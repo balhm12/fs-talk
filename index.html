@@ -275,6 +275,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--soft);color:var(--sub);font-weight:500}
 .badge.wait{background:#FFF1DE;color:#B26100}
 .badge.dup{background:#FDE7EA;color:var(--bad)}
+.badge.ok{background:#E3F4EA;color:var(--ok)}
 .sec{font-size:13px;font-weight:700;margin:4px 0 8px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A3A6B;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:60}
 .toast.on{opacity:1}
@@ -510,7 +511,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.30";
+const APP_VERSION="2026-10-28.31";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1410,7 +1411,15 @@ function renderRosterEditor(body){
   body.appendChild(ta);
   const b=el("button","btn pri","명단 저장");b.style.margin="8px 0 24px";b.onclick=()=>saveRoster(ta.value);body.appendChild(b);
 }
+let pushMap=null,pushMapAt=0;
+async function loadPushMap(){
+  if(!NOTIFY_URL||Date.now()-pushMapAt<60000)return;pushMapAt=Date.now();
+  try{const idToken=await auth.currentUser.getIdToken();
+    const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"pushStatus",idToken})});
+    const j=await res.json().catch(()=>null);if(j&&j.ok&&j.push){pushMap=j.push;if(view==="admin")renderAdmin();}}catch(e){}
+}
 function renderAdmin(){
+  loadPushMap();
   const body=$("adminBody");
   const keep=body.querySelector(".rost");if(keep&&document.activeElement===keep)return;
   body.textContent="";
@@ -1429,6 +1438,7 @@ function renderAdmin(){
       if(nameCount[u.name]>1)r.appendChild(el("span","badge dup","같은 이름 기기 "+nameCount[u.name]+"대"));
       if(id===uid)r.appendChild(el("span","badge","나"));
       if(admins[id]===true)r.appendChild(el("span","badge","관리자"));
+      if(st==="approved"&&pushMap)r.appendChild(el("span","badge"+(pushMap[id]?" ok":" wait"),pushMap[id]?"🔔 알림 켬":"🔕 알림 안 켬"));
       const dev=/iPhone|iPad/.test(u.ua||"")?"iPhone":/Android/.test(u.ua||"")?"Android":"PC";
       const dt=t=>{const d=new Date(t);return ymd(d)+" "+pad(d.getHours())+":"+pad(d.getMinutes());};
       r.appendChild(el("span","meta",u.team+(u.office?" · "+u.office:"")+" · "+dev+(u.createdAt?" · 요청 "+dt(u.createdAt):"")+(st==="approved"&&u.approvedAt?" · 승인 "+dt(u.approvedAt):"")));
@@ -1625,7 +1635,11 @@ async function notifyOthers(r,msgId){
     if(isAdmin){
       if(!j)toast("알림 발송기 응답 없음");
       else if(!j.ok)toast("알림 실패: "+(j.err||"알 수 없음"));
-      else toast("알림 "+(j.sent||0)+"건 발송 (대상 기기 "+(j.targets||0)+"대)");
+      else if(!j.targets&&j.stats){const st=j.stats;
+        toast(st.people===0?"알림 대상 0대 — 이 방에 나 말고 승인된 사람이 없습니다"+(st.myOther?" (내 다른 기기 "+st.myOther+"대는 원래 제외)":""):
+          st.pushPeople===0?"알림 대상 0대 — 대상 "+st.people+"명 모두 아직 「알림 켜기」를 안 했습니다"+(st.myOther?" (내 다른 기기는 원래 제외)":""):
+          "알림 대상 0대 — 알림 켠 "+st.pushPeople+"명이 이 방이나 전체 알림을 꺼 두었습니다");}
+      else toast("알림 "+(j.sent||0)+"건 발송 (대상 기기 "+(j.targets||0)+"대"+(j.stats&&j.stats.people?" · 대상 "+j.stats.people+"명 중 알림 켠 "+j.stats.pushPeople+"명":"")+")");
     }
   }catch(e){if(isAdmin)toast("알림 발송기 연결 실패: "+e.message);}
 }

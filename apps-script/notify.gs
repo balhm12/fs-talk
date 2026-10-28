@@ -20,6 +20,7 @@ function doPost(e){
     const req = JSON.parse(e.postData.contents);
     if(req.type === 'register') return out_(notifyRegister_(req));
     if(req.type === 'testAdmin') return out_(testAdmin_(req));
+    if(req.type === 'pushStatus') return out_(pushStatus_(req));
     if(req.type === 'upload') return out_(upload_(req));
     if(req.type === 'deleteFile') return out_(deleteFile_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
@@ -42,32 +43,40 @@ function doPost(e){
     const mentioned = isDm ? {} : mentions_(String(msg.text||''), users);
     const sc = ROOM_SCOPE[room], targets = [];
     const roomLabel = isDm ? '1:1' : ROOM_NAME[room];
+    // 왜 0대인지 알 수 있게 셈: 내 다른 기기 / 이 방 대상인 다른 사람 / 그중 알림 켠 기기 / 꺼 둔 기기
+    const st = {myOther:0, people:{}, pushPeople:{}, noPush:{}, muted:0};
     Object.keys(users).forEach(function(id){
       const u = users[id];
       if(!u || u.status!=='approved' || id===uid) return;
-      if(u.name===me.name && u.team===me.team) return;
-      if(mute[id] && mute[id]._all) return;               // 이 기기는 전체 알림 꺼짐 (멘션·1:1 포함)
+      if(u.name===me.name && u.team===me.team){ st.myOther++; return; }
       const ment = !!mentioned[u.name];
       if(isDm){ if(dmKeys.indexOf(u.team + '_' + u.name) < 0) return; }
       else if(!ment && sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
-      if(!ment && mute[id] && mute[id][room]) return;     // 멘션은 방 알림을 꺼 둬도 보냄
+      const pk = u.team + '_' + u.name; st.people[pk] = true;
+      const hasTok = Object.keys(tokens[id] || {}).some(function(k){ return tokens[id][k] && tokens[id][k].token; });
+      if(!hasTok){ st.noPush[pk] = u.name; return; }
+      st.pushPeople[pk] = true;
+      if(mute[id] && mute[id]._all){ st.muted++; return; }  // 이 기기는 전체 알림 꺼짐 (멘션·1:1 포함)
+      if(!ment && mute[id] && mute[id][room]){ st.muted++; return; }     // 멘션은 방 알림을 꺼 둬도 보냄
       const t = tokens[id] || {};
       Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token,
         title: ment ? '🔔 ' + (msg.name||'') + '님이 나를 언급 · ' + roomLabel : null}); });
     });
-    if(!targets.length) return out_({ok:true,sent:0,ver:NOTIFY_VER});
+    const stats = {myOther:st.myOther, people:Object.keys(st.people).length, pushPeople:Object.keys(st.pushPeople).length, muted:st.muted,
+      noPush:Object.keys(st.noPush).filter(function(k){ return !st.pushPeople[k]; }).map(function(k){ return st.noPush[k]; }).slice(0,30)};
+    if(!targets.length) return out_({ok:true,sent:0,targets:0,stats:stats,ver:NOTIFY_VER});
     const title = isDm ? '💬 ' + (msg.name||'') + ' (1:1)' : ROOM_NAME[room] + ' · ' + (msg.name||'');
     let body = String(msg.text||'').replace(/\s+/g,' ');
     if(msg.file) body = (/^image\//.test(msg.file.mime||'') ? '📷 사진' : '📎 ' + (msg.file.name||'파일')) + (body ? ' ' + body : '');
     if(msg.re) body = '↪ ' + body;
     const sent = send_(targets, title, body.slice(0,140), APP_URL + '#room-' + encodeURIComponent(room), 'room-' + room, {room:room});
-    return out_({ok:true,sent:sent,targets:targets.length,ver:NOTIFY_VER});
+    return out_({ok:true,sent:sent,targets:targets.length,stats:stats,ver:NOTIFY_VER});
   }catch(err){
     return out_({ok:false,err:String(err)});
   }
 }
 
-const NOTIFY_VER = 'v6';
+const NOTIFY_VER = 'v7';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -152,6 +161,16 @@ function notifyRegister_(req){
   const dev = /iPhone|iPad/.test(u.ua||'') ? 'iPhone' : /Android/.test(u.ua||'') ? 'Android' : 'PC';
   const sent = send_(a.targets, '👥 등록 요청', u.name + ' · ' + u.team + (u.office ? ' ' + u.office : '') + ' · ' + dev + ' — 승인이 필요합니다', APP_URL + '#admin', 'admin-register', {room:''});
   return {ok:true,sent:sent,targets:a.targets.length,ver:NOTIFY_VER};
+}
+
+/** 관리 화면: 기기별 알림 켬 여부 — 관리자만 */
+function pushStatus_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  if(db_('talk/admins/'+uid) !== true) return {ok:false,err:'관리자가 아님',ver:NOTIFY_VER};
+  const tokens = db_('talk/tokens') || {}, out = {};
+  Object.keys(tokens).forEach(function(id){ const n = Object.keys(tokens[id]||{}).filter(function(k){ return tokens[id][k] && tokens[id][k].token; }).length; if(n) out[id] = n; });
+  return {ok:true,push:out,ver:NOTIFY_VER};
 }
 
 /** 관리 화면의 「등록 알림 테스트」 — 관리자만 */
