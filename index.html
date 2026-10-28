@@ -196,6 +196,23 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .mi small{color:var(--sub);font-size:11px}
 .attach{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-size:22px;color:var(--sub);line-height:1;padding:0}
 .attach:hover{color:var(--blue);border-color:var(--blue)}
+.lockov{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.lockbox{width:min(300px,100%);text-align:center}
+.locklogo{width:56px;height:56px;border-radius:16px;background:var(--blue);color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.locktitle{font-size:18px;font-weight:700;color:var(--text)}
+.lockmsg{font-size:13px;color:var(--sub);margin:6px 0 16px;min-height:18px}
+.lockmsg.bad{color:var(--bad)}
+.lockdots{display:flex;justify-content:center;gap:14px;margin-bottom:22px}
+.lockdots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--blue)}
+.lockdots i.on{background:var(--blue)}
+.lockdots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.lockpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.lockpad button{height:56px;border-radius:50%;border:0;background:var(--soft);color:var(--text);font-size:22px;width:56px;margin:0 auto}
+.lockpad button.k0{grid-column:2}
+.lockpad button.fn{background:none;font-size:15px;color:var(--sub)}
+.lockbio{margin-top:18px;width:100%;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:11px;font-size:14px}
+.lockforgot{margin-top:12px;background:none;border:0;color:var(--sub);font-size:12px;text-decoration:underline}
 .vov{position:fixed;inset:0;background:rgba(5,10,18,.97);z-index:48;display:flex;flex-direction:column;color:#fff}
 .vtop{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top))}
 .vwho{flex:1;display:flex;flex-direction:column;font-size:13px}
@@ -515,6 +532,18 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <div class="pov" id="pOv" hidden><div class="pcard" id="pCard"></div></div>
 <div class="sheetov" id="actOv" hidden><div class="sheet" id="act"></div></div>
 <div class="vov" id="vOv" hidden></div>
+<div class="lockov" id="lockOv" hidden>
+  <div class="lockbox">
+    <div class="locklogo">FS</div>
+    <div class="locktitle">FS Talk 잠금</div>
+    <div class="lockmsg" id="lockMsg">PIN 4자리를 입력하세요</div>
+    <div class="lockdots" id="lockDots"><i></i><i></i><i></i><i></i></div>
+    <div class="lockpad" id="lockPad"></div>
+    <button class="lockbio" id="lockBio" hidden>🔐 지문·얼굴·Windows Hello로 열기</button>
+    <button class="lockforgot" id="lockForgot">PIN을 잊었어요</button>
+  </div>
+</div>
+<script>try{if(JSON.parse(localStorage.getItem("fstalk-lock")||"null"))document.getElementById("lockOv").hidden=false;}catch(e){}</script>
 <div class="toast" id="toast"></div>
 <button class="updbar" id="updBar" hidden>🔄 새 버전이 있습니다 · <b>눌러서 새로고침</b></button>
 
@@ -525,7 +554,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.36";
+const APP_VERSION="2026-10-28.37";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -768,7 +797,7 @@ const personKey=(team,name)=>String(team+"_"+name).replace(/[.#$\[\]\/]/g,"");
 const rd=(r,k)=>((reads[r]||{})[k])||0;
 const myRead=r=>Math.max(seen[r]||0,rd(r,myKey));
 function markSeen(){
-  if(!room||document.visibilityState!=="visible")return;
+  if(!room||document.visibilityState!=="visible"||isLocked())return;   // 잠금 화면 뒤에서는 읽음 처리 안 함
   const l=msgs.filter(m=>inRoom(m,room)).pop();if(!l)return;
   if((seen[room]||0)<l.ts){seen[room]=l.ts;try{localStorage.setItem("fstalk-seen",JSON.stringify(seen));}catch(e){}}
   if(myKey&&rd(room,myKey)<l.ts){(reads[room]=reads[room]||{})[myKey]=l.ts;R("reads/"+room+"/"+myKey).set(l.ts).catch(()=>{});}
@@ -1640,6 +1669,9 @@ function openProfile(p){
   const tr=teamRoomOf(p);
   if(tr){const b=el("button","act");const i=el("span","ai2","💬");const t=el("span");t.appendChild(document.createTextNode(roomName(tr)+" 방 열기"));b.appendChild(i);b.appendChild(t);b.onclick=()=>{closeProfile();listTab="rooms";go("room-"+tr);};acts.appendChild(b);}
   if(me&&p.name===me.name&&p.team===me.team){
+    const lk=el("button","act");const li=el("span","ai2","🔒");const lt=el("span");const lc=lockCfg();
+    lt.appendChild(document.createTextNode("화면 잠금: "+(lc?"켜짐":"꺼짐")));lt.appendChild(el("small",null,lc?"PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]+" — 눌러서 바꾸기":"이 기기에서 PIN(지문·얼굴)으로 잠그기"));
+    lk.appendChild(li);lk.appendChild(lt);lk.onclick=()=>openLockSettings();acts.appendChild(lk);
     const th=el("button","act");const i=el("span","ai2","🌗");const t=el("span");t.appendChild(document.createTextNode("화면 테마: "+THEME_LABEL[theme]));t.appendChild(el("small",null,"눌러서 바꾸기 (시스템 → 밝게 → 어둡게)"));th.appendChild(i);th.appendChild(t);th.onclick=()=>{cycleTheme();openProfile(p);};acts.appendChild(th);
     const b=el("button","btn pri","✏️ 내 연락처 수정");b.onclick=editMyProfile;acts.appendChild(b);}
   c.appendChild(acts);
@@ -1797,6 +1829,110 @@ function syncBadge(n){
   if(n===lastBadge)return;lastBadge=n;
   document.title=n?"("+(n>99?"99+":n)+") FS Talk":"FS Talk";
   try{if("setAppBadge" in navigator){n?navigator.setAppBadge(n):navigator.clearAppBadge();}}catch(e){}
+}
+
+/* ---------- 화면 잠금 (기기별 PIN + 지문·얼굴·Windows Hello) ---------- */
+/* 저장: localStorage "fstalk-lock" = {salt, hash, delay(초), cred(생체 인증 키 id)} — PIN 원문은 저장하지 않음 */
+const LOCK_DELAYS=[0,60,300,1800],LOCK_DELAY_LABEL={0:"바로 잠금",60:"1분 뒤 잠금",300:"5분 뒤 잠금",1800:"30분 뒤 잠금"};
+function lockCfg(){try{return JSON.parse(localStorage.getItem("fstalk-lock")||"null");}catch(e){return null;}}
+function saveLockCfg(c){try{if(c)localStorage.setItem("fstalk-lock",JSON.stringify(c));else localStorage.removeItem("fstalk-lock");}catch(e){}}
+const b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function pinHash(pin,salt){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+"|"+pin+"|fstalk"));return b64(d);}
+async function bioAvailable(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+async function bioRegister(){
+  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"FS Talk"},
+    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:(me&&me.name)||"FS Talk",displayName:(me&&me.name)||"FS Talk"},
+    pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
+  return b64(c.rawId);
+}
+async function bioCheck(cred){
+  await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:"public-key",id:unb64(cred)}],userVerification:"required",timeout:60000}});
+  return true;
+}
+let lockPin="",lockFails=0,lockUntil=0,lockHiddenAt=0;
+function isLocked(){return !$("lockOv").hidden;}
+function showLock(){
+  const c=lockCfg();if(!c)return;
+  lockPin="";drawDots();$("lockMsg").textContent="PIN 4자리를 입력하세요";$("lockMsg").classList.remove("bad");
+  $("lockBio").hidden=!c.cred;$("lockOv").hidden=false;
+  if(c.cred&&!isTouch())setTimeout(()=>{},0);
+}
+function unlock(){$("lockOv").hidden=true;lockPin="";lockFails=0;if(started){markSeen();renderNav();}}
+function drawDots(){[...$("lockDots").children].forEach((d,i)=>d.classList.toggle("on",i<lockPin.length));}
+async function lockKey(k){
+  if(Date.now()<lockUntil){$("lockMsg").textContent="잠시 후 다시 시도하세요 ("+Math.ceil((lockUntil-Date.now())/1000)+"초)";return;}
+  if(k==="del"){lockPin=lockPin.slice(0,-1);drawDots();return;}
+  if(!/^\d$/.test(k)||lockPin.length>=4)return;
+  lockPin+=k;drawDots();
+  if(lockPin.length<4)return;
+  const c=lockCfg();if(!c){unlock();return;}
+  if(await pinHash(lockPin,c.salt)===c.hash){unlock();return;}
+  lockFails++;lockPin="";
+  const dots=$("lockDots");dots.classList.remove("shake");void dots.offsetWidth;dots.classList.add("shake");setTimeout(drawDots,350);
+  const m=$("lockMsg");m.classList.add("bad");
+  if(lockFails>=5){lockUntil=Date.now()+30000;lockFails=0;m.textContent="5번 틀렸습니다. 30초 뒤에 다시 시도하세요.";}
+  else m.textContent="PIN이 맞지 않습니다 ("+lockFails+"/5)";
+}
+(()=>{const pad=$("lockPad");["1","2","3","4","5","6","7","8","9","bio","0","del"].forEach(k=>{
+  if(k==="bio"){pad.appendChild(el("span"));return;}
+  const b=el("button",k==="del"?"fn":k==="0"?"k0":"",k==="del"?"⌫":k);b.type="button";if(k==="del")b.setAttribute("aria-label","지우기");b.onclick=()=>lockKey(k);pad.appendChild(b);});
+  // 0 버튼은 가운데 칸
+  const z=pad.querySelector(".k0");if(z)z.classList.remove("k0");
+})();
+document.addEventListener("keydown",e=>{if(!isLocked())return;if(/^\d$/.test(e.key))lockKey(e.key);else if(e.key==="Backspace")lockKey("del");});
+$("lockBio").onclick=async()=>{const c=lockCfg();if(!c||!c.cred)return;try{await bioCheck(c.cred);unlock();}catch(e){$("lockMsg").textContent="생체 인증을 하지 못했어요. PIN을 입력하세요.";}};
+$("lockForgot").onclick=async()=>{
+  if(!confirm("PIN을 잊었으면 이 기기의 잠금을 지우고 처음부터 다시 등록해야 합니다.\n(대화 내용은 서버에 그대로 있고, 관리자 승인을 다시 받으면 이어서 볼 수 있습니다)\n\n이 기기를 초기화할까요?"))return;
+  saveLockCfg(null);try{await auth.signOut();}catch(e){}
+  try{localStorage.removeItem("fstalk-seen");}catch(e){}
+  location.hash="";location.reload();
+};
+document.addEventListener("visibilitychange",()=>{
+  const c=lockCfg();if(!c)return;
+  if(document.visibilityState==="hidden")lockHiddenAt=Date.now();
+  else if(lockHiddenAt&&Date.now()-lockHiddenAt>=(c.delay||0)*1000)showLock();
+});
+// 시작할 때 잠금 화면 준비 (HTML에서 미리 덮어 둔 경우 생체 버튼·문구 정리)
+if(lockCfg())showLock();
+
+/* 잠금 설정 창 */
+async function openLockSettings(){
+  const c=$("pCard");c.textContent="";
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  const cur=lockCfg();
+  c.appendChild(el("div","locklogo","🔒"));c.appendChild(el("h3",null,"화면 잠금"));
+  c.appendChild(el("div","tm2","이 기기에만 적용됩니다 · PIN은 서버에 저장되지 않아요"));
+  const f=el("form");f.style.marginTop="14px";f.style.textAlign="left";
+  const mk=(lab,id,ph)=>{const d=el("div","f");const l=el("label",null,lab);l.htmlFor=id;const i=el("input");i.id=id;i.type="password";i.inputMode="numeric";i.maxLength=4;i.pattern="[0-9]*";i.autocomplete="off";i.placeholder=ph;d.appendChild(l);d.appendChild(i);return d;};
+  if(cur)f.appendChild(mk("지금 PIN","lkOld","PIN 4자리"));
+  f.appendChild(mk(cur?"새 PIN (바꿀 때만)":"새 PIN 4자리","lkNew","숫자 4자리"));
+  f.appendChild(mk("새 PIN 한 번 더","lkNew2","숫자 4자리"));
+  const dd=el("div","f");dd.appendChild(el("label",null,"앱을 떠났다 돌아오면"));const ds=el("select");ds.id="lkDelay";
+  LOCK_DELAYS.forEach(v=>ds.appendChild(new Option(LOCK_DELAY_LABEL[v],v)));ds.value=String(cur?cur.delay||0:60);dd.appendChild(ds);f.appendChild(dd);
+  const bioOk=await bioAvailable();
+  let bioCb=null;
+  if(bioOk){const bd=el("label","f");bd.style.flexDirection="row";bd.style.alignItems="center";bd.style.gap="8px";bioCb=el("input");bioCb.type="checkbox";bioCb.checked=!!(cur&&cur.cred);bd.appendChild(bioCb);bd.appendChild(document.createTextNode("지문·얼굴·Windows Hello로도 열기"));f.appendChild(bd);}
+  const sv=el("button","btn pri",cur?"저장":"잠금 켜기");sv.type="submit";f.appendChild(sv);
+  if(cur){const off=el("button","btn bad","잠금 끄기");off.type="button";off.style.marginTop="8px";off.onclick=async()=>{
+    const o=$("lkOld").value;if(await pinHash(o,cur.salt)!==cur.hash){toast("지금 PIN이 맞지 않습니다.");return;}
+    saveLockCfg(null);toast("화면 잠금을 껐습니다.");closeProfile();};f.appendChild(off);}
+  f.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const o=cur?$("lkOld").value:"",n=$("lkNew").value,n2=$("lkNew2").value;
+    if(cur&&await pinHash(o,cur.salt)!==cur.hash){toast("지금 PIN이 맞지 않습니다.");return;}
+    if(!cur||n){if(!/^\d{4}$/.test(n)){toast("PIN은 숫자 4자리로 정해 주세요.");return;}if(n!==n2){toast("새 PIN 두 번이 서로 다릅니다.");return;}}
+    const cfg=cur?Object.assign({},cur):{};
+    if(!cur||n){cfg.salt=b64(crypto.getRandomValues(new Uint8Array(12)));cfg.hash=await pinHash(n,cfg.salt);}
+    cfg.delay=+ds.value||0;
+    if(bioCb){
+      if(bioCb.checked&&!cfg.cred){try{cfg.cred=await bioRegister();}catch(err){toast("생체 인증 등록을 건너뛰었어요 (PIN으로만 잠금).");delete cfg.cred;}}
+      if(!bioCb.checked)delete cfg.cred;
+    }
+    saveLockCfg(cfg);toast(cur?"잠금 설정을 바꿨습니다.":"화면 잠금을 켰습니다. 앱을 떠났다 돌아오면 잠깁니다.");closeProfile();
+  });
+  c.appendChild(f);$("pOv").hidden=false;setTimeout(()=>$(cur?"lkOld":"lkNew").focus(),50);
 }
 
 /* ---------- 새 버전 안내 ---------- */
