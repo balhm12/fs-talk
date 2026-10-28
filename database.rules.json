@@ -104,6 +104,24 @@
           ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()",
           ".validate": "newData.isBoolean()"
         }
+      },
+      "profiles": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$p": {
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()",
+          "phone": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "email": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "ts": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
       }
     }
   }

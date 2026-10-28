@@ -92,6 +92,22 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .row.mine .bubble{background:var(--blue);color:#fff;border-radius:14px 4px 14px 14px;cursor:pointer}
 .row.mine.cont .bubble{border-radius:14px}
 .row.mine .tag{color:#BFE6FF}
+.pov{position:fixed;inset:0;background:rgba(15,25,40,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.pcard{background:#fff;border-radius:16px;width:min(360px,100%);padding:22px 20px 18px;text-align:center;position:relative}
+.pcard .av{margin:0 auto 10px;width:72px;height:72px;font-size:20px}
+.pcard h3{margin:0;font-size:18px}
+.pcard .tm2{color:var(--sub);font-size:13px;margin-top:2px}
+.pcard .x{position:absolute;top:8px;right:10px;background:none;border:0;font-size:22px;color:var(--sub)}
+.pcard .acts{display:flex;flex-direction:column;gap:8px;margin-top:16px;text-align:left}
+.pcard .act{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none;font-size:15px;background:#fff}
+.pcard .act:hover{border-color:var(--blue)}
+.pcard .act .ai2{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#E6F1FB;font-size:17px;flex:none}
+.pcard .act small{display:block;color:var(--sub);font-size:11px}
+.pcard .none{color:var(--sub);font-size:13px;padding:8px 0}
+.pcard .f{text-align:left}
+.pcard .btn{width:100%;padding:11px;margin-top:6px}
+.myedit{display:flex;align-items:center;gap:8px;margin:0 10px 8px;padding:10px 12px;border:1px dashed #C9DFF5;border-radius:12px;background:#F5F9FD;font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
+.clickable{cursor:pointer}
 .unr{color:#E8A317;font-weight:700;font-size:11px}
 .row .del{display:none;font-size:11px;color:var(--bad);background:#fff;border:1px solid #F1C2CA;border-radius:6px;padding:1px 7px}
 .row.sel .del{display:inline-block}
@@ -317,6 +333,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <button id="tAdmin" hidden><span class="ri">⚙️</span>관리</button>
   </nav>
 </div>
+<div class="pov" id="pOv" hidden><div class="pcard" id="pCard"></div></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -326,7 +343,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.16";
+const APP_VERSION="2026-10-28.17";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -467,6 +484,7 @@ function start(){
   R("joined/"+myKey).set(true).catch(()=>{});
   R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
   R("reads").on("value",s=>{reads=s.val()||{};schedule();},()=>{});
+  R("profiles").on("value",s=>{profiles=s.val()||{};if(listTab==="org")renderNav();},()=>{});
   refreshPush();
   ROOMS.forEach(r=>{
     const q=R("msgs/"+r.id).orderByChild("ts").limitToLast(PER_ROOM);
@@ -566,12 +584,13 @@ function renderNav(){
       const n=i===0?tu:i===3?pendingCount:0;if(n){const d=el("span","dot",n>99?"99+":String(n));e.appendChild(d);}});
   });
   $("rAdmin").hidden=!isAdmin;$("tAdmin").hidden=!isAdmin;
-  const ma=$("meAv");ma.textContent="";if(me){const a=personAv(me.name,"s");a.title=me.name;ma.appendChild(a);}
+  const ma=$("meAv");ma.textContent="";if(me){const a=personAv(me.name,"s");a.title="내 정보";a.classList.add("clickable");a.onclick=()=>openProfile({team:me.team,name:me.name,office:me.office||""});ma.appendChild(a);}
 }
 function renderOrg(nav,q){
   const list=rosterList().filter(p=>!q||p.name.includes(q)||p.team.toLowerCase().replace(/\s+/g,"").includes(q))
     .sort((a,b)=>teamRank(a.team)-teamRank(b.team)||(a.office||"").localeCompare(b.office||"","ko")||a.name.localeCompare(b.name,"ko"));
   $("lTitle").textContent="";$("lTitle").appendChild(document.createTextNode("조직도"));$("lTitle").appendChild(el("small",null,rosterList().length+"명"));
+  if(me){const pf=profiles[myKey]||{};const eb=el("button","myedit",(pf.phone||pf.email)?"✏️ 내 연락처 수정":"✏️ 내 연락처·메일 입력하기");eb.onclick=editMyProfile;nav.appendChild(eb);}
   if(!list.length){nav.appendChild(el("div","more",rosterList().length?"찾는 사람이 없습니다.":"관리자가 명단을 아직 등록하지 않았습니다."));return;}
   let g="";
   list.forEach(p=>{
@@ -579,11 +598,11 @@ function renderOrg(nav,q){
     if(key!==g){g=key;nav.appendChild(el("div","lgrp",key));}
     const b=el("button","li");
     b.appendChild(personAv(p.name));
-    const mid=el("div","mid");mid.appendChild(el("div","nm",p.name+(me&&me.name===p.name?" (나)":"")));mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")));
+    const pf=profiles[personKey(p.team,p.name)]||{};
+    const mid=el("div","mid");mid.appendChild(el("div","nm",p.name+(me&&me.name===p.name?" (나)":"")));mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")+(pf.phone?" · "+pf.phone:"")));
     b.appendChild(mid);
     const target=Object.keys(ROOM_SCOPE).find(k=>{const sc=ROOM_SCOPE[k];return sc[0]===p.team&&sc[1]&&sc[1]===p.office;})||Object.keys(ROOM_SCOPE).find(k=>ROOM_SCOPE[k][0]===p.team&&!ROOM_SCOPE[k][1]);
-    b.title=target?roomName(target)+" 방 열기":"";
-    b.onclick=()=>{if(target){listTab="rooms";go("room-"+target);}};
+    b.onclick=()=>openProfile(p);
     nav.appendChild(b);
   });
 }
@@ -599,7 +618,7 @@ function renderInfo(){
   box.appendChild(h);
   const l=el("div","il");l.appendChild(el("div","lgrp","참여자 "+mem.length+"명"));
   mem.sort((a,b)=>teamRank(a.team)-teamRank(b.team)||a.name.localeCompare(b.name,"ko")).forEach(p=>{
-    const m=el("div","mem");m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
+    const m=el("div","mem clickable");m.onclick=()=>openProfile(p);m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
   });
   if(!mem.length)l.appendChild(el("div","more","명단이 등록되면 참여자가 표시됩니다."));
   box.appendChild(l);
@@ -714,7 +733,7 @@ function renderMsgs(scroll){
     const cont=same(prev,m)&&ymd(new Date(prev.ts))===day,lastOfGroup=!same(m,next);
     const mine=isMine(m);
     const row=el("div","row"+(mine?" mine":"")+(cont?" cont":"")+(selId===m.id?" sel":"")+(isAdmin&&!mine?" adm":""));row.id="m-"+m.id;
-    if(!mine){const avs=el("div","avs");if(!cont)avs.appendChild(personAv(m.name,"s"));row.appendChild(avs);}
+    if(!mine){const avs=el("div","avs");if(!cont){const a=personAv(m.name,"s");a.classList.add("clickable");a.onclick=()=>openProfileByName(m.name);avs.appendChild(a);}row.appendChild(avs);}
     const col=el("div","col");
     if(!cont&&(!mine||(room==="all"&&m.room!=="all"))){
       const who=el("div","who");
@@ -892,6 +911,54 @@ if("serviceWorker" in navigator&&window.isSecureContext){
   window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});});
 }
 renderInstall();
+
+/* ---------- 프로필 (연락처·메일) ---------- */
+let profiles={};
+function closeProfile(){$("pOv").hidden=true;}
+$("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
+function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
+function teamRoomOf(p){return Object.keys(ROOM_SCOPE).find(k=>{const sc=ROOM_SCOPE[k];return sc[0]===p.team&&sc[1]&&sc[1]===p.office;})||Object.keys(ROOM_SCOPE).find(k=>ROOM_SCOPE[k][0]===p.team&&!ROOM_SCOPE[k][1]);}
+function openProfile(p){
+  const c=$("pCard");c.textContent="";
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(personAv(p.name));c.appendChild(el("h3",null,p.name));
+  c.appendChild(el("div","tm2",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")));
+  const pf=profiles[personKey(p.team,p.name)]||{};
+  const acts=el("div","acts");
+  if(pf.phone){const a=el("a","act");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");const i=el("span","ai2","📞");const t=el("span");t.appendChild(document.createTextNode(pf.phone));t.appendChild(el("small",null,"눌러서 전화 걸기"));a.appendChild(i);a.appendChild(t);acts.appendChild(a);}
+  if(pf.email){const a=el("a","act");a.href="mailto:"+pf.email;const i=el("span","ai2","✉️");const t=el("span");t.appendChild(document.createTextNode(pf.email));t.appendChild(el("small",null,"눌러서 메일 쓰기"));a.appendChild(i);a.appendChild(t);acts.appendChild(a);}
+  if(!pf.phone&&!pf.email)acts.appendChild(el("div","none","아직 연락처를 입력하지 않았습니다."));
+  const tr=teamRoomOf(p);
+  if(tr){const b=el("button","act");const i=el("span","ai2","💬");const t=el("span");t.appendChild(document.createTextNode(roomName(tr)+" 방 열기"));b.appendChild(i);b.appendChild(t);b.onclick=()=>{closeProfile();listTab="rooms";go("room-"+tr);};acts.appendChild(b);}
+  if(me&&p.name===me.name&&p.team===me.team){const b=el("button","btn pri","✏️ 내 연락처 수정");b.onclick=editMyProfile;acts.appendChild(b);}
+  c.appendChild(acts);
+  $("pOv").hidden=false;
+}
+function editMyProfile(){
+  const c=$("pCard");c.textContent="";
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(personAv(me.name));c.appendChild(el("h3",null,"내 연락처"));
+  c.appendChild(el("div","tm2","FS Talk 사용자 모두가 볼 수 있어요"));
+  const pf=profiles[myKey]||{};
+  const f=el("form");f.style.marginTop="14px";
+  const mk=(lab,id,type,ph,val)=>{const d=el("div","f");const l=el("label",null,lab);l.htmlFor=id;const i=el("input");i.id=id;i.type=type;i.placeholder=ph;i.value=val||"";i.autocomplete="off";d.appendChild(l);d.appendChild(i);return d;};
+  f.appendChild(mk("휴대폰 번호","pfPhone","tel","010-0000-0000",pf.phone));
+  f.appendChild(mk("메일","pfMail","email","name@sysmex.co.kr",pf.email));
+  const b=el("button","btn pri","저장");b.type="submit";f.appendChild(b);
+  f.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const phone=$("pfPhone").value.trim(),email=$("pfMail").value.trim();
+    if(phone&&!/^[0-9+\-\s()]{7,20}$/.test(phone)){toast("휴대폰 번호 형식을 확인해 주세요.");return;}
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast("메일 주소 형식을 확인해 주세요.");return;}
+    try{
+      if(!phone&&!email)await R("profiles/"+myKey).remove();
+      else await R("profiles/"+myKey).set({phone,email,ts:firebase.database.ServerValue.TIMESTAMP});
+      toast("저장했습니다.");closeProfile();
+    }catch(err){toast("저장 실패: "+(err.code||err.message)+" — DB 규칙이 최신인지 확인하세요.");}
+  });
+  c.appendChild(f);$("pOv").hidden=false;setTimeout(()=>$("pfPhone").focus(),50);
+}
 
 /* ---------- 푸시 알림 ---------- */
 let messaging=null,myMute={},pushToken=null;
