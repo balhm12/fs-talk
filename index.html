@@ -296,7 +296,7 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .mi small{color:var(--sub);font-size:11px}
 .attach{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-size:22px;color:var(--sub);line-height:1;padding:0}
 .attach:hover{color:var(--blue);border-color:var(--blue)}
-.lockov{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.lockov{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;align-items:safe center;justify-content:center;padding:20px;overflow-y:auto}
 .lockbox{width:min(300px,100%);text-align:center}
 .locklogo{width:56px;height:56px;border-radius:16px;background:var(--blue);color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
 .locktitle{font-size:18px;font-weight:700;color:var(--text)}
@@ -313,6 +313,28 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .lockpad button.fn{background:none;font-size:15px;color:var(--sub)}
 .lockbio{margin-top:18px;width:100%;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:11px;font-size:14px}
 .lockforgot{margin-top:12px;background:none;border:0;color:var(--sub);font-size:12px;text-decoration:underline}
+.lockbio{display:flex;align-items:center;justify-content:center;gap:8px}
+.lockbio .ico{color:var(--blue)}
+.lockfoot{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:28px;font-size:11px;color:var(--sub);letter-spacing:.02em}
+.lockfoot .brandlogo{height:24px;opacity:.85}
+/* 휴대폰: 잠금 화면을 크게 (숫자 키 78px · 글자 키움) */
+@media (pointer:coarse){
+  .lockbox{width:min(360px,100%)}
+  .lockov{padding:calc(12px + env(safe-area-inset-top)) 20px calc(12px + env(safe-area-inset-bottom))}
+  .locklogo{width:min(72px,8.5vh);height:min(72px,8.5vh);border-radius:20px;font-size:26px;margin-bottom:min(14px,1.6vh)}
+  .locktitle{font-size:24px}
+  .lockmsg{font-size:17px;margin:min(10px,1.2vh) 0 min(24px,2.6vh);min-height:24px}
+  .lockdots{gap:22px;margin-bottom:min(30px,3.4vh)}
+  .lockdots i{width:18px;height:18px;border-width:2.5px}
+  .lockpad{gap:min(16px,1.8vh) 14px}
+  .lockpad button{width:min(80px,9.6vh);height:min(80px,9.6vh);font-size:32px}
+  .lockpad button.fn{font-size:28px}
+  .lockpad button:active{background:var(--line)}
+  .lockbio{margin-top:min(26px,3vh);padding:14px;font-size:18px;border-radius:16px}
+  .lockforgot{margin-top:min(12px,1.4vh);font-size:16px;padding:8px}
+  .lockfoot{margin-top:min(26px,2.8vh);font-size:13px;gap:6px}
+  .lockfoot .brandlogo{height:28px}
+}
 .vov{position:fixed;inset:0;background:rgba(5,10,18,.97);z-index:48;display:flex;flex-direction:column;color:#fff}
 .vtop{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top))}
 .vwho{flex:1;display:flex;flex-direction:column;font-size:13px}
@@ -803,8 +825,9 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <div class="lockmsg" id="lockMsg">PIN 4자리를 입력하세요</div>
     <div class="lockdots" id="lockDots"><i></i><i></i><i></i><i></i></div>
     <div class="lockpad" id="lockPad"></div>
-    <button class="lockbio" id="lockBio" hidden>🔐 지문·얼굴·Windows Hello로 열기</button>
+    <button class="lockbio" id="lockBio" hidden><span class="ico" data-ic="lock"></span><span id="lockBioTx">지문·얼굴로 열기</span></button>
     <button class="lockforgot" id="lockForgot">PIN을 잊었어요</button>
+    <div class="lockfoot"><img class="brandlogo" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="79" height="24"><span>Made by FSS Team</span></div>
   </div>
 </div>
 <script>try{if(JSON.parse(localStorage.getItem("fstalk-lock")||"null"))document.getElementById("lockOv").hidden=false;}catch(e){}</script>
@@ -818,7 +841,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.61";
+const APP_VERSION="2026-10-28.62";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2618,6 +2641,7 @@ function showLock(){
   const c=lockCfg();if(!c)return;
   lockPin="";drawDots();$("lockMsg").textContent="PIN 4자리를 입력하세요";$("lockMsg").classList.remove("bad");
   $("lockBio").hidden=!c.cred;$("lockOv").hidden=false;
+  const ua=navigator.userAgent;$("lockBioTx").textContent=/iPhone|iPad|iPod/.test(ua)?"Face ID·Touch ID로 열기":/Android/.test(ua)?"지문·얼굴 인식으로 열기":/Windows/.test(ua)?"Windows Hello로 열기":/Mac/.test(ua)?"Touch ID로 열기":"지문·얼굴로 열기";
   if(c.cred&&!isTouch())setTimeout(()=>{},0);
 }
 function unlock(){$("lockOv").hidden=true;lockPin="";lockFails=0;if(started){markSeen();renderNav();}}
