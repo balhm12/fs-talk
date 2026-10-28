@@ -764,7 +764,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.53";
+const APP_VERSION="2026-10-28.54";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1069,6 +1069,22 @@ function markSeen(){
   const l=msgs.filter(m=>inRoom(m,room)).pop();if(!l)return;
   if((seen[room]||0)<l.ts){seen[room]=l.ts;try{localStorage.setItem("fstalk-seen",JSON.stringify(seen));}catch(e){}}
   if(myKey&&rd(room,myKey)<l.ts){(reads[room]=reads[room]||{})[myKey]=l.ts;R("reads/"+room+"/"+myKey).set(l.ts).catch(()=>{});}
+  clearNotesSoon();
+}
+/* 읽은 방의 알림은 알림센터에서 지움 (안드로이드·PC 확실, 아이폰은 iOS가 허용하는 만큼) */
+let clearT=0;
+function clearNotesSoon(){clearTimeout(clearT);clearT=setTimeout(clearReadNotes,400);}
+async function clearReadNotes(){
+  try{
+    if(!("serviceWorker" in navigator))return;
+    const reg=await navigator.serviceWorker.getRegistration("./");if(!reg||!reg.getNotifications)return;
+    const list=await reg.getNotifications();
+    list.forEach(n=>{
+      const t=n.tag||"";if(t.indexOf("room-")!==0)return;            // 관리자 알림(등록 요청)은 그대로 둠
+      const r=t.slice(5);
+      if(r===room||(room==="all"&&!isPriv(r))||!unread(r))n.close();
+    });
+  }catch(e){}
 }
 /* 메시지별 안 읽은 사람 수: 그 방 참여자 중 앱에 들어온 적 있는 사람만 셈 (보낸 사람 제외) */
 const roomJoinedCache={};
@@ -1292,7 +1308,7 @@ function route(){
   showView();
 }
 window.addEventListener("hashchange",route);
-document.addEventListener("visibilitychange",()=>{if(started&&document.visibilityState==="visible"&&view==="chat"&&room&&!(isM()&&mList)){markSeen();renderNav();}});
+document.addEventListener("visibilitychange",()=>{if(!started||document.visibilityState!=="visible")return;if(view==="chat"&&room&&!(isM()&&mList)){markSeen();renderNav();}syncBadge(totalUnread(),true);clearNotesSoon();});
 window.addEventListener("resize",()=>{if(started)renderInfo();});
 window.matchMedia("(max-width:820px)").addEventListener("change",()=>{if(started)showView();});
 $("backBtn").onclick=()=>{if(history.length>1&&location.hash)history.back();else go("");};
@@ -2310,8 +2326,9 @@ if(messaging){
 }
 /* 작업 표시줄·홈 화면 아이콘과 창 제목에 안 읽은 수 */
 let lastBadge=-1;
-function syncBadge(n){
-  if(n===lastBadge)return;lastBadge=n;
+function syncBadge(n,force){
+  if(n===lastBadge&&!force)return;lastBadge=n;
+  try{caches.open("fstalk-meta").then(c=>c.put("./badge",new Response(String(n)))).catch(()=>{});}catch(e){}   // 앱이 꺼져 있을 때 서비스 워커가 이어서 셈
   document.title=n?"("+(n>99?"99+":n)+") FS Talk":"FS Talk";
   try{if("setAppBadge" in navigator){n?navigator.setAppBadge(n):navigator.clearAppBadge();}}catch(e){}
 }

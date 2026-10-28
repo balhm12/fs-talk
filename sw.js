@@ -13,6 +13,21 @@ firebase.initializeApp({
 firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
 
 const CACHE = "fstalk-v3";
+const META = "fstalk-meta";   // 앱 아이콘 숫자(안 읽은 수) 보관 — 캐시 정리 때 지우지 않음
+
+// 앱이 꺼져 있을 때 알림이 오면 앱 아이콘 숫자 +1 (앱을 열면 정확한 수로 다시 맞춤)
+self.addEventListener("push", e => {
+  let room = "";
+  try { const d = e.data && e.data.json(); room = (d && d.data && d.data.room) || ""; } catch (err) {}
+  if (!room || !self.navigator || !("setAppBadge" in self.navigator)) return;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    if (list.some(c => c.visibilityState === "visible")) return;   // 앱이 화면에 떠 있으면 앱이 직접 셈
+    return caches.open(META).then(c => c.match("./badge").then(r => r ? r.text() : "0").then(t => {
+      const n = (parseInt(t, 10) || 0) + 1;
+      return c.put("./badge", new Response(String(n))).then(() => self.navigator.setAppBadge(n));
+    }));
+  }).catch(() => {}));
+});
 
 // 앱이 직접 띄운 알림(창이 열려 있을 때)을 누르면 그 방으로 — FCM이 띄운 알림은 Firebase가 처리
 self.addEventListener("notificationclick", e => {
@@ -31,7 +46,7 @@ self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== META).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
   const req = e.request;
