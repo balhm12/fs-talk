@@ -66,6 +66,10 @@
             }
           }
         }
+      },
+      "roster": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
       }
     }
   }
