@@ -377,7 +377,17 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .toast{bottom:calc(80px + env(safe-area-inset-bottom))}
 }
 @media (max-width:820px) and (pointer:fine){
-  .app.m-list .list{padding-bottom:50px}
+  /* 마우스로 쓰는 좁은 PC 창: 아래 탭 대신 왼쪽 아이콘 막대를 계속 보여 줌 (휴대폰은 아래 탭 그대로) */
+  .app,.app.info-on{grid-template-columns:52px 1fr}
+  .rail{display:flex;padding:10px 0;gap:4px}
+  .rail .logo{width:32px;height:32px;font-size:12px;margin-bottom:8px;border-radius:10px}
+  .rail button{width:40px;height:40px;font-size:0;gap:0;border-radius:10px}
+  .rail button .ri{font-size:19px}
+  .rail .dot{top:1px;right:1px}
+  .tabbar,.app.m-list .tabbar{display:none!important}
+  .app.m-list .list{padding-bottom:0}
+  .sw{padding:10px 10px 12px}
+  .toast{bottom:20px}
   .lhead{padding:12px 12px 6px}
   .lhead h2{font-size:17px}
   .lsearch{font-size:13px;padding:7px 10px}
@@ -400,8 +410,6 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .attach{width:34px;height:34px;font-size:19px}
   .tabbar button{padding:5px 0 6px;font-size:10px}
   .tabbar button span.ri{font-size:17px}
-  .sw{padding:10px 10px 60px}
-  .toast{bottom:62px}
 }
 </style>
 
@@ -554,7 +562,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.37";
+const APP_VERSION="2026-10-28.38";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
