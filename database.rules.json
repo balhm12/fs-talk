@@ -88,6 +88,22 @@
             ".validate": "newData.isBoolean()"
           }
         }
+      },
+      "reads": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$room": {
+          "$p": {
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()",
+            ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+          }
+        }
+      },
+      "joined": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$p": {
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()",
+          ".validate": "newData.isBoolean()"
+        }
       }
     }
   }

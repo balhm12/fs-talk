@@ -92,6 +92,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .row.mine .bubble{background:var(--blue);color:#fff;border-radius:14px 4px 14px 14px;cursor:pointer}
 .row.mine.cont .bubble{border-radius:14px}
 .row.mine .tag{color:#BFE6FF}
+.unr{color:#E8A317;font-weight:700;font-size:11px}
 .row .del{display:none;font-size:11px;color:var(--bad);background:#fff;border:1px solid #F1C2CA;border-radius:6px;padding:1px 7px}
 .row.sel .del{display:inline-block}
 .row.adm .bubble{cursor:pointer}
@@ -325,7 +326,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.15";
+const APP_VERSION="2026-10-28.16";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -368,7 +369,7 @@ const R=p=>db.ref("talk/"+p);
 
 let uid=null,me=null,isAdmin=false;
 let msgs=[];const byId=new Map();
-let room="all",view="chat",mList=true;
+let room="",view="chat",mList=true;   // room "" = 아직 고른 방 없음(PC 첫 화면)
 const seen={};try{Object.assign(seen,JSON.parse(localStorage.getItem("fstalk-seen")||"{}"));}catch(e){}
 const isM=()=>window.matchMedia("(max-width:820px)").matches;
 const inRoom=(m,id)=>id==="all"||m.room===id;
@@ -406,13 +407,13 @@ function applyMe(){
 }
 
 /* ---------- 등록 ---------- */
-let roster={},picked=null,manual=false;
+let roster={},picked=null,manual=false,rosterVer=0;
 function rosterList(){const out=[];Object.keys(roster).forEach(t=>{const g=roster[t]||{};Object.keys(g).forEach(n=>out.push({team:t,name:n,office:typeof g[n]==="string"?g[n]:""}));});return out;}
 const TEAM_ORDER=["FSG","FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
 const teamLabel=t=>t==="FSG"?"FSG 그룹장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
-function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};syncPickMode();applyMe();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
+function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};rosterVer++;syncPickMode();applyMe();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
 function syncPickMode(){
   const has=rosterList().length>0;
   const usePick=has;
@@ -462,6 +463,10 @@ function start(){
   if(started){renderNav();return;}
   started=true;
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();},()=>{});
+  myKey=personKey(me.team,me.name);
+  R("joined/"+myKey).set(true).catch(()=>{});
+  R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
+  R("reads").on("value",s=>{reads=s.val()||{};schedule();},()=>{});
   refreshPush();
   ROOMS.forEach(r=>{
     const q=R("msgs/"+r.id).orderByChild("ts").limitToLast(PER_ROOM);
@@ -482,11 +487,30 @@ function addMsg(roomId,key,v){
 }
 function schedule(){if(renderQ)return;renderQ=true;requestAnimationFrame(()=>{renderQ=false;refresh();});}
 function refresh(){
-  if(view==="chat"){renderMsgs(false);if(!(isM()&&mList))markSeen();}
+  if(view==="chat"&&room){renderMsgs(false);if(!(isM()&&mList))markSeen();}
   else if(view==="search")renderSearch();
   renderNav();
 }
-function markSeen(){const l=msgs.filter(m=>inRoom(m,room)).pop();if(l&&seen[room]!==l.ts){seen[room]=l.ts;try{localStorage.setItem("fstalk-seen",JSON.stringify(seen));}catch(e){}}}
+/* 읽음 상태: talk/reads/{방}/{팀_이름} = 마지막으로 읽은 메시지 시각 (기기 간 공유) */
+let reads={},joined={},myKey="";
+const personKey=(team,name)=>String(team+"_"+name).replace(/[.#$\[\]\/]/g,"");
+const rd=(r,k)=>((reads[r]||{})[k])||0;
+const myRead=r=>Math.max(seen[r]||0,rd(r,myKey));
+function markSeen(){
+  if(!room||document.visibilityState!=="visible")return;
+  const l=msgs.filter(m=>inRoom(m,room)).pop();if(!l)return;
+  if((seen[room]||0)<l.ts){seen[room]=l.ts;try{localStorage.setItem("fstalk-seen",JSON.stringify(seen));}catch(e){}}
+  if(myKey&&rd(room,myKey)<l.ts){(reads[room]=reads[room]||{})[myKey]=l.ts;R("reads/"+room+"/"+myKey).set(l.ts).catch(()=>{});}
+}
+/* 메시지별 안 읽은 사람 수: 그 방 참여자 중 앱에 들어온 적 있는 사람만 셈 (보낸 사람 제외) */
+const roomJoinedCache={};
+function unreadPeople(m){
+  const key=m.room;let mem=roomJoinedCache[key];
+  if(!mem||mem._v!==rosterVer+"|"+Object.keys(joined).length){mem=roomMembers(m.room).map(p=>personKey(p.team,p.name)).filter(k=>joined[k]);mem._v=rosterVer+"|"+Object.keys(joined).length;roomJoinedCache[key]=mem;}
+  const author=rosterList().find(p=>p.name===m.name);const ak=author?personKey(author.team,author.name):"";
+  let n=0;mem.forEach(k=>{if(k!==ak&&Math.max(rd(m.room,k),rd("all",k))<m.ts)n++;});
+  return n;
+}
 
 /* ---------- 내비게이션 (메신저형) ---------- */
 const pad=n=>String(n).padStart(2,"0");
@@ -502,8 +526,8 @@ function personAv(name,cls){const p=personTeam(name);return avatar(String(name||
 function roomAv(id,cls){const l=ROOM_LOOK[id]||["?","#8A94A3"];return avatar(l[0],l[1],"sq"+(cls?" "+cls:""));}
 function roomMembers(id){const sc=ROOM_SCOPE[id];const all=rosterList();if(!sc)return all;return all.filter(p=>p.team===sc[0]&&(!sc[1]||p.office===sc[1]));}
 const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 다른 기기에서 쓴 글도 내 글
-function unread(id){return msgs.filter(m=>inRoom(m,id)&&m.ts>(seen[id]||0)&&!isMine(m)).length;}
-function totalUnread(){return msgs.filter(m=>!isMine(m)&&m.ts>(seen[m.room]||0)&&m.ts>(seen.all||0)).length;}
+function unread(id){return msgs.filter(m=>inRoom(m,id)&&!isMine(m)&&m.ts>Math.max(myRead(id),myRead(m.room),myRead("all"))).length;}
+function totalUnread(){return msgs.filter(m=>!isMine(m)&&m.ts>Math.max(myRead(m.room),myRead("all"))).length;}
 function fmtTime(ts){const d=new Date(ts),t=new Date();if(ymd(d)===ymd(t))return hm(d);const y=new Date(t);y.setDate(t.getDate()-1);if(ymd(d)===ymd(y))return "어제";return (d.getMonth()+1)+"월 "+d.getDate()+"일";}
 function renderNav(){
   const nav=$("nav");nav.textContent="";
@@ -566,7 +590,7 @@ function renderOrg(nav,q){
 let infoOn=(()=>{try{return localStorage.getItem("fstalk-info")!=="0";}catch(e){return true;}})();
 function renderInfo(){
   const box=$("info");box.textContent="";
-  const on=view==="chat"&&!(isM()&&mList)&&(isM()||window.innerWidth<=1200?infoOpen:infoOn);
+  const on=view==="chat"&&!!room&&!(isM()&&mList)&&(isM()||window.innerWidth<=1200?infoOpen:infoOn);
   $("app").classList.toggle("info-on",on);
   if(!on)return;
   const r=ROOMS.find(x=>x.id===room);const mem=roomMembers(room);
@@ -590,7 +614,9 @@ document.addEventListener("click",e=>{if(infoOpen&&!$("info").contains(e.target)
 function showView(){
   ["chatView","searchView","adminView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
-  if(view==="chat"){const r=ROOMS.find(x=>x.id===room);ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
+  $("composer").hidden=view==="chat"&&!room;
+  if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(document.createTextNode("💬 대화방을 선택하세요"));b.appendChild(e);}
+  else if(view==="chat"){const r=ROOMS.find(x=>x.id===room);ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
   else{$("title").textContent="관리";$("desc").textContent="등록 승인 · 관리자 지정 · 직원 명단";renderAdmin();}
   const ml=isM()&&mList;
@@ -612,11 +638,12 @@ function route(){
   showView();
 }
 window.addEventListener("hashchange",route);
+document.addEventListener("visibilitychange",()=>{if(started&&document.visibilityState==="visible"&&view==="chat"&&room&&!(isM()&&mList)){markSeen();renderNav();}});
 window.addEventListener("resize",()=>{if(started)renderInfo();});
 window.matchMedia("(max-width:820px)").addEventListener("change",()=>{if(started)showView();});
 $("backBtn").onclick=()=>{if(history.length>1&&location.hash)history.back();else go("");};
-$("rChat").onclick=$("tChat").onclick=()=>{listTab="rooms";$("lq").value="";isM()?go(""):(view!=="chat"?go("room-"+room):renderNav());};
-$("rOrg").onclick=$("tOrg").onclick=()=>{$("lq").value="";if(isM())go("org");else{listTab="org";if(view!=="chat")go("room-"+room);else renderNav();}};
+$("rChat").onclick=$("tChat").onclick=()=>{listTab="rooms";$("lq").value="";isM()?go(""):(view!=="chat"?go(room?"room-"+room:""):renderNav());};
+$("rOrg").onclick=$("tOrg").onclick=()=>{$("lq").value="";if(isM())go("org");else{listTab="org";if(view!=="chat")go(room?"room-"+room:"org");else renderNav();}};
 $("rSearch").onclick=$("tSearch").onclick=()=>{go("search");setTimeout(()=>$("q").focus(),30);};
 $("rAdmin").onclick=$("tAdmin").onclick=()=>go("admin");
 $("lq").addEventListener("input",renderNav);
@@ -701,6 +728,7 @@ function renderMsgs(scroll){
     line.appendChild(b);
     const meta=el("div","meta2");
     if(mine||isAdmin){const del=el("button","del","삭제");del.onclick=ev=>{ev.stopPropagation();removeMsg(m);};meta.appendChild(del);}
+    const un=unreadPeople(m);if(un>0)meta.appendChild(el("span","unr",String(un)));
     if(lastOfGroup)meta.appendChild(el("span",null,hm(d)));
     line.appendChild(meta);
     col.appendChild(line);
