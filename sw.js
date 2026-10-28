@@ -12,7 +12,19 @@ firebase.initializeApp({
 });
 firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
 
-const CACHE = "fstalk-v2";
+const CACHE = "fstalk-v3";
+
+// 앱이 직접 띄운 알림(창이 열려 있을 때)을 누르면 그 방으로 — FCM이 띄운 알림은 Firebase가 처리
+self.addEventListener("notificationclick", e => {
+  const url = e.notification.data && e.notification.data.url;
+  if (!url) return;
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    const target = new URL(url, self.registration.scope).href;
+    for (const c of list) { if (c.url.split("#")[0] === target.split("#")[0] && "focus" in c) { c.navigate ? c.navigate(target).catch(() => {}) : null; return c.focus(); } }
+    return self.clients.openWindow(target);
+  }));
+});
 const SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
