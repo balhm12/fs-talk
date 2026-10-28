@@ -1,0 +1,69 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "talk": {
+      "admins": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      },
+      "users": {
+        ".read": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true || (auth.uid === $uid && (!data.exists() || data.child('status').val() !== 'approved') && newData.child('status').val() === 'pending'))",
+          ".validate": "newData.hasChildren(['name', 'team', 'status'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20"
+          },
+          "team": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "office": {
+            ".validate": "newData.isString() && newData.val().length <= 10"
+          },
+          "status": {
+            ".validate": "newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected'"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "ua": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "msgs": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$room": {
+          ".indexOn": [
+            "ts"
+          ],
+          "$id": {
+            ".write": "$room.matches(/^(all|notice|ts|cs|west|east|central|daejeon|gwangju|south|busan|daegu|fss)$/) && auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('talk/admins/' + auth.uid).val() === true)))",
+            ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts'])",
+            "uid": {
+              ".validate": "newData.val() === auth.uid"
+            },
+            "name": {
+              ".validate": "newData.val() === root.child('talk/users/' + auth.uid + '/name').val()"
+            },
+            "text": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 4000"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    }
+  }
+}
