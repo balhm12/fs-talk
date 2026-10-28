@@ -175,6 +175,28 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 .aifoot{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.5}
 .myedit{display:flex;align-items:center;gap:10px;margin:0 10px 8px;padding:10px 12px;border:1px solid var(--selline);border-radius:12px;background:var(--sel2);font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
 .myedit:hover{border-color:var(--blue)}
+/* 실마리 연동 */
+.pkhint{font-size:13px;color:var(--sub);margin:8px 0 10px;line-height:1.5}
+.silbox{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin:0 0 12px}
+.silhd{display:flex;align-items:center;gap:6px;color:#005BAC;margin-bottom:6px}
+.silhd b{font-size:14px}
+.sillink{margin-left:auto;background:none;border:0;color:var(--link);font-size:12px;padding:2px 0}
+.silrow{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line2);padding:8px 2px;color:var(--text)}
+.silrow:hover{background:var(--soft2)}
+.silt{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.silt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--strong)}
+.sildev{flex:none;font-size:11px;font-weight:700;color:#fff;background:#005BAC;border-radius:5px;padding:1px 6px}
+.silm{font-size:12px;color:var(--sub)}
+.sillock{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sub)}
+.sillock .btn{width:auto;flex:none;margin:0;padding:6px 12px}
+.silchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.row.mine .silchips{justify-content:flex-end}
+.silchip{display:inline-flex;align-items:center;gap:5px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;border-radius:14px;padding:3px 10px;font-size:12px;max-width:100%}
+.silchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.silchip:hover{border-color:#005BAC}
+html[data-theme=dark] .silchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
+html[data-theme=dark] .silhd{color:#8CC4F5}
+@media (pointer:coarse){.silchip{font-size:14px;padding:5px 12px}.silt b{font-size:16px}.silm{font-size:13px}.silhd b{font-size:16px}}
 /* 공지 확인 */
 .ackbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
 .row.mine .ackbar{justify-content:flex-end}
@@ -738,6 +760,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
         </div>
         <div class="hint">장비명·에러·병원·부품 등 대화에 나온 말이면 다 찾습니다. 대소문자와 띄어쓰기 차이는 무시해요. 결과를 누르면 그 대화로 이동합니다.</div>
         <div class="chips" id="chips"></div>
+        <div class="silbox" id="silBox" hidden></div>
         <div class="sum"><span>검색 결과 <b id="cnt">–</b>건</span></div>
         <div class="res" id="res"></div>
       </div>
@@ -794,7 +817,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.58";
+const APP_VERSION="2026-10-28.59";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1050,6 +1073,7 @@ function start(){
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
+  setTimeout(()=>{silRecall().then(k=>{if(k){silKey=k;silLoad().catch(()=>{});}}).catch(()=>{});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
   R("acks").on("value",s=>{acks=s.val()||{};schedule();if(!acksLoaded){acksLoaded=true;setTimeout(maybeNoticePrompt,2500);}},()=>{});
   R("lockreset/"+myKey).on("value",s=>{const v=+s.val()||0;const c=lockCfg();
     if(v&&c&&(c.set||0)<v){saveLockCfg(null);if(isLocked())unlock();toast("관리자가 화면 잠금을 초기화했습니다. 필요하면 설정에서 다시 켜 주세요.");if(view==="settings")renderSettings();}},()=>{});
@@ -1486,6 +1510,7 @@ function renderMsgs(scroll){
     const rx=reactsOf(m);
     if(rx.length){const rw=el("div","reacts");const mineR=myReact(m);rx.forEach(([c,n])=>{const k=el("button","rc"+(mineR===c?" on":""),REACT_EMO[c]+" "+n);k.title=reactWho(m,c);k.onclick=()=>setReact(m,c);rw.appendChild(k);});col.appendChild(rw);}
     if(isNoticeMsg(m)&&!pending.has(m.id)&&m.ts>Date.now()-ACK_DAYS*864e5)col.appendChild(ackBar(m,mine));
+    if(silIdx){const sc=silChips(m);if(sc)col.appendChild(sc);}
     row.appendChild(col);
     box.appendChild(row);
   });
@@ -2053,6 +2078,7 @@ function renderSearch(){
   const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12);
   if(top.length){box.appendChild(el("span","hint","자주 쓴 태그:"));top.forEach(([t,n])=>{const c=el("button","chip",t+" "+n);c.onclick=()=>{$("q").value=t;renderSearch();};box.appendChild(c);});}
   const ts=terms($("q").value),fr=$("fRoom").value,fp=+$("fPeriod").value||0,fw=$("fWho").value;
+  renderSil($("q").value);
   const res=$("res");res.textContent="";
   if(!ts.length&&!fr&&!fw&&!fp){$("cnt").textContent="–";res.appendChild(el("div","more","검색어를 입력하거나 방·기간을 고르세요."));return;}
   const since=fp?Date.now()-fp*864e5:0;
@@ -2077,6 +2103,121 @@ function renderSearch(){
     res.appendChild(h);
   });
   if(hits.length>200)res.appendChild(el("div","more","최근 200건만 표시했습니다. 검색어를 더 구체적으로 넣어 보세요."));
+}
+/* ---------- 실마리(Sysmex TS Guide) 연동: 검색에서 관련 에러·조치 보기 + 대화 속 에러 자동 연결 ----------
+   실마리 데이터는 비밀번호로 잠겨 있음(AES-256-GCM). 키는 이 기기에만 두고(실마리와 같은 방식·같은 저장 이름, 30일) 서버로 보내지 않음.
+   같은 사이트(balhm12.github.io)라 PC·안드로이드 크롬에서는 실마리에서 넣은 비밀번호를 그대로 씀. */
+const SIL_BASE="https://balhm12.github.io/sysmex-ts/",SIL_KEY="sysmex-ts-key";
+let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null;
+const silB64=s=>{const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;};
+const silToB64=buf=>{let s="";const a=new Uint8Array(buf);for(let i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s);};
+async function silGetAuth(){if(!silAuth){const r=await fetch(SIL_BASE+"data/_auth.json",{cache:"no-cache"});if(!r.ok)throw new Error("실마리 연결 실패 "+r.status);silAuth=await r.json();}return silAuth;}
+async function silRecall(){
+  const a=await silGetAuth();let st=null;try{st=JSON.parse(localStorage.getItem(SIL_KEY)||"null");}catch(e){}
+  if(!st||st.until<Date.now()||st.salt!==a.salt)return null;                       // 비밀번호가 바뀌면 salt가 바뀜
+  return crypto.subtle.importKey("raw",silB64(st.k),"AES-GCM",true,["decrypt"]);
+}
+async function silOpen(key,buf){const a=new Uint8Array(buf);return crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},key,a.slice(12));}
+async function silUnlock(pw){
+  const a=await silGetAuth();
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:silB64(a.salt),iterations:a.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},true,["decrypt"]);
+  try{await silOpen(key,silB64(a.verify).buffer);}catch(e){return false;}
+  const raw=await crypto.subtle.exportKey("raw",key);
+  try{localStorage.setItem(SIL_KEY,JSON.stringify({k:silToB64(raw),until:Date.now()+30*864e5,salt:a.salt}));}catch(e){}
+  silKey=key;silErr="";silP=null;return true;
+}
+function silLoad(){                                    // 검색용 목록(에러 이름·코드·장비) — 한 번 풀면 이 화면에서 계속 씀
+  if(silIdx)return Promise.resolve(silIdx);
+  if(silP)return silP;
+  silP=(async()=>{
+    const a=await silGetAuth();
+    if(!silKey)silKey=await silRecall();
+    if(!silKey){const e=new Error("locked");e.locked=true;throw e;}
+    const r=await fetch(SIL_BASE+"data/search-index.json.enc",{cache:"no-cache"});if(!r.ok)throw new Error("실마리 데이터 "+r.status);
+    let raw;try{raw=await silOpen(silKey,await r.arrayBuffer());}catch(e){try{localStorage.removeItem(SIL_KEY);}catch(x){}silKey=null;const er=new Error("locked");er.locked=true;throw er;}
+    const j=a.gz?await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).json():JSON.parse(new TextDecoder().decode(raw));
+    silIdx=j.rows||[];silVer++;silErr="";
+    silCodes=new Map();silTitles=[];
+    silIdx.forEach(r=>{(r.c||[]).forEach(c=>{const k=String(c).toLowerCase();if(k.length>=3){if(!silCodes.has(k))silCodes.set(k,[]);silCodes.get(k).push(r);}});
+      const t=String(r.t||"").toLowerCase();if(t.length>=8)silTitles.push([t,r]);});
+    schedule();if(view==="search")renderSil($("q").value);
+    return silIdx;
+  })();
+  silP.catch(e=>{silP=null;silErr=e.locked?"locked":e.message;if(view==="search")renderSil($("q").value);});
+  return silP;
+}
+function silScore(r,q){                                 // 실마리 앱과 같은 순서: 코드 > 에러 이름 > 기타 키워드
+  for(const c0 of r.c||[]){const c=String(c0).toLowerCase();if(c===q)return 1000;if(c.indexOf(q)===0)return 900;}
+  const k1=r.k1||"";if(k1.indexOf(q)===0)return 800;if((" "+k1).indexOf(" "+q)>=0)return 700;if(k1.indexOf(q)>=0)return 600;
+  const k2=r.k2||"";if((" "+k2).indexOf(" "+q)>=0)return 400;if(k2.indexOf(q)>=0)return 300;
+  if((r.k3||"").indexOf(q)>=0)return 100;return 0;
+}
+function silSearch(q,limit){
+  q=String(q||"").trim().toLowerCase();if(!q||!silIdx)return [];
+  const run=qq=>silIdx.map(r=>({s:silScore(r,qq),r})).filter(x=>x.s).sort((a,b)=>b.s-a.s||a.r.p-b.r.p||b.r.n-a.r.n);
+  let out=run(q);
+  if(!out.length&&/\s/.test(q)){const words=q.split(/\s+/).filter(w=>w.length>=2);const seen=new Map();words.forEach(w=>run(w).forEach(x=>{const k=x.r.d+"/"+x.r.p+"/"+x.r.i;const o=seen.get(k);if(o)o.s+=x.s;else seen.set(k,{s:x.s,r:x.r});}));out=[...seen.values()].sort((a,b)=>b.s-a.s||b.r.n-a.r.n);}
+  return out.slice(0,limit||5).map(x=>x.r);
+}
+const silUrl=r=>SIL_BASE+"#/e/"+encodeURIComponent(r.d)+"/"+r.p+"/"+r.i;
+function silOpenUrl(u){try{window.open(u,"_blank","noopener");}catch(e){location.href=u;}}
+function silRowEl(r){
+  const b=el("button","silrow");
+  const t1=el("span","silt");t1.appendChild(el("span","sildev",r.d));t1.appendChild(el("b",null,r.t||"(이름 없음)"));b.appendChild(t1);
+  const t2=el("span","silm",((r.c&&r.c.length)?r.c.slice(0,2).join(" / ")+" · ":"")+"발생 "+(r.n||0)+"건");b.appendChild(t2);
+  b.onclick=()=>silOpenUrl(silUrl(r));return b;
+}
+function renderSil(q){
+  const box=$("silBox");if(!box)return;q=String(q||"").trim();
+  if(q.length<2){box.hidden=true;return;}
+  box.hidden=false;box.textContent="";
+  const hd=el("div","silhd");hd.appendChild(icEl("wrench","",16));hd.appendChild(el("b",null,"실마리"));
+  const all=el("button","sillink","실마리에서 「"+q.slice(0,20)+"」 찾기 ›");all.onclick=()=>silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(q));hd.appendChild(all);box.appendChild(hd);
+  if(!silIdx){
+    if(silErr==="locked"){const lk=el("div","sillock");lk.appendChild(el("span",null,"에러 조치도 함께 보려면 실마리 비밀번호를 이 기기에 한 번 넣어 주세요. (30일 기억)"));const ub=el("button","btn pri","잠금 풀기");ub.onclick=openSilUnlock;lk.appendChild(ub);box.appendChild(lk);}
+    else if(silErr){box.appendChild(el("div","more","실마리를 불러오지 못했습니다: "+silErr));}
+    else{box.appendChild(el("div","more","실마리 불러오는 중…"));silLoad().catch(()=>{});}
+    return;
+  }
+  const rows=silSearch(q,5);
+  if(!rows.length){box.appendChild(el("div","more","실마리에 맞는 에러가 없습니다. 에러 이름 일부·코드·부품 번호로 찾아보세요."));return;}
+  rows.forEach(r=>box.appendChild(silRowEl(r)));
+}
+function openSilUnlock(){
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"실마리 잠금 풀기"));
+  c.appendChild(el("div","pkhint","실마리 앱에 넣는 것과 같은 비밀번호입니다. 이 기기에만 30일 동안 기억하고 서버로 보내지 않습니다."));
+  const f=el("div","f");const inp=el("input");inp.type="password";inp.id="silPw";inp.autocomplete="current-password";inp.placeholder="실마리 비밀번호";f.appendChild(inp);c.appendChild(f);
+  const ok=el("button","btn pri","잠금 풀기");c.appendChild(ok);
+  const go1=async()=>{if(!inp.value)return;ok.disabled=true;ok.textContent="확인 중…";
+    try{const good=await silUnlock(inp.value);if(!good){toast("비밀번호가 맞지 않습니다.");ok.disabled=false;ok.textContent="잠금 풀기";inp.select();return;}
+      closeProfile();toast("실마리를 연결했습니다.");silLoad().catch(()=>{});if(view==="search")renderSil($("q").value);}
+    catch(e){toast("실패: "+e.message);ok.disabled=false;ok.textContent="잠금 풀기";}};
+  ok.onclick=go1;inp.onkeydown=e=>{if(e.key==="Enter")go1();};
+  $("pOv").hidden=false;setTimeout(()=>inp.focus(),50);
+}
+/* 대화 속 에러 자동 연결: 실마리 에러 이름이 그대로 나오거나, 에러 코드가 「에러·코드·장비명」과 함께 나오면 버튼을 붙임 */
+const SIL_ERRW=/(에러|error|err|오류|코드|code|알람|alarm)/i;
+function silMatches(m){
+  if(!silIdx||!m.text)return [];
+  if(m._silv===silVer)return m._sil;
+  const t=m.text.toLowerCase(),found=new Map();
+  silTitles.forEach(([tt,r])=>{if(t.indexOf(tt)>=0)found.set(r.d+"/"+r.p+"/"+r.i,{r,s:2});});
+  const errW=SIL_ERRW.test(t);
+  (t.match(/[a-z0-9][a-z0-9.\-]{2,}/g)||[]).forEach(tok=>{
+    const rows=silCodes.get(tok);if(!rows)return;
+    rows.forEach(r=>{const dev=t.indexOf(String(r.d).toLowerCase())>=0;if(!errW&&!dev)return;const k=r.d+"/"+r.p+"/"+r.i;if(!found.has(k))found.set(k,{r,s:dev?1.5:1});});
+  });
+  const out=[...found.values()].sort((a,b)=>b.s-a.s||b.r.n-a.r.n).slice(0,3).map(x=>x.r);
+  m._silv=silVer;m._sil=out;return out;
+}
+function silChips(m){
+  const ms=silMatches(m);if(!ms.length)return null;
+  const w=el("div","silchips");
+  ms.forEach(r=>{const b=el("button","silchip");b.appendChild(icEl("wrench","",13));b.appendChild(el("span",null,"실마리 · "+r.d+" · "+String(r.t||"").slice(0,26)));b.title=(r.t||"")+" — 원인·조치 보기";b.onclick=e=>{e.stopPropagation();silOpenUrl(silUrl(r));};w.appendChild(b);});
+  return w;
 }
 let tmr;["q","fRoom","fPeriod","fWho"].forEach(id=>$(id).addEventListener(id==="q"?"input":"change",()=>{clearTimeout(tmr);tmr=setTimeout(renderSearch,120);}));
 
