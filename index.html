@@ -709,7 +709,8 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .li .mid{gap:3px}
   .cnt{min-width:22px;height:22px;line-height:22px;font-size:12px}
   .lgrp{font-size:13px;padding:14px 10px 4px}
-  .mlinks a{font-size:14px}
+  .mlinks a{font-size:13.5px;flex:1 1 0;min-width:0;justify-content:center;gap:4px;padding:7px 6px}   /* 바로가기 4개가 한 줄에 */
+  .mlinks a svg{flex:none}
   .myedit{font-size:14px}
 }
 </style>
@@ -769,6 +770,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <a class="rlink" href="https://balhm12.github.io/Sysmex-schedule/index.html" target="_blank" rel="noopener" title="설치일정 (새 창)"><span class="ri" data-ic="box"></span>설치</a>
     <a class="rlink" href="https://balhm12.github.io/Sysmex-schedule/work-schedule.html" target="_blank" rel="noopener" title="근무일정 (새 창)"><span class="ri" data-ic="calendar"></span>근무</a>
     <a class="rlink" href="https://balhm12.github.io/sysmex-ts/" target="_blank" rel="noopener" title="실마리 · Sysmex TS Guide (새 창)"><span class="ri" data-ic="compass"></span>실마리</a>
+    <a class="rlink" href="https://sysmex-system-configuration.web.app/" target="_blank" rel="noopener" title="전국 시스템 구성도 (새 창)"><span class="ri" data-ic="sysgrid"></span>구성도</a>
     <div class="grow"></div>
     <button id="rSettings" title="설정"><span class="ri" data-ic="gear"></span>설정</button>
     <div class="meav" id="meAv"></div>
@@ -782,6 +784,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <a href="https://balhm12.github.io/Sysmex-schedule/index.html" target="_blank" rel="noopener"><span data-ic="box"></span>설치일정</a>
       <a href="https://balhm12.github.io/Sysmex-schedule/work-schedule.html" target="_blank" rel="noopener"><span data-ic="calendar"></span>근무일정</a>
       <a href="https://balhm12.github.io/sysmex-ts/" target="_blank" rel="noopener"><span data-ic="compass"></span>실마리</a>
+      <a href="https://sysmex-system-configuration.web.app/" target="_blank" rel="noopener"><span data-ic="sysgrid"></span>구성도</a>
     </div>
     <div id="inst"></div>
     <div id="pushCard"></div>
@@ -885,7 +888,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-29.74";
+const APP_VERSION="2026-10-29.75";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -938,6 +941,7 @@ const ICON={
   panel:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M14.5 4.5v15"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   send:'<path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5z"/>',
+  sysgrid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7M17.5 14v7"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>',
   bell:'<path d="M6 9a6 6 0 0 1 12 0c0 6.5 2.5 8 2.5 8h-17S6 15.5 6 9"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
   bellOff:'<path d="M6 9a6 6 0 0 1 9.5-4.9M18 9c0 6.5 2.5 8 2.5 8H8"/><path d="M6 9c0 3.3-.6 5.4-1.3 6.6M10 20.5a2.2 2.2 0 0 0 4 0M3 3l18 18"/>',
@@ -2966,7 +2970,7 @@ function renderSettings(){
   setRow(c,"lock","화면 잠금",lc?"켜짐 · PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]:"꺼짐 · 이 기기에서 PIN(지문·얼굴)으로 잠그기",()=>openLockSettings());
   // 바로가기
   c=setSec(wrap,"바로가기");
-  [["box","설치일정","https://balhm12.github.io/Sysmex-schedule/index.html"],["calendar","근무일정","https://balhm12.github.io/Sysmex-schedule/work-schedule.html"],["compass","실마리 · Sysmex TS Guide","https://balhm12.github.io/sysmex-ts/"]].forEach(([i,t,u])=>setRow(c,i,t,"새 창으로 열기",()=>window.open(u,"_blank","noopener")));
+  [["box","설치일정","https://balhm12.github.io/Sysmex-schedule/index.html"],["calendar","근무일정","https://balhm12.github.io/Sysmex-schedule/work-schedule.html"],["compass","실마리 · Sysmex TS Guide","https://balhm12.github.io/sysmex-ts/"],["sysgrid","전국 시스템 구성도","https://sysmex-system-configuration.web.app/"]].forEach(([i,t,u])=>setRow(c,i,t,"새 창으로 열기",()=>window.open(u,"_blank","noopener")));
   // 앱 정보
   c=setSec(wrap,"앱 정보");
   setRow(c,"info","버전",null,null,APP_VERSION);
