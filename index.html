@@ -344,6 +344,33 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .tabbar .dot{right:calc(50% - 22px)}
   .toast{bottom:calc(80px + env(safe-area-inset-bottom))}
 }
+@media (max-width:820px) and (pointer:fine){
+  .app.m-list .list{padding-bottom:50px}
+  .lhead{padding:12px 12px 6px}
+  .lhead h2{font-size:17px}
+  .lsearch{font-size:13px;padding:7px 10px}
+  .litems{padding:0 4px 8px}
+  .li{padding:6px 8px;gap:9px}
+  .li .nm{font-size:14px}
+  .li .pv{font-size:12px}
+  .av{width:38px;height:38px;font-size:12px}
+  .av.s{width:30px;height:30px;font-size:10px}
+  .row .avs{width:30px}
+  .top{padding:6px 10px;min-height:48px}
+  .top h2{font-size:15px}
+  .top .av{width:30px;height:30px}
+  .menu{font-size:22px}
+  .msgs{padding:8px 10px}
+  .bubble{padding:7px 11px}
+  .composer{padding:7px 8px}
+  .composer textarea,.filters input,.filters select{font-size:14px}
+  .composer .btn{padding:7px 13px}
+  .attach{width:34px;height:34px;font-size:19px}
+  .tabbar button{padding:5px 0 6px;font-size:10px}
+  .tabbar button span.ri{font-size:17px}
+  .sw{padding:10px 10px 60px}
+  .toast{bottom:62px}
+}
 </style>
 
 </head>
@@ -414,6 +441,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <div><h2 id="title"></h2><div class="desc" id="desc"></div></div>
       <div class="grow"></div>
       <button class="tb" id="favBtn" title="즐겨찾기" aria-label="즐겨찾기" hidden>☆</button>
+      <button class="tb" id="popBtn" title="이 대화방을 작은 새 창으로 열기" aria-label="새 창으로 열기" hidden>⧉</button>
       <button class="tb" id="infoBtn" title="대화방 정보" aria-label="대화방 정보">☰</button>
     </div>
     <div class="banner" id="banner" hidden></div>
@@ -482,7 +510,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.29";
+const APP_VERSION="2026-10-28.30";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -528,6 +556,7 @@ let msgs=[];const byId=new Map();
 let room="",view="chat",mList=true;   // room "" = 아직 고른 방 없음(PC 첫 화면)
 const seen={};try{Object.assign(seen,JSON.parse(localStorage.getItem("fstalk-seen")||"{}"));}catch(e){}
 const isM=()=>window.matchMedia("(max-width:820px)").matches;
+const isTouch=()=>window.matchMedia("(pointer:coarse)").matches;   // 손가락 화면(휴대폰·태블릿) — 줄바꿈은 Enter, 보내기는 버튼
 const SV=firebase.database.ServerValue.TIMESTAMP;
 /* 1:1 대화방: dm_{팀_이름}__{팀_이름} (두 사람 키를 정렬해서 붙임) */
 const isDm=id=>typeof id==="string"&&id.indexOf("dm_")===0;
@@ -858,6 +887,7 @@ function showView(){
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
   $("composer").hidden=view!=="chat"||!room;
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
+  $("popBtn").hidden=view!=="chat"||!room||isTouch();
   if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(document.createTextNode("💬 대화방을 선택하세요"));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
@@ -1115,6 +1145,11 @@ async function toggleFav(){
   catch(e){toast("변경 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 $("favBtn").onclick=toggleFav;
+$("popBtn").onclick=()=>{
+  if(!room)return;
+  const w=window.open(location.pathname+"#room-"+encodeURIComponent(room),"fstalk-"+room,"width=440,height=720,menubar=no,toolbar=no,location=no,status=no");
+  if(!w)toast("팝업이 막혔어요. 주소창 오른쪽의 팝업 차단 아이콘에서 허용해 주세요.");else{try{w.focus();}catch(e){}}
+};
 
 /* ---------- 저장한 글 (메시지 즐겨찾기) ---------- */
 let saved={};
@@ -1283,7 +1318,7 @@ input.addEventListener("keydown",e=>{
     if(e.key==="Escape"){$("mbox").hidden=true;mcands=[];return;}
   }
   if(e.key==="Escape"&&(replyTo||editing)){cancelCompose();return;}
-  if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&!isM()){e.preventDefault();$("composer").requestSubmit();}
+  if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&!isTouch()){e.preventDefault();$("composer").requestSubmit();}
 });
 input.addEventListener("paste",e=>{const f=e.clipboardData&&e.clipboardData.files;if(f&&f.length){e.preventDefault();sendFiles(f);}});
 $("composer").addEventListener("submit",async e=>{
@@ -1302,7 +1337,7 @@ $("composer").addEventListener("submit",async e=>{
   try{const ref=await R("msgs/"+r).push(data);afterSend(r,ref.key);}
   catch(err){input.value=t;replyTo=rt;renderCbar();toast("전송 실패: "+(err.code||err.message));}
 });
-function setPlaceholder(){input.placeholder=(isM()||window.innerWidth<=1100)?"메시지 입력 · @이름":"메시지 입력 · Enter 전송 · @이름 알림 · #태그 · 사진 붙여넣기";}
+function setPlaceholder(){input.placeholder=isTouch()?"메시지 입력 · @이름":window.innerWidth<=1100?"메시지 입력 (Enter 전송)":"메시지 입력 · Enter 전송 · @이름 알림 · #태그 · 사진 붙여넣기";}
 setPlaceholder();window.matchMedia("(max-width:820px)").addEventListener("change",setPlaceholder);window.matchMedia("(max-width:1100px)").addEventListener("change",setPlaceholder);
 
 /* ---------- 검색 ---------- */
