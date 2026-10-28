@@ -221,6 +221,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <div class="f"><label for="rTeam">소속</label>
       <select id="rTeam">
         <option value="">선택하세요</option>
+        <option value="FSG">FSG (그룹장)</option>
         <option>FS WEST</option><option>FS EAST</option><option>FS CENTRAL</option><option>FS SOUTH</option><option>FSS Team</option><option>FSOM Team</option><option>기타</option>
       </select></div>
     <div class="f" id="rOfficeBox" hidden><label for="rOffice">사무소</label><select id="rOffice"></select></div>
@@ -309,7 +310,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.6";
+const APP_VERSION="2026-10-28.7";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -385,7 +386,8 @@ auth.onAuthStateChanged(u=>{
 /* ---------- 등록 ---------- */
 let roster={},picked=null,manual=false;
 function rosterList(){const out=[];Object.keys(roster).forEach(t=>{const g=roster[t]||{};Object.keys(g).forEach(n=>out.push({team:t,name:n,office:typeof g[n]==="string"?g[n]:""}));});return out;}
-const TEAM_ORDER=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
+const TEAM_ORDER=["FSG","FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
+const teamLabel=t=>t==="FSG"?"FSG 그룹장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
 function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};syncPickMode();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
@@ -394,7 +396,7 @@ function syncPickMode(){
   const usePick=has&&!manual;
   $("rPick").hidden=!usePick;$("rManual").hidden=usePick;$("toPick").hidden=!has;
   const sel=$("pTeam"),cur=sel.value;sel.textContent="";sel.appendChild(new Option("전체 팀",""));
-  [...new Set(rosterList().map(p=>p.team))].sort((a,b)=>teamRank(a)-teamRank(b)||a.localeCompare(b,"ko")).forEach(t=>sel.appendChild(new Option(t,t)));
+  [...new Set(rosterList().map(p=>p.team))].sort((a,b)=>teamRank(a)-teamRank(b)||a.localeCompare(b,"ko")).forEach(t=>sel.appendChild(new Option(teamLabel(t),t)));
   sel.value=cur;
   if(usePick)renderPick();
 }
@@ -405,10 +407,10 @@ function renderPick(){
   if(!list.length){box.appendChild(el("div","none","찾는 이름이 없습니다."));return;}
   let g="";
   list.forEach(p=>{
-    if(p.team!==g){g=p.team;box.appendChild(el("div","grp",g));}
+    if(p.team!==g){g=p.team;box.appendChild(el("div","grp",teamLabel(g)));}
     const b=el("button",picked&&picked.name===p.name&&picked.team===p.team?"on":"");b.type="button";
     b.appendChild(el("span",null,p.name));b.appendChild(el("small",null,p.office?p.office+" 사무소":""));
-    b.onclick=()=>{picked=p;$("pSel").hidden=false;$("pSel").textContent="선택: "+p.name+" · "+p.team+(p.office?" · "+p.office+" 사무소":"");renderPick();};
+    b.onclick=()=>{picked=p;$("pSel").hidden=false;$("pSel").textContent="선택: "+p.name+" · "+teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"");renderPick();};
     box.appendChild(b);
   });
 }
@@ -475,7 +477,7 @@ const pad=n=>String(n).padStart(2,"0");
 const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const hm=d=>{const h=d.getHours();return (h<12?"오전 ":"오후 ")+((h%12)||12)+":"+pad(d.getMinutes());};
 let pendingCount=0,listTab="rooms";
-const TEAM_COLOR={"FS WEST":"#009EE0","FS EAST":"#E8871E","FS CENTRAL":"#7A5CC4","FS SOUTH":"#1FA85C","FSS Team":"#D6336C","FSOM Team":"#0E7C86"};
+const TEAM_COLOR={"FSG":"#1A3A6B","FS WEST":"#009EE0","FS EAST":"#E8871E","FS CENTRAL":"#7A5CC4","FS SOUTH":"#1FA85C","FSS Team":"#D6336C","FSOM Team":"#0E7C86"};
 const ROOM_LOOK={all:["전체","#1A3A6B"],notice:["공지","#E5484D"],ts:["FS","#005BAC"],cs:["CS","#0E9AA7"],west:["W","#009EE0"],east:["E","#E8871E"],central:["C","#7A5CC4"],daejeon:["대전","#9A7FD8"],gwangju:["광주","#9A7FD8"],south:["S","#1FA85C"],busan:["부산","#45BE7A"],daegu:["대구","#45BE7A"],fss:["FSS","#D6336C"],fsom:["OM","#0E7C86"]};
 const ROOM_SCOPE={west:["FS WEST"],east:["FS EAST"],central:["FS CENTRAL"],daejeon:["FS CENTRAL","대전"],gwangju:["FS CENTRAL","광주"],south:["FS SOUTH"],busan:["FS SOUTH","부산"],daegu:["FS SOUTH","대구"],fss:["FSS Team"],fsom:["FSOM Team"]};
 function personTeam(name){const p=rosterList().find(x=>x.name===name);return p||null;}
@@ -532,11 +534,11 @@ function renderOrg(nav,q){
   if(!list.length){nav.appendChild(el("div","more",rosterList().length?"찾는 사람이 없습니다.":"관리자가 명단을 아직 등록하지 않았습니다."));return;}
   let g="";
   list.forEach(p=>{
-    const key=p.team+(p.office?" · "+p.office:"");
+    const key=teamLabel(p.team)+(p.office?" · "+p.office:"");
     if(key!==g){g=key;nav.appendChild(el("div","lgrp",key));}
     const b=el("button","li");
     b.appendChild(personAv(p.name));
-    const mid=el("div","mid");mid.appendChild(el("div","nm",p.name+(me&&me.name===p.name?" (나)":"")));mid.appendChild(el("div","pv",p.team+(p.office?" · "+p.office+" 사무소":"")));
+    const mid=el("div","mid");mid.appendChild(el("div","nm",p.name+(me&&me.name===p.name?" (나)":"")));mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")));
     b.appendChild(mid);
     const target=Object.keys(ROOM_SCOPE).find(k=>{const sc=ROOM_SCOPE[k];return sc[0]===p.team&&sc[1]&&sc[1]===p.office;})||Object.keys(ROOM_SCOPE).find(k=>ROOM_SCOPE[k][0]===p.team&&!ROOM_SCOPE[k][1]);
     b.title=target?roomName(target)+" 방 열기":"";
@@ -554,7 +556,7 @@ function renderInfo(){
   const h=el("div","ih");h.appendChild(roomAv(room));h.appendChild(el("b",null,r.name));h.appendChild(el("span",null,r.desc));box.appendChild(h);
   const l=el("div","il");l.appendChild(el("div","lgrp","참여자 "+mem.length+"명"));
   mem.sort((a,b)=>teamRank(a.team)-teamRank(b.team)||a.name.localeCompare(b.name,"ko")).forEach(p=>{
-    const m=el("div","mem");m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));t.appendChild(el("br"));t.appendChild(el("small",null,p.team+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
+    const m=el("div","mem");m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
   });
   if(!mem.length)l.appendChild(el("div","more","명단이 등록되면 참여자가 표시됩니다."));
   box.appendChild(l);
