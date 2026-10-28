@@ -58,7 +58,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* 목록 패널 */
 .list{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0}
 .lhead{padding:16px 16px 10px}
-.lhead h2{margin:0 0 10px;font-size:18px;display:flex;align-items:center;gap:8px}
+.lhead h2{margin:0 0 10px;font-size:18px;display:flex;align-items:center;gap:8px;color:var(--strong)}
 .lhrow{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .allbell{display:flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:16px;padding:4px 11px;font-size:12px;white-space:nowrap;margin-top:1px}
 .allbell:hover{border-color:var(--blue)}
@@ -559,6 +559,24 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .hit .tx{font-size:15px}
   .hit .meta{font-size:13px}
 }
+/* 휴대폰 대화 목록: 카카오톡과 비슷하게 (방 이름 17 · 미리보기 15 · 시간 13 · 아이콘 48) */
+@media (pointer:coarse){
+  .lhead h2{font-size:24px}
+  .li{padding:10px 10px;gap:14px;min-height:64px}
+  .li .av{width:48px;height:48px;font-size:14px}
+  .li .av.sq{border-radius:16px}
+  .li .av.sq svg{width:24px;height:24px}
+  .li.sub .av{width:40px;height:40px;font-size:12px}
+  .li .nm{font-size:17px}
+  .li .nm small{font-size:14px}
+  .li .pv{font-size:15px}
+  .li .tm{font-size:13px}
+  .li .mid{gap:3px}
+  .cnt{min-width:22px;height:22px;line-height:22px;font-size:12px}
+  .lgrp{font-size:13px;padding:14px 10px 4px}
+  .mlinks a{font-size:14px}
+  .myedit{font-size:14px}
+}
 </style>
 
 </head>
@@ -729,7 +747,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.48";
+const APP_VERSION="2026-10-28.49";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1072,7 +1090,7 @@ function unread(id){return msgs.filter(m=>inRoom(m,id)&&isUnread(m,id)).length;}
 function unreadMention(id){return msgs.some(m=>inRoom(m,id)&&isUnread(m,id)&&mentionsMe(m));}
 function totalUnread(){return msgs.filter(m=>shown(m)&&!isMine(m)&&m.ts>readFor(m)).length;}
 const isImgF=f=>/^image\//.test(f&&f.mime||"");
-function previewText(m){if(m.text)return m.text;if(m.file)return isImgF(m.file)?"📷 사진":"📎 "+m.file.name;return "";}
+function previewText(m){if(m.text)return m.text;if(m.file)return isImgF(m.file)?"사진":"파일: "+m.file.name;return "";}
 const msgText=m=>m.text+(m.file?" "+m.file.name:"");
 function fmtTime(ts){const d=new Date(ts),t=new Date();if(ymd(d)===ymd(t))return hm(d);const y=new Date(t);y.setDate(t.getDate()-1);if(ymd(d)===ymd(y))return "어제";return (d.getMonth()+1)+"월 "+d.getDate()+"일";}
 let navStats=null;
