@@ -326,6 +326,15 @@
           ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
           ".validate": "newData.isNumber()"
         }
+      },
+      "acks": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$msg": {
+          "$p": {
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) && root.child('talk/msgs/notice/' + $msg).exists()",
+            ".validate": "newData.isNumber()"
+          }
+        }
       }
     }
   }

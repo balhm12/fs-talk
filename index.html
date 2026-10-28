@@ -175,6 +175,34 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 .aifoot{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.5}
 .myedit{display:flex;align-items:center;gap:10px;margin:0 10px 8px;padding:10px 12px;border:1px solid var(--selline);border-radius:12px;background:var(--sel2);font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
 .myedit:hover{border-color:var(--blue)}
+/* 공지 확인 */
+.ackbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
+.row.mine .ackbar{justify-content:flex-end}
+.ackbtn{border:1.5px solid #E7413E;color:#E7413E;background:var(--panel);border-radius:14px;padding:4px 12px;font-size:12px;font-weight:700}
+.ackbtn:hover{background:#E7413E;color:#fff}
+.ackdone{font-size:12px;color:#2E9A36;font-weight:700;padding:2px}
+.ackstat{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:14px;padding:4px 10px;font-size:12px}
+.ackstat:hover{border-color:var(--blue)}
+.nalert{display:flex;align-items:center;gap:10px;margin:2px 4px 6px;padding:10px 12px;border-radius:12px;background:#FDECEC;border:1px solid #F5B5B4;color:#B3261E;text-align:left;width:calc(100% - 8px)}
+.nalert .nat{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.nalert .nat b{font-size:14px}
+.nalert .nat small{font-size:12px;color:#7A3A36;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nalert .nago{font-size:12px;font-weight:700;flex:none}
+html[data-theme=dark] .nalert{background:#3A1E20;border-color:#6B2E2E;color:#F3A19F}
+html[data-theme=dark] .nalert .nat small{color:#D9A3A0}
+.nphead{text-align:left;display:flex;align-items:center;gap:8px;color:#E7413E;font-size:17px;margin-right:24px}
+.npmeta{text-align:left;font-size:12px;color:var(--sub);margin:6px 0 10px}
+.nptext{text-align:left;white-space:pre-wrap;word-break:break-word;line-height:1.6;max-height:46vh;overflow:auto;background:var(--soft);border-radius:10px;padding:12px 14px;margin-bottom:10px;color:var(--strong)}
+.nplater{display:block;margin:8px auto 0;background:none;border:0;color:var(--sub);font-size:13px;padding:6px}
+.acksum{font-size:13px;color:var(--sub);margin:6px 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ackbody{max-height:52vh;overflow:auto}
+.acktitle{font-size:13px;font-weight:700;margin:10px 0 6px;color:var(--strong)}
+.ackchips{display:flex;flex-wrap:wrap;gap:6px}
+.ackchip{font-size:13px;padding:3px 10px;border-radius:12px;background:var(--sel);color:var(--text)}
+.ackchip.no{background:#FDECEC;color:#B3261E}
+html[data-theme=dark] .ackchip.no{background:#3A1E20;color:#F3A19F}
+.ackfoot{font-size:11px;color:var(--sub);margin:12px 0 4px}
+@media (pointer:coarse){.ackbtn,.ackstat,.ackdone{font-size:14px;padding:6px 14px}.nalert .nat b{font-size:16px}.nalert .nat small{font-size:14px}.nptext{font-size:16px}}
 .myedit .met{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .myedit .met b{font-size:14px;color:var(--strong)}
 .myedit .met small{font-size:12px;color:var(--sub)}
@@ -764,7 +792,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.54";
+const APP_VERSION="2026-10-28.55";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1018,6 +1046,7 @@ function start(){
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
+  R("acks").on("value",s=>{acks=s.val()||{};schedule();if(!acksLoaded){acksLoaded=true;setTimeout(maybeNoticePrompt,2500);}},()=>{});
   R("lockreset/"+myKey).on("value",s=>{const v=+s.val()||0;const c=lockCfg();
     if(v&&c&&(c.set||0)<v){saveLockCfg(null);if(isLocked())unlock();toast("관리자가 화면 잠금을 초기화했습니다. 필요하면 설정에서 다시 켜 주세요.");if(view==="settings")renderSettings();}},()=>{});
   if(isAdmin)watchUsers();
@@ -1157,6 +1186,8 @@ function renderNav(){
         ["all","전체",ROOMS.filter(r=>r.grp==="전체"&&!favs[r.id])],
         ["team","팀·사무소",ROOMS.filter(r=>r.grp==="팀"&&!favs[r.id])],
         ["dm","1:1·그룹 대화",dmRooms.filter(r=>!favs[r.id])]];
+      const pn=pendingNotices();
+      if(pn.length){const na=el("button","nalert");na.appendChild(icEl("megaphone","",20));const t=el("span","nat");t.appendChild(el("b",null,"확인 안 한 공지 "+pn.length+"건"));t.appendChild(el("small",null,(pn[0].name||"")+": "+previewText(pn[0]).replace(/\s+/g," ").slice(0,40)));na.appendChild(t);na.appendChild(el("span","nago","확인 ›"));na.onclick=()=>{noticePrompted=true;showNoticePrompt();};nav.appendChild(na);}
       groups.forEach(([k,label,list])=>{
         if(!list.length&&k!=="dm")return;
         const h=el("button","lgrp fold");h.appendChild(el("span",null,(fold[k]?"▸ ":"▾ ")+label));
@@ -1450,6 +1481,7 @@ function renderMsgs(scroll){
     col.appendChild(line);
     const rx=reactsOf(m);
     if(rx.length){const rw=el("div","reacts");const mineR=myReact(m);rx.forEach(([c,n])=>{const k=el("button","rc"+(mineR===c?" on":""),REACT_EMO[c]+" "+n);k.title=reactWho(m,c);k.onclick=()=>setReact(m,c);rw.appendChild(k);});col.appendChild(rw);}
+    if(isNoticeMsg(m)&&!pending.has(m.id)&&m.ts>Date.now()-ACK_DAYS*864e5)col.appendChild(ackBar(m,mine));
     row.appendChild(col);
     box.appendChild(row);
   });
@@ -1638,6 +1670,82 @@ $("popBtn").onclick=()=>{
 
 /* ---------- 저장한 글 (메시지 즐겨찾기) ---------- */
 let saved={};
+/* ---------- 공지 확인 (꼭 읽어야 하는 공지: 확인 버튼 · 미확인 안내 · 다시 알림) ---------- */
+let acks={},acksLoaded=false,noticePrompted=false;   // acks/{글id}/{팀_이름}=확인 시각
+const ACK_DAYS=30;                                  // 최근 30일 공지만 확인을 요청
+const isNoticeMsg=m=>!!m&&m.room==="notice";
+const ackedByMe=m=>!!(acks[m.id]&&acks[m.id][myKey]);
+function pendingNotices(){const lim=Date.now()-ACK_DAYS*864e5;return msgs.filter(m=>isNoticeMsg(m)&&!isMine(m)&&m.ts>lim&&!ackedByMe(m)&&!pending.has(m.id));}
+function authorKey(m){const a=rosterList().find(p=>p.name===m.name);return a?personKey(a.team,a.name):"";}
+function ackPeople(m){   // 대상: 앱에 들어온 적 있는 사람(작성자 제외)
+  const ak=authorKey(m),a=acks[m.id]||{};
+  const all=Object.keys(joined).filter(k=>k!==ak&&personByKey(k));
+  return {all,done:all.filter(k=>a[k]),todo:all.filter(k=>!a[k])};
+}
+const keyName=k=>{const p=personByKey(k);return p?p.name:k.slice(k.lastIndexOf("_")+1);};
+function ackNotice(m,quiet){return R("acks/"+m.id+"/"+myKey).set(SV).then(()=>{if(!quiet)toast("공지를 확인했습니다.");}).catch(e=>toast("저장 실패: "+e.message));}
+function canSeeAcks(m){return isMine(m)||isAdmin;}
+function ackBar(m,mine){
+  const w=el("div","ackbar");
+  if(!mine){
+    if(ackedByMe(m))w.appendChild(el("span","ackdone","✓ 확인함"));
+    else{const b=el("button","ackbtn","확인했어요");b.onclick=e=>{e.stopPropagation();ackNotice(m);};w.appendChild(b);}
+  }
+  if(canSeeAcks(m)){const st=ackPeople(m);const c=el("button","ackstat","확인 "+st.done.length+"/"+st.all.length+(st.todo.length?" · 미확인 "+st.todo.length+" ›":" · 모두 확인"));c.onclick=e=>{e.stopPropagation();openAckList(m);};w.appendChild(c);}
+  return w;
+}
+function openAckList(m){
+  const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"공지 확인 현황"));
+  c.appendChild(el("div","acksum",String(m.text||previewText(m)).replace(/\s+/g," ").slice(0,80)));
+  const draw=()=>{
+    body.textContent="";const st=ackPeople(m),a=acks[m.id]||{};
+    body.appendChild(el("div","acktitle","미확인 "+st.todo.length+"명"));
+    const t=el("div","ackchips");st.todo.map(keyName).sort().forEach(n=>t.appendChild(el("span","ackchip no",n)));if(!st.todo.length)t.appendChild(el("span","more","모두 확인했습니다 🎉"));body.appendChild(t);
+    body.appendChild(el("div","acktitle","확인 "+st.done.length+"명"));
+    const d=el("div","ackchips");st.done.sort((p,q)=>a[p]-a[q]).forEach(k=>{const ch=el("span","ackchip",keyName(k));ch.title=ymd(new Date(a[k]))+" "+hm(new Date(a[k]));d.appendChild(ch);});body.appendChild(d);
+    body.appendChild(el("div","ackfoot","앱에 들어온 적 있는 "+st.all.length+"명 기준 · 작성자 제외"));
+    rb.disabled=!st.todo.length;
+  };
+  const body=el("div","ackbody");c.appendChild(body);
+  const rb=el("button","btn pri","미확인 "+"사람에게 다시 알림 보내기");
+  rb.onclick=async()=>{
+    const st=ackPeople(m);if(!st.todo.length)return;
+    if(!confirm("확인하지 않은 "+st.todo.length+"명에게 이 공지를 다시 알릴까요?\n(같은 공지는 30분에 한 번만 보낼 수 있어요)"))return;
+    rb.disabled=true;rb.textContent="보내는 중…";
+    try{
+      const idToken=await auth.currentUser.getIdToken();
+      const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"remind",idToken,msgId:m.id})});
+      const j=await res.json().catch(()=>null);
+      if(!j)throw new Error("알림 발송기 응답 없음");
+      if(!j.ok)throw new Error(j.ver==="v9"||!j.ver?"Apps Script를 새 버전(v10)으로 배포해 주세요":(j.err||"알 수 없음"));
+      toast(j.people+"명("+j.sent+"대 기기)에게 다시 알렸습니다."+(j.noPush?" 알림을 안 켠 "+j.noPush+"명은 앱을 열 때 안내가 뜹니다.":""));
+    }catch(e){toast("다시 알림 실패: "+e.message);}
+    rb.textContent="미확인 사람에게 다시 알림 보내기";draw();
+  };
+  c.appendChild(rb);draw();$("pOv").hidden=false;
+}
+/* 앱을 열었을 때 확인 안 한 공지가 있으면 한 건씩 보여 줌 («나중에»는 2시간 동안 안 띄움) */
+function maybeNoticePrompt(){
+  if(noticePrompted||!me||isLocked()||!$("pOv").hidden)return;
+  let sn=0;try{sn=+localStorage.getItem("fstalk-nsnooze")||0;}catch(e){}
+  if(Date.now()<sn)return;
+  const list=pendingNotices();if(!list.length)return;
+  noticePrompted=true;showNoticePrompt();
+}
+function showNoticePrompt(){
+  const list=pendingNotices();if(!list.length){closeProfile();return;}
+  const m=list[0];
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const hd=el("div","nphead");hd.appendChild(icEl("megaphone","",22));hd.appendChild(el("b",null,"확인이 필요한 공지"+(list.length>1?" "+list.length+"건":"")));c.appendChild(hd);
+  const d=new Date(m.ts);c.appendChild(el("div","npmeta",m.name+" · "+(d.getMonth()+1)+"/"+d.getDate()+" "+hm(d)));
+  const tx=el("div","nptext");if(m.file)tx.appendChild(el("div","more",isImgF(m.file)?"📷 사진":"📎 "+(m.file.name||"파일")));if(m.text)tx.appendChild(richText(String(m.text).slice(0,1200)));c.appendChild(tx);
+  const ok=el("button","btn pri","확인했어요"+(list.length>1?" · 다음 공지":""));ok.onclick=()=>{ackNotice(m,true).then(()=>{if(pendingNotices().filter(x=>x.id!==m.id).length)setTimeout(showNoticePrompt,150);else{closeProfile();toast("공지를 모두 확인했습니다.");}});};c.appendChild(ok);
+  const vw=el("button","btn","공지방에서 보기");vw.onclick=()=>{closeProfile();jumpTo(m.id);};c.appendChild(vw);
+  const later=el("button","nplater","나중에 볼게요");later.onclick=()=>{try{localStorage.setItem("fstalk-nsnooze",String(Date.now()+2*3600e3));}catch(e){}closeProfile();};c.appendChild(later);
+  $("pOv").hidden=false;
+}
 async function toggleSave(m){
   const ref=R("prefs/"+myKey+"/saved/"+m.id);
   try{

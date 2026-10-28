@@ -24,6 +24,7 @@ function doPost(e){
     if(req.type === 'summary') return out_(summary_(req));
     if(req.type === 'upload') return out_(upload_(req));
     if(req.type === 'deleteFile') return out_(deleteFile_(req));
+    if(req.type === 'remind') return out_(remind_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -83,7 +84,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v9';
+const NOTIFY_VER = 'v10';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -92,6 +93,40 @@ function mentions_(text, users){
   const out = {}; const re = /@([^\s@]+)/g; let m;
   while((m = re.exec(text))){ for(let i=0;i<list.length;i++){ if(m[1].indexOf(list[i]) === 0){ out[list[i]] = true; break; } } }
   return out;
+}
+
+/* ---------- 공지 다시 알림: 공지를 쓴 사람(같은 사람의 다른 기기 포함)이나 관리자만, 확인 안 한 사람에게만 ---------- */
+function remind_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const msgId = String(req.msgId||'');
+  if(!/^[-\w]{10,40}$/.test(msgId)) return {ok:false,err:'bad request',ver:NOTIFY_VER};
+  const msg = db_('talk/msgs/notice/'+msgId);
+  if(!msg) return {ok:false,err:'공지를 찾을 수 없습니다',ver:NOTIFY_VER};
+  const users = db_('talk/users') || {}, me = users[uid] || {}, author = users[msg.uid] || {};
+  if(me.status !== 'approved') return {ok:false,err:'승인된 사용자가 아닙니다',ver:NOTIFY_VER};
+  const isAuthor = msg.uid === uid || (author.name === me.name && author.team === me.team);
+  if(!isAuthor && db_('talk/admins/'+uid) !== true) return {ok:false,err:'공지를 쓴 사람이나 관리자만 보낼 수 있습니다',ver:NOTIFY_VER};
+  const cache = CacheService.getScriptCache();
+  if(cache.get('remind:'+msgId)) return {ok:false,err:'같은 공지는 30분에 한 번만 다시 알릴 수 있습니다',ver:NOTIFY_VER};
+  const acks = db_('talk/acks/'+msgId) || {}, tokens = db_('talk/tokens') || {};
+  const authorKey = (author.team||me.team) + '_' + (author.name||msg.name);
+  const targets = [], people = {}, pushPeople = {};
+  Object.keys(users).forEach(function(id){
+    const u = users[id];
+    if(!u || u.status !== 'approved') return;
+    const pk = u.team + '_' + u.name;
+    if(pk === authorKey || acks[pk]) return;     // 작성자·이미 확인한 사람 제외 (꼭 봐야 하는 공지라 방 알림을 꺼 둬도 보냄)
+    people[pk] = true;
+    const t = tokens[id] || {};
+    Object.keys(t).forEach(function(k){ if(t[k] && t[k].token){ pushPeople[pk] = true; targets.push({uid:id,key:k,token:t[k].token}); } });
+  });
+  let body = String(msg.text||'').replace(/\s+/g,' ');
+  if(msg.file) body = (/^image\//.test(msg.file.mime||'') ? '📷 사진' : '📎 ' + (msg.file.name||'파일')) + (body ? ' ' + body : '');
+  const n = Object.keys(people).length, np = Object.keys(pushPeople).length;
+  const sent = targets.length ? send_(targets, '📢 확인이 필요한 공지 · ' + (msg.name||''), ('눌러서 확인해 주세요 — ' + body).slice(0,140), APP_URL + '#room-notice', 'room-notice', {room:'notice'}) : 0;
+  cache.put('remind:'+msgId, '1', 1800);
+  return {ok:true, sent:sent, people:n, noPush:n - np, ver:NOTIFY_VER};
 }
 
 /* ---------- 사진·파일 첨부 → Google 드라이브 「FS Talk 첨부」/yyyy-MM ---------- */
