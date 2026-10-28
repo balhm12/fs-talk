@@ -794,7 +794,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.57";
+const APP_VERSION="2026-10-28.58";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -806,7 +806,7 @@ const FIREBASE_CONFIG={
 };
 const ROOMS=[
   {id:"notice",name:"공지",icon:"📢",desc:"FSG 전체 공지",grp:"전체"},
-  {id:"all",name:"전체방",icon:"🌐",desc:"모든 방의 대화가 함께 기록됩니다 · 여기서 쓴 글은 전체방에만 올라가요",grp:"전체"},
+  {id:"all",name:"전체방",icon:"🌐",desc:"FS·CS 방 대화가 함께 보입니다 · 여기서 쓴 글은 전체방에만 올라가요",grp:"전체"},
   {id:"ts",name:"FS",icon:"🛠",desc:"Field Service · 현장 조치 공유",grp:"전체"},
   {id:"cs",name:"CS",icon:"☎",desc:"고객지원",grp:"전체"},
   {id:"west",name:"FS WEST",icon:"W",desc:"FS WEST 팀방",grp:"팀"},
@@ -906,7 +906,9 @@ let groups={},gidx={};
 const dmLeft=id=>{const d=isGroup(id)?gidx[id]:dms[id];return d&&d.left?+d.left:0;};
 const dmVisible=id=>{const d=dms[id];return !!d&&(!d.left||(+d.ts||0)>+d.left);};
 const shown=m=>!isPriv(m.room)||m.ts>dmLeft(m.room);
-const inRoom=(m,id)=>id==="all"?!isPriv(m.room):(m.room===id&&shown(m));
+const ALL_SRC=new Set(["all","ts","cs"]);          // 전체방에 함께 보이는 방: 전체방 자체 글 + FS + CS (나머지 방은 각자 방에서만)
+const inAll=r=>ALL_SRC.has(r);
+const inRoom=(m,id)=>id==="all"?inAll(m.room):(m.room===id&&shown(m));
 const myGroup=id=>isGroup(id)&&!!groups[id]&&!!(groups[id].members||{})[myKey];
 let dms={};
 function dmOther(id){if(!isDm(id)||!myKey)return null;const ks=id.slice(3).split("__");if(ks.length!==2||ks[0]===ks[1])return null;return ks[0]===myKey?ks[1]:ks[1]===myKey?ks[0]:null;}
@@ -1113,7 +1115,7 @@ async function clearReadNotes(){
     list.forEach(n=>{
       const t=n.tag||"";if(t.indexOf("room-")!==0)return;            // 관리자 알림(등록 요청)은 그대로 둠
       const r=t.slice(5);
-      if(r===room||(room==="all"&&!isPriv(r))||!unread(r))n.close();
+      if(r===room||(room==="all"&&inAll(r))||!unread(r))n.close();
     });
   }catch(e){}
 }
@@ -1123,7 +1125,7 @@ function unreadPeople(m){
   const key=m.room;let mem=roomJoinedCache[key];
   if(!mem||mem._v!==rosterVer+"|"+Object.keys(joined).length){mem=roomMembers(m.room).map(p=>personKey(p.team,p.name)).filter(k=>joined[k]);mem._v=rosterVer+"|"+Object.keys(joined).length;roomJoinedCache[key]=mem;}
   const author=rosterList().find(p=>p.name===m.name);const ak=author?personKey(author.team,author.name):"";
-  let n=0;mem.forEach(k=>{if(k!==ak&&Math.max(rd(m.room,k),isPriv(m.room)?0:rd("all",k))<m.ts)n++;});
+  let n=0;mem.forEach(k=>{if(k!==ak&&Math.max(rd(m.room,k),inAll(m.room)?rd("all",k):0)<m.ts)n++;});
   return n;
 }
 
@@ -1150,7 +1152,7 @@ function personAv(name,cls){
 function roomAv(id,cls){if(isGroup(id)){const r=getRoom(id);const n=r?r.name.replace(/\s+/g,""):"그룹";return avatar(n.slice(0,2),"#5B6B82","sq"+(cls?" "+cls:""));}if(isDm(id)){const r=getRoom(id);return personAv(r?r.name:"?",cls);}const l=ROOM_LOOK[id]||["?","#8A94A3"];const a=avatar(l[0],l[1],"sq"+(cls?" "+cls:""));if(l[2]){a.innerHTML=ic(l[2],cls==="s"?16:20);a.title=l[0];}return a;}
 function roomMembers(id){if(isGroup(id))return Object.keys((groups[id]||{}).members||{}).map(personByKey).filter(Boolean);if(isDm(id))return [personByKey(myKey),personByKey(dmOther(id))].filter(Boolean);const sc=ROOM_SCOPE[id];const all=rosterList();if(!sc)return all;return all.filter(p=>p.team===sc[0]&&(!sc[1]||p.office===sc[1]));}
 const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 다른 기기에서 쓴 글도 내 글
-const readFor=m=>isPriv(m.room)?myRead(m.room):Math.max(myRead(m.room),myRead("all"));
+const readFor=m=>inAll(m.room)?Math.max(myRead(m.room),myRead("all")):myRead(m.room);
 const isUnread=(m,id)=>!isMine(m)&&m.ts>Math.max(myRead(id),readFor(m));
 function unread(id){return msgs.filter(m=>inRoom(m,id)&&isUnread(m,id)).length;}
 function unreadMention(id){return msgs.some(m=>inRoom(m,id)&&isUnread(m,id)&&mentionsMe(m));}
@@ -1166,7 +1168,7 @@ function buildNavStats(){
   for(const m of msgs){
     if(!shown(m))continue;
     const u=!isMine(m)&&m.ts>readFor(m),mm=u&&mentionsMe(m);
-    bump(m.room,m,u,mm);if(!isPriv(m.room)&&m.room!=="all")bump("all",m,u&&m.ts>myRead("all"),mm);else if(m.room==="all"){}
+    bump(m.room,m,u,mm);if(inAll(m.room)&&m.room!=="all")bump("all",m,u&&m.ts>myRead("all"),mm);else if(m.room==="all"){}
   }
   return st;
 }
@@ -1396,7 +1398,7 @@ function richText(text,ts){
 let jumpId=null,jumpTerms=null;
 /* ---------- 이전 대화 불러오기 ---------- */
 const hasMore={};let loadingOlder=false;
-const moreRooms=id=>id==="all"?ROOMS.map(r=>r.id).filter(k=>hasMore[k]):(hasMore[id]?[id]:[]);
+const moreRooms=id=>id==="all"?[...ALL_SRC].filter(k=>hasMore[k]):(hasMore[id]?[id]:[]);
 async function loadOlder(roomId,n){
   const own=msgs.filter(m=>m.room===roomId);if(!own.length){hasMore[roomId]=false;return 0;}
   const oldest=own[0].ts;

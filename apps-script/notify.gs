@@ -88,7 +88,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v11';
+const NOTIFY_VER = 'v12';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -197,7 +197,7 @@ function summary_(req){
   if(cache.get('sum:'+uid)) return {ok:false,err:'잠시 후 다시 눌러 주세요',ver:NOTIFY_VER};
   cache.put('sum:'+uid,'1',15);
   const since = Math.max(0, +req.since || 0), limit = Math.min(300, Math.max(10, +req.limit || 150));
-  const rooms = room === 'all' ? ['all'].concat(FIXED_ROOMS) : [room];
+  const rooms = room === 'all' ? ['all','ts','cs'] : [room];   // 전체방 = 전체방 글 + FS + CS
   let msgs = [];
   rooms.forEach(function(r){
     const q = 'orderBy=%22ts%22' + (since ? '&startAt=' + (since+1) : '') + '&limitToLast=' + limit;
