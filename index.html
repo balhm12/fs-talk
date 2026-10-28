@@ -325,7 +325,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.14";
+const APP_VERSION="2026-10-28.15";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -467,7 +467,8 @@ function start(){
     const q=R("msgs/"+r.id).orderByChild("ts").limitToLast(PER_ROOM);
     q.on("child_added",s=>{addMsg(r.id,s.key,s.val());});
     q.on("child_removed",s=>{const m=byId.get(s.key);if(m){byId.delete(s.key);msgs=msgs.filter(x=>x!==m);schedule();}});
-  },);
+    q.once("value",s=>{hasMore[r.id]=s.numChildren()>=PER_ROOM;schedule();},()=>{});
+  });
   if(isAdmin)watchUsers();
   route();
 }
@@ -590,7 +591,7 @@ function showView(){
   ["chatView","searchView","adminView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
   if(view==="chat"){const r=ROOMS.find(x=>x.id===room);ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
-  else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방에서 방마다 최근 "+PER_ROOM+"건을 찾습니다";renderSearch();}
+  else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
   else{$("title").textContent="관리";$("desc").textContent="등록 승인 · 관리자 지정 · 직원 명단";renderAdmin();}
   const ml=isM()&&mList;
   $("app").classList.toggle("m-list",ml);
@@ -643,10 +644,39 @@ function richText(text,ts){
 
 /* ---------- 대화 ---------- */
 let jumpId=null,jumpTerms=null,selId=null;
+/* ---------- 이전 대화 불러오기 ---------- */
+const hasMore={};let loadingOlder=false;
+const moreRooms=id=>id==="all"?ROOMS.map(r=>r.id).filter(k=>hasMore[k]):(hasMore[id]?[id]:[]);
+async function loadOlder(roomId,n){
+  const own=msgs.filter(m=>m.room===roomId);if(!own.length){hasMore[roomId]=false;return 0;}
+  const oldest=own[0].ts;
+  const snap=await R("msgs/"+roomId).orderByChild("ts").endBefore(oldest).limitToLast(n).once("value");
+  let got=0;snap.forEach(c=>{addMsg(roomId,c.key,c.val());got++;});
+  hasMore[roomId]=got>=n;return got;
+}
+async function loadOlderFor(id,n){
+  if(loadingOlder)return;loadingOlder=true;
+  const box=$("msgs"),h0=box.scrollHeight,t0=box.scrollTop;
+  try{for(const r of moreRooms(id))await loadOlder(r,n||PER_ROOM);}catch(e){toast("불러오기 실패: "+(e.code||e.message));}
+  loadingOlder=false;
+  if(view==="chat"){renderMsgs(false);box.scrollTop=box.scrollHeight-h0+t0;}else renderSearch();
+}
+async function loadAllHistory(){
+  if(loadingOlder)return;
+  toast("오래된 대화까지 불러오는 중…");
+  let guard=0;
+  while(ROOMS.some(r=>hasMore[r.id])&&guard++<200){
+    loadingOlder=true;
+    try{for(const r of ROOMS.map(x=>x.id).filter(k=>hasMore[k]))await loadOlder(r,2000);}catch(e){toast("불러오기 실패: "+(e.code||e.message));break;}
+    finally{loadingOlder=false;}
+  }
+  renderSearch();renderNav();toast("전체 기간 대화를 모두 불러왔습니다.");
+}
 function renderMsgs(scroll){
   const box=$("msgs"),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
   box.textContent="";
   const list=msgs.filter(m=>inRoom(m,room));
+  if(moreRooms(room).length){const mb=el("button","btn","⬆ 이전 대화 더 보기");mb.style.alignSelf="center";mb.style.margin="4px 0 8px";mb.onclick=()=>{mb.disabled=true;mb.textContent="불러오는 중…";loadOlderFor(room);};box.appendChild(mb);}
   if(!list.length){const e=el("div","empty");e.appendChild(document.createTextNode("아직 대화가 없습니다."));e.appendChild(el("br"));e.appendChild(document.createTextNode("첫 메시지를 남겨 보세요."));box.appendChild(e);return;}
   const same=(a,b)=>a&&b&&a.author===b.author&&a.room===b.room&&ymd(new Date(a.ts))===ymd(new Date(b.ts))&&Math.abs(b.ts-a.ts)<120000&&hm(new Date(a.ts))===hm(new Date(b.ts));
   let lastDay="";
@@ -719,6 +749,7 @@ function renderSearch(){
     return true;
   }).sort((a,b)=>b.ts-a.ts);
   $("cnt").textContent=hits.length;
+  if(ROOMS.some(r=>hasMore[r.id])){const b=el("button","btn","🕘 오래된 대화까지 검색");b.style.margin="0 0 10px";b.onclick=()=>{b.disabled=true;b.textContent="불러오는 중…";loadAllHistory();};res.appendChild(b);}
   if(!hits.length){res.appendChild(el("div","more","찾는 내용이 없습니다. 단어를 줄이거나 다른 표현으로 검색해 보세요."));return;}
   hits.slice(0,200).forEach(m=>{
     const h=el("div","hit"),meta=el("div","meta");
