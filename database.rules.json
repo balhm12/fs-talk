@@ -16,7 +16,7 @@
         "$uid": {
           ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true || (auth.uid === $uid && (!data.exists() || data.child('status').val() !== 'approved') && newData.child('status').val() === 'pending'))",
-          ".validate": "newData.hasChildren(['name', 'team', 'status'])",
+          ".validate": "newData.hasChildren(['name', 'team', 'status']) && root.child('talk/roster/' + newData.child('team').val() + '/' + newData.child('name').val()).exists()",
           "name": {
             ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20"
           },

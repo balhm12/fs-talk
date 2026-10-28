@@ -214,9 +214,10 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <div class="f"><label for="pQ">이름 검색</label><input id="pQ" type="search" placeholder="이름 일부를 입력하세요 (예: 흥민)"></div>
       <div class="plist" id="pList"></div>
       <div class="psel" id="pSel" hidden></div>
-      <button type="button" class="linkbtn" id="toManual">명단에 내 이름이 없어요 → 직접 입력</button>
+      <div class="hint" style="margin:0 0 12px">명단에 이름이 없으면 FSS팀(관리자)에게 요청하세요.</div>
     </div>
-    <div id="rManual">
+    <div id="rNone" class="psel" hidden>아직 직원 명단이 등록되지 않았습니다. 관리자가 명단을 등록한 뒤 다시 열어 주세요.</div>
+    <div id="rManual" hidden>
     <div class="f"><label for="rName">이름</label><input id="rName" maxlength="20" placeholder="예: 홍길동"></div>
     <div class="f"><label for="rTeam">소속</label>
       <select id="rTeam">
@@ -225,7 +226,6 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
         <option>FS WEST</option><option>FS EAST</option><option>FS CENTRAL</option><option>FS SOUTH</option><option>FSS Team</option><option>FSOM Team</option><option>기타</option>
       </select></div>
     <div class="f" id="rOfficeBox" hidden><label for="rOffice">사무소</label><select id="rOffice"></select></div>
-    <button type="button" class="linkbtn" id="toPick" hidden>← 명단에서 고르기</button>
     </div>
     <button class="btn pri" type="submit" id="regBtn">등록 요청</button>
   </form>
@@ -310,7 +310,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.7";
+const APP_VERSION="2026-10-28.8";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -363,10 +363,13 @@ auth.onAuthStateChanged(u=>{
   if(!u){auth.signInAnonymously().catch(e=>{$("loadMsg").textContent="로그인 실패: "+(e.code||e.message)+" — 새로고침해 주세요.";});return;}
   uid=u.uid;$("myUid").textContent="기기 ID: "+uid;
   watchRoster();
-  R("admins/"+uid).on("value",s=>{isAdmin=s.val()===true;if(started)renderNav();if(isAdmin&&started)watchUsers();});
-  R("users/"+uid).on("value",s=>{
-    me=s.val();
-    show("gLoad",false);
+  R("admins/"+uid).on("value",s=>{isAdmin=s.val()===true;applyMe();if(started)renderNav();if(isAdmin&&started)watchUsers();});
+  R("users/"+uid).on("value",s=>{meLoaded=true;me=s.val();applyMe();},err=>{$("loadMsg").textContent="데이터베이스 연결 실패("+(err&&err.code||"")+"). 관리자에게 알려 주세요.";show("gLoad",true);});
+});
+let meLoaded=false;
+function applyMe(){
+    if(!meLoaded)return;
+    show("gLoad",false);$("reRegBtn").hidden=false;
     if(!me||me.status==="rejected"){
       show("gReg",true);show("gWait",false);show("app",false);
       if(me&&me.status==="rejected")toast("등록이 거절되었습니다. 정보를 확인해 다시 요청하세요.");
@@ -375,13 +378,15 @@ auth.onAuthStateChanged(u=>{
     }else if(me.status==="pending"){
       show("gReg",false);show("gWait",true);show("app",false);
       $("waitMsg").textContent=me.name+" ("+me.team+(me.office?" · "+me.office:"")+") 님의 등록 요청을 보냈습니다. 관리자가 승인하면 이 화면이 자동으로 바뀝니다.";
+    }else if(me.status==="approved"&&!isAdmin&&rosterList().length&&!rosterList().some(p=>p.name===me.name&&p.team===me.team)){
+      show("gReg",false);show("gWait",true);show("app",false);
+      $("waitMsg").textContent="직원 명단에 없는 사용자입니다. FSS팀(관리자)에게 문의하세요.";$("reRegBtn").hidden=true;
     }else if(me.status==="approved"){
       show("gReg",false);show("gWait",false);show("app",true);
       $("me").textContent=me.name+" · "+me.team+(me.office?" "+me.office:"");
       start();
     }
-  },err=>{$("loadMsg").textContent="데이터베이스 연결 실패("+(err&&err.code||"")+"). 관리자에게 알려 주세요.";show("gLoad",true);});
-});
+}
 
 /* ---------- 등록 ---------- */
 let roster={},picked=null,manual=false;
@@ -390,11 +395,11 @@ const TEAM_ORDER=["FSG","FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","
 const teamLabel=t=>t==="FSG"?"FSG 그룹장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
-function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};syncPickMode();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
+function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};syncPickMode();applyMe();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
 function syncPickMode(){
   const has=rosterList().length>0;
-  const usePick=has&&!manual;
-  $("rPick").hidden=!usePick;$("rManual").hidden=usePick;$("toPick").hidden=!has;
+  const usePick=has;
+  $("rPick").hidden=!has;$("rManual").hidden=true;$("rNone").hidden=has;$("regBtn").disabled=!has;
   const sel=$("pTeam"),cur=sel.value;sel.textContent="";sel.appendChild(new Option("전체 팀",""));
   [...new Set(rosterList().map(p=>p.team))].sort((a,b)=>teamRank(a)-teamRank(b)||a.localeCompare(b,"ko")).forEach(t=>sel.appendChild(new Option(teamLabel(t),t)));
   sel.value=cur;
@@ -416,8 +421,6 @@ function renderPick(){
 }
 $("pQ").addEventListener("input",renderPick);
 $("pTeam").addEventListener("change",renderPick);
-$("toManual").onclick=()=>{manual=true;picked=null;$("pSel").hidden=true;syncPickMode();$("rName").focus();};
-$("toPick").onclick=()=>{manual=false;syncPickMode();};
 function syncOffice(){
   const t=$("rTeam").value,box=$("rOfficeBox"),sel=$("rOffice");
   const list=OFFICES[t];box.hidden=!list;sel.textContent="";
@@ -427,15 +430,8 @@ $("rTeam").addEventListener("change",syncOffice);
 $("regForm").addEventListener("submit",async e=>{
   e.preventDefault();
   let name,team,office;
-  if(!$("rPick").hidden){
-    if(!picked){toast("명단에서 이름을 골라 주세요.");return;}
-    name=picked.name;team=picked.team;office=picked.office||"";
-  }else{
-    name=$("rName").value.trim().replace(/\s+/g," ");team=$("rTeam").value;office=OFFICES[team]?$("rOffice").value:"";
-    if(name.length<2){toast("이름을 2자 이상 입력하세요.");return;}
-    if(!team){toast("소속을 선택하세요.");return;}
-    if(OFFICES[team]&&!office){toast("사무소를 선택하세요.");return;}
-  }
+  if(!picked){toast("명단에서 이름을 골라 주세요.");return;}
+  name=picked.name;team=picked.team;office=picked.office||"";
   const data={name,team,office,status:"pending",createdAt:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent.slice(0,180)};
   $("regBtn").disabled=true;
   try{await R("users/"+uid).set(data);}catch(err){toast("등록 실패: "+(err.code||err.message));}
