@@ -21,6 +21,7 @@ function doPost(e){
     if(req.type === 'register') return out_(notifyRegister_(req));
     if(req.type === 'testAdmin') return out_(testAdmin_(req));
     if(req.type === 'upload') return out_(upload_(req));
+    if(req.type === 'deleteFile') return out_(deleteFile_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     if((!ROOM_NAME[room] && !isDm) || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request',ver:NOTIFY_VER});
@@ -66,7 +67,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v5';
+const NOTIFY_VER = 'v6';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -96,6 +97,27 @@ function upload_(req){
   try{ f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }
   catch(e){ f.setTrashed(true); return {ok:false,err:'드라이브 공유 설정 실패: '+e,ver:NOTIFY_VER}; }
   return {ok:true,id:f.getId(),ver:NOTIFY_VER};
+}
+/** 사진·파일 삭제 — 메시지를 쓴 본인(같은 사람의 다른 기기 포함)만, FS Talk 첨부 폴더의 파일만 휴지통으로 */
+function deleteFile_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const room = String(req.room||''), msgId = String(req.msgId||'');
+  if(!/^[-\w]{10,40}$/.test(msgId) || !(ROOM_NAME[room] || /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room))) return {ok:false,err:'bad request',ver:NOTIFY_VER};
+  const msg = db_('talk/msgs/'+encodeURIComponent(room)+'/'+msgId);
+  if(!msg || !msg.file || !msg.file.id) return {ok:false,err:'첨부가 없는 메시지',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid) || {}, author = msg.uid === uid ? me : (db_('talk/users/'+msg.uid) || {});
+  if(me.status !== 'approved' || !(msg.uid === uid || (author.name === me.name && author.team === me.team))) return {ok:false,err:'본인 글만 지울 수 있습니다',ver:NOTIFY_VER};
+  let f;
+  try{ f = DriveApp.getFileById(String(msg.file.id)); }catch(e){ return {ok:true,gone:true,ver:NOTIFY_VER}; }
+  // 첨부 폴더(FS Talk 첨부/yyyy-MM) 안의 파일인지 확인 — 다른 드라이브 파일은 절대 건드리지 않음
+  let inUpload = false;
+  const ps = f.getParents();
+  while(ps.hasNext() && !inUpload){ const pf = ps.next(); const gp = pf.getParents(); while(gp.hasNext()){ if(gp.next().getName() === UPLOAD_FOLDER){ inUpload = true; break; } } }
+  if(!inUpload || String(f.getDescription()||'').indexOf('FS Talk · ') !== 0) return {ok:false,err:'FS Talk 첨부 파일이 아닙니다',ver:NOTIFY_VER};
+  if(f.isTrashed()) return {ok:true,gone:true,ver:NOTIFY_VER};
+  f.setTrashed(true);
+  return {ok:true,ver:NOTIFY_VER};
 }
 function rootFolder_(n){ const it = DriveApp.getFoldersByName(n); return it.hasNext() ? it.next() : DriveApp.createFolder(n); }
 function subFolder_(parent, n){ const it = parent.getFoldersByName(n); return it.hasNext() ? it.next() : parent.createFolder(n); }

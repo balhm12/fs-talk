@@ -182,6 +182,17 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .mi small{color:var(--sub);font-size:11px}
 .attach{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-size:22px;color:var(--sub);line-height:1;padding:0}
 .attach:hover{color:var(--blue);border-color:var(--blue)}
+.vov{position:fixed;inset:0;background:rgba(5,10,18,.97);z-index:48;display:flex;flex-direction:column;color:#fff}
+.vtop{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top))}
+.vwho{flex:1;display:flex;flex-direction:column;font-size:13px}
+.vwho span{color:#AEB8C6;font-size:12px}
+.vmid{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px}
+.vimg{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.vmid .more{color:#AEB8C6}
+.vbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.vbtn{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:20px;padding:9px 14px;font-size:14px;text-decoration:none;line-height:1}
+.vbtn:hover{background:rgba(255,255,255,.22)}
+.vbtn.bad{color:#FF9AA8}
 .sheetov{position:fixed;inset:0;background:rgba(15,25,40,.45);z-index:45;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--panel);width:min(420px,100%);border-radius:18px 18px 0 0;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
 .apv{padding:4px 8px 10px;font-size:13px;color:var(--sub);display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:8px}
@@ -441,6 +452,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 </div>
 <div class="pov" id="pOv" hidden><div class="pcard" id="pCard"></div></div>
 <div class="sheetov" id="actOv" hidden><div class="sheet" id="act"></div></div>
+<div class="vov" id="vOv" hidden></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -450,7 +462,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.25";
+const APP_VERSION="2026-10-28.27";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -950,7 +962,7 @@ function renderMsgs(scroll){
     const line=el("div","line");
     const b=el("div","bubble"+(m.file?" media"+(!m.text&&!m.re?" only":""):""));
     if(m.re){const qd=el("div","quote");qd.appendChild(el("b",null,"↪ "+m.re.name));qd.appendChild(el("span",null,String(m.re.text||"").replace(/\s+/g," ")));qd.onclick=ev=>{ev.stopPropagation();jumpTo(m.re.id);};b.appendChild(qd);}
-    if(m.file)b.appendChild(fileView(m.file));
+    if(m.file)b.appendChild(fileView(m.file,m));
     if(m.text){const tx=el("div","tx");tx.appendChild(richText(m.text,jumpId===m.id?jumpTerms:null));b.appendChild(tx);}
     b.onclick=()=>openActions(m);
     line.appendChild(b);
@@ -970,10 +982,22 @@ function renderMsgs(scroll){
   else if(scroll||atBottom)box.scrollTop=box.scrollHeight;
 }
 async function removeMsg(m){
-  if(!confirm("이 메시지를 삭제할까요?"+(m.file?"\n(첨부 파일은 백업용으로 드라이브에 남습니다)":"")))return;
+  const kind=m.file?(isImgF(m.file)?"사진":"파일"):"";
+  if(!confirm(m.file?"이 "+kind+"을 삭제할까요?\n대화에서 지워지고, 드라이브의 원본도 휴지통으로 옮겨집니다.":"이 메시지를 삭제할까요?"))return;
+  let fileMsg="";
+  if(m.file){   // 메시지를 지우기 전에 드라이브 파일부터 정리 (발송기가 메시지 주인을 확인해야 하므로)
+    try{
+      const idToken=await auth.currentUser.getIdToken();
+      const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"deleteFile",idToken,room:m.room,msgId:m.id})});
+      const j=await res.json().catch(()=>null);
+      if(!j||!j.ok)fileMsg=" (드라이브 원본은 남았습니다"+(j&&!j.ver?" — Apps Script 새 버전 배포 필요":j&&j.err?": "+j.err:"")+")";
+      else if(j.gone)fileMsg=" (드라이브 원본은 이미 없었습니다)";
+    }catch(e){fileMsg=" (드라이브 원본은 남았습니다: 연결 실패)";}
+  }
   try{
     const pr=Object.keys(pins).find(k=>pins[k]&&pins[k].id===m.id);if(pr)await R("pins/"+pr).remove().catch(()=>{});
-    await R("msgs/"+m.room+"/"+m.id).remove();toast("삭제했습니다.");
+    if(saved[m.id])R("prefs/"+myKey+"/saved/"+m.id).remove().catch(()=>{});
+    await R("msgs/"+m.room+"/"+m.id).remove();toast((kind?kind+"을":"메시지를")+" 삭제했습니다."+fileMsg);
   }catch(e){toast("삭제 실패: "+(e.code||e.message));}
 }
 function jumpTo(id){
@@ -988,18 +1012,40 @@ const driveView=id=>"https://drive.google.com/file/d/"+encodeURIComponent(id)+"/
 const driveThumb=(id,w)=>"https://drive.google.com/thumbnail?id="+encodeURIComponent(id)+"&sz=w"+(w||800);
 function fmtSize(n){n=+n||0;return n>=1048576?(n/1048576).toFixed(1)+"MB":n>=1024?Math.round(n/1024)+"KB":n+"B";}
 function fileIcon(f){const n=(f.name||"").toLowerCase();return /\.pdf$/.test(n)?"📕":/\.(xlsx?|csv)$/.test(n)?"📊":/\.(pptx?)$/.test(n)?"📽":/\.(docx?|hwpx?|txt)$/.test(n)?"📄":/\.zip$/.test(n)?"🗜":isImgF(f)?"🖼":"📎";}
-function fileCard(f){
-  const a=el("a","fcard");a.href=driveView(f.id);a.target="_blank";a.rel="noopener";a.onclick=ev=>ev.stopPropagation();
+function fileCard(f,m){
+  const a=el("a","fcard");a.href=driveView(f.id);a.target="_blank";a.rel="noopener";
+  a.onclick=ev=>{ev.stopPropagation();if(m){ev.preventDefault();openActions(m);}};   // 대화 안에서는 메뉴(파일 열기·삭제 등)
   a.appendChild(el("span","fi",fileIcon(f)));const t=el("span");t.appendChild(el("b",null,f.name||"파일"));t.appendChild(el("small",null,fmtSize(f.size)+" · 눌러서 열기"));a.appendChild(t);return a;
 }
-function fileView(f){
-  if(!isImgF(f))return fileCard(f);
-  const a=el("a","img");a.href=driveView(f.id);a.target="_blank";a.rel="noopener";a.onclick=ev=>ev.stopPropagation();
+function fileView(f,m){
+  if(!isImgF(f))return fileCard(f,m);
+  const a=el("a","img");a.href=driveView(f.id);a.target="_blank";a.rel="noopener";
+  a.onclick=ev=>{ev.stopPropagation();if(m){ev.preventDefault();openViewer(m);}};
   const i=el("img");i.loading="lazy";i.alt=f.name||"사진";i.referrerPolicy="no-referrer";
   if(f.w&&f.h){const k=Math.min(1,260/f.w,340/f.h);i.width=Math.round(f.w*k);i.height=Math.round(f.h*k);}
-  i.src=driveThumb(f.id,800);i.onerror=()=>{a.replaceWith(fileCard(f));};
+  i.src=driveThumb(f.id,800);i.onerror=()=>{a.replaceWith(fileCard(f,m));};
   a.appendChild(i);return a;
 }
+
+/* ---------- 사진 크게 보기 ---------- */
+function openViewer(m){
+  const ov=$("vOv");ov.textContent="";
+  const top=el("div","vtop");
+  const who=el("div","vwho");who.appendChild(el("b",null,m.name));const d=new Date(m.ts);who.appendChild(el("span",null,ymd(d)+" "+hm(d)));top.appendChild(who);
+  const x=el("button","vbtn","✕");x.setAttribute("aria-label","닫기");x.onclick=closeViewer;top.appendChild(x);
+  ov.appendChild(top);
+  const img=el("img","vimg");img.alt=m.file.name||"사진";img.referrerPolicy="no-referrer";img.src=driveThumb(m.file.id,1600);
+  img.onerror=()=>{img.replaceWith(el("div","more","사진을 불러오지 못했습니다. 「원본 열기」를 눌러 주세요."));};
+  const mid=el("div","vmid");mid.appendChild(img);mid.onclick=e=>{if(e.target===mid)closeViewer();};ov.appendChild(mid);
+  const bar=el("div","vbar");
+  const o=el("a","vbtn","⬇ 원본 열기");o.href=driveView(m.file.id);o.target="_blank";o.rel="noopener";bar.appendChild(o);
+  const r=el("button","vbtn","↩ 답장");r.onclick=()=>{closeViewer();startReply(m);};bar.appendChild(r);
+  if(isMine(m)){const del=el("button","vbtn bad","🗑 삭제");del.onclick=()=>{closeViewer();removeMsg(m);};bar.appendChild(del);}
+  const mn=el("button","vbtn","⋯ 더보기");mn.onclick=()=>{closeViewer();openActions(m);};bar.appendChild(mn);
+  ov.appendChild(bar);ov.hidden=false;
+}
+function closeViewer(){$("vOv").hidden=true;$("vOv").textContent="";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("vOv").hidden)closeViewer();});
 
 /* ---------- 반응·고정·즐겨찾기 ---------- */
 const REACTS=[["like","👍"],["heart","❤️"],["lol","😂"],["wow","😮"],["ok","✅"],["pray","🙏"]];
@@ -1095,10 +1141,11 @@ function openActions(m){
   const pv=el("div","apv");pv.appendChild(el("b",null,m.name));pv.appendChild(el("span",null,previewText(m).replace(/\s+/g," ").slice(0,80)));s.appendChild(pv);
   const er=el("div","emos");REACTS.forEach(([c,e])=>{const b=el("button","emo"+(myReact(m)===c?" on":""),e);b.title=e;b.onclick=()=>{closeActions();setReact(m,c);};er.appendChild(b);});s.appendChild(er);
   const add=(icon,label,fn,cls)=>{const b=el("button","aitem"+(cls?" "+cls:""));if(icon)b.appendChild(el("span","ai",icon));b.appendChild(document.createTextNode(label));b.onclick=()=>{closeActions();fn();};s.appendChild(b);};
+  if(m.file){if(isImgF(m.file))add("🔍","크게 보기",()=>openViewer(m));else add("⬇️","파일 열기",()=>window.open(driveView(m.file.id),"_blank","noopener"));}
   add("↩️","답장",()=>startReply(m));
   add("⭐",saved[m.id]?"저장 해제":"저장 (나중에 다시 보기)",()=>toggleSave(m));
   if(m.text)add("📋","복사",()=>copyText(m.text));
-  if(m.file)add("⬇️","파일 열기",()=>window.open(driveView(m.file.id),"_blank","noopener"));
+  if(m.file&&isImgF(m.file))add("⬇️","원본 열기",()=>window.open(driveView(m.file.id),"_blank","noopener"));
   if(canPin(m)){const pinned=!!pinOf(room)&&pinOf(room).id===m.id;add("📌",pinned?"상단 고정 해제":"이 방 상단에 고정",()=>pinned?unpin(room):pinMsg(m));}
   if(isMine(m)&&m.text)add("✏️","수정",()=>startEdit(m));
   if(isMine(m))add("🗑","삭제",()=>removeMsg(m),"bad");
