@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1A3A6B">
+<meta name="theme-color" content="#005BAC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FS Talk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>FS Talk</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -45,6 +52,11 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .li .tm{font-size:11px;color:#98A2B0}
 .cnt{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#FF4D4F;color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center}
 .me{padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--sub)}
+.inst{margin:0 10px 10px;background:#E6F1FB;border:1px solid #C9DFF5;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.55;position:relative}
+.inst b{display:block;font-size:14px;margin-bottom:4px;color:var(--navy)}
+.inst ol{margin:4px 0 0;padding-left:18px}
+.inst .x{position:absolute;top:6px;right:8px;background:none;border:0;font-size:18px;color:var(--sub)}
+.inst .btn{margin-top:8px}
 /* 아바타 */
 .av{flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;letter-spacing:-.5px}
 .av.sq{border-radius:12px;font-size:12px}
@@ -254,6 +266,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <h2 id="lTitle">대화</h2>
       <input type="search" class="lsearch" id="lq" placeholder="검색">
     </div>
+    <div id="inst"></div>
     <div class="litems" id="nav"></div>
     <div class="me" id="me"></div>
   </aside>
@@ -310,7 +323,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.8";
+const APP_VERSION="2026-10-28.9";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -778,6 +791,38 @@ function renderAdmin(){
   });
   renderRosterEditor(body);
 }
+
+/* ---------- 홈 화면 설치 (PWA) ---------- */
+const isStandalone=()=>window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const isAndroid=/Android/.test(navigator.userAgent);
+let deferredInstall=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;renderInstall();});
+window.addEventListener("appinstalled",()=>{deferredInstall=null;renderInstall();toast("홈 화면에 설치했습니다.");});
+function instHidden(){try{return +localStorage.getItem("fstalk-inst-hide")>Date.now();}catch(e){return false;}}
+function renderInstall(){
+  const box=$("inst");box.textContent="";
+  if(isStandalone()||instHidden())return;
+  if(!isIOS&&!isAndroid&&!deferredInstall)return;
+  const c=el("div","inst");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=()=>{try{localStorage.setItem("fstalk-inst-hide",String(Date.now()+7*864e5));}catch(e){}renderInstall();};c.appendChild(x);
+  c.appendChild(el("b",null,"📲 FS Talk을 홈 화면에 설치하세요"));
+  if(isIOS){
+    c.appendChild(document.createTextNode("앱처럼 전체 화면으로 열리고, 다음 단계에서 알림도 받을 수 있어요."));
+    const ol=el("ol");["Safari 주소창 옆 ⋯ 버튼(또는 공유 □↑)을 누르세요","「공유」 → 「홈 화면에 추가」 → 「추가」를 누르세요","홈 화면의 FS Talk 아이콘으로 여세요"].forEach(t=>ol.appendChild(el("li",null,t)));c.appendChild(ol);
+    if(!/Safari/.test(navigator.userAgent)||/CriOS|FxiOS|EdgiOS|NAVER|KAKAOTALK/.test(navigator.userAgent))c.appendChild(el("div",null,"※ 지금 브라우저에서 안 되면 Safari로 이 주소를 열어 주세요."));
+  }else if(deferredInstall){
+    c.appendChild(document.createTextNode("앱처럼 바로 열고, 다음 단계에서 알림도 받을 수 있어요."));c.appendChild(el("br"));
+    const b=el("button","btn pri","앱 설치");b.onclick=async()=>{const d=deferredInstall;deferredInstall=null;d.prompt();try{await d.userChoice;}catch(e){}renderInstall();};c.appendChild(b);
+  }else{
+    c.appendChild(document.createTextNode("Chrome 오른쪽 위 메뉴(⋮) → 「홈 화면에 추가」 또는 「앱 설치」를 누르세요."));
+  }
+  box.appendChild(c);
+}
+if("serviceWorker" in navigator&&window.isSecureContext){
+  window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});});
+}
+renderInstall();
 
 /* ---------- 연결 상태 ---------- */
 let connT=null;
