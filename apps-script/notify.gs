@@ -25,7 +25,8 @@ function doPost(e){
     if(req.type === 'deleteFile') return out_(deleteFile_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
-    if((!ROOM_NAME[room] && !isDm) || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request',ver:NOTIFY_VER});
+    const isGroup = /^g_[-\w]{10,40}$/.test(room);
+    if((!ROOM_NAME[room] && !isDm && !isGroup) || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request',ver:NOTIFY_VER});
     const uid = verifyUser_(String(req.idToken||''));
     if(!uid) return out_({ok:false,err:'auth',ver:NOTIFY_VER});
     const msg = db_('talk/msgs/'+encodeURIComponent(room)+'/'+msgId);
@@ -40,9 +41,13 @@ function doPost(e){
     const myKey = me.team + '_' + me.name;
     const dmKeys = isDm ? room.slice(3).split('__') : null;
     if(isDm && dmKeys.indexOf(myKey) < 0) return out_({ok:false,err:'dm',ver:NOTIFY_VER});
-    const mentioned = isDm ? {} : mentions_(String(msg.text||''), users);
+    const grp = isGroup ? (db_('talk/groups/'+room) || {}) : null;
+    const gMembers = grp ? (grp.members || {}) : null;
+    if(isGroup && !gMembers[myKey]) return out_({ok:false,err:'group',ver:NOTIFY_VER});
+    const mentioned = (isDm || isGroup) ? {} : mentions_(String(msg.text||''), users);
     const sc = ROOM_SCOPE[room], targets = [];
-    const roomLabel = isDm ? '1:1' : ROOM_NAME[room];
+    const groupName = grp ? (grp.name || '그룹 대화') : '';
+    const roomLabel = isDm ? '1:1' : isGroup ? groupName : ROOM_NAME[room];
     // 왜 0대인지 알 수 있게 셈: 내 다른 기기 / 이 방 대상인 다른 사람 / 그중 알림 켠 기기 / 꺼 둔 기기
     const st = {myOther:0, people:{}, pushPeople:{}, noPush:{}, muted:0};
     Object.keys(users).forEach(function(id){
@@ -51,6 +56,7 @@ function doPost(e){
       if(u.name===me.name && u.team===me.team){ st.myOther++; return; }
       const ment = !!mentioned[u.name];
       if(isDm){ if(dmKeys.indexOf(u.team + '_' + u.name) < 0) return; }
+      else if(isGroup){ if(!gMembers[u.team + '_' + u.name]) return; }
       else if(!ment && sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
       const pk = u.team + '_' + u.name; st.people[pk] = true;
       const hasTok = Object.keys(tokens[id] || {}).some(function(k){ return tokens[id][k] && tokens[id][k].token; });
@@ -65,7 +71,7 @@ function doPost(e){
     const stats = {myOther:st.myOther, people:Object.keys(st.people).length, pushPeople:Object.keys(st.pushPeople).length, muted:st.muted,
       noPush:Object.keys(st.noPush).filter(function(k){ return !st.pushPeople[k]; }).map(function(k){ return st.noPush[k]; }).slice(0,30)};
     if(!targets.length) return out_({ok:true,sent:0,targets:0,stats:stats,ver:NOTIFY_VER});
-    const title = isDm ? '💬 ' + (msg.name||'') + ' (1:1)' : ROOM_NAME[room] + ' · ' + (msg.name||'');
+    const title = isDm ? '💬 ' + (msg.name||'') + ' (1:1)' : isGroup ? '👥 ' + groupName + ' · ' + (msg.name||'') : ROOM_NAME[room] + ' · ' + (msg.name||'');
     let body = String(msg.text||'').replace(/\s+/g,' ');
     if(msg.file) body = (/^image\//.test(msg.file.mime||'') ? '📷 사진' : '📎 ' + (msg.file.name||'파일')) + (body ? ' ' + body : '');
     if(msg.re) body = '↪ ' + body;
@@ -76,7 +82,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v7';
+const NOTIFY_VER = 'v8';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -112,7 +118,7 @@ function deleteFile_(req){
   const uid = verifyUser_(String(req.idToken||''));
   if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const room = String(req.room||''), msgId = String(req.msgId||'');
-  if(!/^[-\w]{10,40}$/.test(msgId) || !(ROOM_NAME[room] || /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room))) return {ok:false,err:'bad request',ver:NOTIFY_VER};
+  if(!/^[-\w]{10,40}$/.test(msgId) || !(ROOM_NAME[room] || /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room) || /^g_[-\w]{10,40}$/.test(room))) return {ok:false,err:'bad request',ver:NOTIFY_VER};
   const msg = db_('talk/msgs/'+encodeURIComponent(room)+'/'+msgId);
   if(!msg || !msg.file || !msg.file.id) return {ok:false,err:'첨부가 없는 메시지',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid) || {}, author = msg.uid === uid ? me : (db_('talk/users/'+msg.uid) || {});
@@ -299,7 +305,7 @@ function restoreMissing(){
   const bak = JSON.parse(it.next().getBlob().getDataAsString());
   const now = db_('talk') || {};
   let added = 0;
-  ['msgs','users','roster','admins','mute','profiles','reacts','pins','dms','prefs'].forEach(function(sec){
+  ['msgs','users','roster','admins','mute','profiles','reacts','pins','dms','prefs','groups','gidx'].forEach(function(sec){
     const b = bak[sec] || {}, c = now[sec] || {};
     Object.keys(b).forEach(function(k1){
       const bv = b[k1], cv = c[k1];

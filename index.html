@@ -52,6 +52,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .allbell:hover{border-color:var(--blue)}
 .allbell.off{background:var(--soft);color:var(--sub)}
 .allbell .bi{font-size:14px}
+.lhbtns{display:flex;gap:6px}
 .lhead h2 small{font-size:12px;color:var(--sub);font-weight:400}
 .lsearch{width:100%;border:0;background:var(--soft);border-radius:8px;padding:9px 12px}
 .litems{flex:1;overflow:auto;padding:0 6px 10px}
@@ -122,6 +123,19 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .pcard .none{color:var(--sub);font-size:13px;padding:8px 0}
 .pcard .f{text-align:left}
 .pcard .btn{width:100%;padding:11px;margin-top:6px}
+.pcard.wide{width:min(440px,100%);text-align:left;max-height:92vh;display:flex;flex-direction:column}
+.pcard.wide h3{text-align:left}
+.pkf{display:flex;gap:6px;margin:8px 0}
+.pkf input,.pkf select{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--panel);color:var(--text);font-size:14px}
+.pkf input{flex:1;min-width:0}
+.plist.pk{flex:1;min-height:160px;max-height:none;margin-bottom:8px}
+.plist.pk button{padding:9px 12px;font-size:14px;color:var(--text)}
+.plist .pkall{display:block;width:100%;background:var(--sel);color:var(--link);border:0;padding:8px;font-size:13px}
+.pkfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--sub)}
+.pkfoot .btn{width:auto!important;margin:0!important;padding:9px 20px}
+.newroom{display:block;width:calc(100% - 20px);margin:2px 10px 6px;padding:8px 10px;border:1px dashed var(--selline);background:var(--sel2);color:var(--link);border-radius:10px;font-size:13px;text-align:left}
+.gacts{display:flex;flex-wrap:wrap;gap:6px;padding:8px 8px 4px}
+.gacts .btn{font-size:12px;padding:6px 10px}
 .myedit{display:flex;align-items:center;gap:8px;margin:0 10px 8px;padding:10px 12px;border:1px dashed var(--selline);border-radius:12px;background:var(--sel2);font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
 .clickable{cursor:pointer}
 .unr{color:#E8A317;font-weight:700;font-size:11px}
@@ -427,7 +441,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   </nav>
   <aside class="list" id="side">
     <div class="lhead">
-      <div class="lhrow"><h2 id="lTitle">대화</h2><button class="allbell" id="allBell" hidden></button></div>
+      <div class="lhrow"><h2 id="lTitle">대화</h2><div class="lhbtns"><button class="allbell" id="newRoomBtn" title="새 그룹 대화방 만들기" hidden>＋ 새 방</button><button class="allbell" id="allBell" hidden></button></div></div>
       <input type="search" class="lsearch" id="lq" placeholder="검색">
     </div>
     <div id="inst"></div>
@@ -511,7 +525,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.34";
+const APP_VERSION="2026-10-28.35";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -562,10 +576,15 @@ const SV=firebase.database.ServerValue.TIMESTAMP;
 /* 1:1 대화방: dm_{팀_이름}__{팀_이름} (두 사람 키를 정렬해서 붙임) */
 const isDm=id=>typeof id==="string"&&id.indexOf("dm_")===0;
 /* 1:1은 전체방에 절대 안 보임. 나간 1:1은 나간 시점 이전 대화를 내 화면에서 숨김 */
-const dmLeft=id=>{const d=dms[id];return d&&d.left?+d.left:0;};
+/* 그룹 대화방: g_{키} — 참여자만 읽고 씀. 1:1과 마찬가지로 전체방에는 안 올라감 */
+const isGroup=id=>typeof id==="string"&&id.indexOf("g_")===0;
+const isPriv=id=>isDm(id)||isGroup(id);
+let groups={},gidx={};
+const dmLeft=id=>{const d=isGroup(id)?gidx[id]:dms[id];return d&&d.left?+d.left:0;};
 const dmVisible=id=>{const d=dms[id];return !!d&&(!d.left||(+d.ts||0)>+d.left);};
-const shown=m=>!isDm(m.room)||m.ts>dmLeft(m.room);
-const inRoom=(m,id)=>id==="all"?!isDm(m.room):(m.room===id&&shown(m));
+const shown=m=>!isPriv(m.room)||m.ts>dmLeft(m.room);
+const inRoom=(m,id)=>id==="all"?!isPriv(m.room):(m.room===id&&shown(m));
+const myGroup=id=>isGroup(id)&&!!groups[id]&&!!(groups[id].members||{})[myKey];
 let dms={};
 function dmOther(id){if(!isDm(id)||!myKey)return null;const ks=id.slice(3).split("__");if(ks.length!==2||ks[0]===ks[1])return null;return ks[0]===myKey?ks[1]:ks[1]===myKey?ks[0]:null;}
 function personByKey(k){return rosterList().find(p=>personKey(p.team,p.name)===k)||null;}
@@ -573,9 +592,12 @@ function dmId(p){return "dm_"+[myKey,personKey(p.team,p.name)].sort().join("__")
 function getRoom(id){
   const r=ROOMS.find(x=>x.id===id);if(r)return r;
   if(isDm(id)&&dmOther(id)){const p=personByKey(dmOther(id));return {id,name:p?p.name:"(명단에 없음)",desc:"1:1 대화"+(p?" · "+teamLabel(p.team)+(p.office?" "+p.office:""):""),grp:"1:1",dm:1,person:p};}
+  if(isGroup(id)&&groups[id]){const g=groups[id];const names=Object.keys(g.members||{}).map(k=>{const q=personByKey(k);return q?q.name:null;}).filter(Boolean);
+    return {id,name:g.name||groupAutoName(names),desc:"그룹 대화 · "+names.join(", "),grp:"그룹",group:1};}
   return null;
 }
 const roomName=id=>{const r=getRoom(id);return r?r.name:id;};
+function groupAutoName(names){const o=names.filter(n=>!me||n!==me.name);return o.length<=3?o.join(", "):o.slice(0,3).join(", ")+" 외 "+(o.length-3)+"명";}
 
 /* ---------- 화면 테마 ---------- */
 const THEMES=["system","light","dark"],THEME_LABEL={system:"시스템 설정 따름",light:"밝게",dark:"어둡게"};
@@ -696,6 +718,7 @@ function start(){
   refreshPush();
   ROOMS.forEach(r=>watchRoom(r.id));
   R("dms/"+myKey).on("value",s=>{dms=s.val()||{};Object.keys(dms).forEach(id=>{if(dmOther(id))watchRoom(id);});schedule();if(view==="chat"&&isDm(room))showView();},()=>{});
+  R("gidx/"+myKey).on("value",s=>{gidx=s.val()||{};Object.keys(gidx).forEach(watchGroup);Object.keys(groups).forEach(id=>{if(!gidx[id]){delete groups[id];}});schedule();if(view==="chat"&&isGroup(room))showView();},()=>{});
   R("reacts").on("value",s=>{reacts=s.val()||{};schedule();},()=>{});
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
@@ -712,7 +735,13 @@ function watchRoom(id){
   q.on("child_removed",s=>{const m=byId.get(s.key);if(m){byId.delete(s.key);msgs=msgs.filter(x=>x!==m);schedule();}});
   q.once("value",s=>{hasMore[id]=s.numChildren()>=PER_ROOM;schedule();},()=>{});
 }
-const allRoomIds=()=>ROOMS.map(r=>r.id).concat(Object.keys(dms).filter(id=>dmOther(id)));
+const allRoomIds=()=>ROOMS.map(r=>r.id).concat(Object.keys(dms).filter(id=>dmOther(id)),Object.keys(groups).filter(myGroup));
+const gWatched=new Set();
+function watchGroup(id){
+  if(!isGroup(id)||gWatched.has(id))return;gWatched.add(id);
+  R("groups/"+id).on("value",s=>{const g=s.val();if(g)groups[id]=g;else delete groups[id];if(myGroup(id))watchRoom(id);schedule();if(view==="chat"&&room===id){showView();}},
+    ()=>{gWatched.delete(id);delete groups[id];schedule();});
+}
 function parseMsg(v){
   if(!v||typeof v.text!=="string")return null;
   return {text:v.text,ts:+v.ts||Date.now(),author:String(v.uid||""),name:String(v.name||""),
@@ -750,7 +779,7 @@ function unreadPeople(m){
   const key=m.room;let mem=roomJoinedCache[key];
   if(!mem||mem._v!==rosterVer+"|"+Object.keys(joined).length){mem=roomMembers(m.room).map(p=>personKey(p.team,p.name)).filter(k=>joined[k]);mem._v=rosterVer+"|"+Object.keys(joined).length;roomJoinedCache[key]=mem;}
   const author=rosterList().find(p=>p.name===m.name);const ak=author?personKey(author.team,author.name):"";
-  let n=0;mem.forEach(k=>{if(k!==ak&&Math.max(rd(m.room,k),isDm(m.room)?0:rd("all",k))<m.ts)n++;});
+  let n=0;mem.forEach(k=>{if(k!==ak&&Math.max(rd(m.room,k),isPriv(m.room)?0:rd("all",k))<m.ts)n++;});
   return n;
 }
 
@@ -765,10 +794,10 @@ const ROOM_SCOPE={west:["FS WEST"],east:["FS EAST"],central:["FS CENTRAL"],daeje
 function personTeam(name){const p=rosterList().find(x=>x.name===name);return p||null;}
 function avatar(label,color,cls){const a=el("div","av"+(cls?" "+cls:""),label);a.style.background=color;return a;}
 function personAv(name,cls){const p=personTeam(name);return avatar(String(name||"?").slice(-2),(p&&TEAM_COLOR[p.team])||"#8A94A3",cls);}
-function roomAv(id,cls){if(isDm(id)){const r=getRoom(id);return personAv(r?r.name:"?",cls);}const l=ROOM_LOOK[id]||["?","#8A94A3"];return avatar(l[0],l[1],"sq"+(cls?" "+cls:""));}
-function roomMembers(id){if(isDm(id))return [personByKey(myKey),personByKey(dmOther(id))].filter(Boolean);const sc=ROOM_SCOPE[id];const all=rosterList();if(!sc)return all;return all.filter(p=>p.team===sc[0]&&(!sc[1]||p.office===sc[1]));}
+function roomAv(id,cls){if(isGroup(id)){const r=getRoom(id);const n=r?r.name.replace(/\s+/g,""):"그룹";return avatar(n.slice(0,2),"#5B6B82","sq"+(cls?" "+cls:""));}if(isDm(id)){const r=getRoom(id);return personAv(r?r.name:"?",cls);}const l=ROOM_LOOK[id]||["?","#8A94A3"];return avatar(l[0],l[1],"sq"+(cls?" "+cls:""));}
+function roomMembers(id){if(isGroup(id))return Object.keys((groups[id]||{}).members||{}).map(personByKey).filter(Boolean);if(isDm(id))return [personByKey(myKey),personByKey(dmOther(id))].filter(Boolean);const sc=ROOM_SCOPE[id];const all=rosterList();if(!sc)return all;return all.filter(p=>p.team===sc[0]&&(!sc[1]||p.office===sc[1]));}
 const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 다른 기기에서 쓴 글도 내 글
-const readFor=m=>isDm(m.room)?myRead(m.room):Math.max(myRead(m.room),myRead("all"));
+const readFor=m=>isPriv(m.room)?myRead(m.room):Math.max(myRead(m.room),myRead("all"));
 const isUnread=(m,id)=>!isMine(m)&&m.ts>Math.max(myRead(id),readFor(m));
 function unread(id){return msgs.filter(m=>inRoom(m,id)&&isUnread(m,id)).length;}
 function unreadMention(id){return msgs.some(m=>inRoom(m,id)&&isUnread(m,id)&&mentionsMe(m));}
@@ -783,8 +812,9 @@ function renderNav(){
   if(listTab==="org"){renderOrg(nav,q);}
   else{
     $("lTitle").textContent="대화";
-    const lastTs=id=>{const l=msgs.filter(m=>inRoom(m,id)).pop();return l?l.ts:((dms[id]||{}).ts||0);};
-    const dmRooms=Object.keys(dms).filter(id=>dmOther(id)&&dmVisible(id)).map(getRoom).sort((a,b)=>lastTs(b.id)-lastTs(a.id));
+    const lastTs=id=>{const l=msgs.filter(m=>inRoom(m,id)).pop();return l?l.ts:(((isGroup(id)?groups[id]:dms[id])||{}).ts||0);};
+    const dmRooms=Object.keys(dms).filter(id=>dmOther(id)&&dmVisible(id)).map(getRoom)
+      .concat(Object.keys(groups).filter(myGroup).map(getRoom).filter(Boolean)).sort((a,b)=>lastTs(b.id)-lastTs(a.id));
     if(q){
       ROOMS.concat(dmRooms).filter(r=>r.name.replace(/\s+/g,"").toLowerCase().includes(q)).forEach(r=>nav.appendChild(roomBtn(r,false)));
       if(!nav.children.length)nav.appendChild(el("div","more","찾는 대화방이 없습니다."));
@@ -792,7 +822,7 @@ function renderNav(){
       const groups=[["fav","★ 즐겨찾기",ROOMS.concat(dmRooms).filter(r=>favs[r.id])],
         ["all","전체",ROOMS.filter(r=>r.grp==="전체"&&!favs[r.id])],
         ["team","팀·사무소",ROOMS.filter(r=>r.grp==="팀"&&!favs[r.id])],
-        ["dm","1:1 대화",dmRooms.filter(r=>!favs[r.id])]];
+        ["dm","1:1·그룹 대화",dmRooms.filter(r=>!favs[r.id])]];
       groups.forEach(([k,label,list])=>{
         if(!list.length&&k!=="dm")return;
         const h=el("button","lgrp fold");h.appendChild(el("span",null,(fold[k]?"▸ ":"▾ ")+label));
@@ -800,7 +830,8 @@ function renderNav(){
         h.onclick=()=>{fold[k]=!fold[k];try{localStorage.setItem("fstalk-fold",JSON.stringify(fold));}catch(e){}renderNav();};
         nav.appendChild(h);
         if(fold[k])return;
-        if(k==="dm"&&!list.length){nav.appendChild(el("div","dmhint","조직도에서 사람을 누르고 「1:1 대화」를 고르면 여기에 생깁니다."));return;}
+        if(k==="dm"){const nb=el("button","newroom","＋ 새 그룹 대화방 만들기");nb.onclick=()=>openGroupCreate();nav.appendChild(nb);}
+        if(k==="dm"&&!list.length){nav.appendChild(el("div","dmhint","1:1 대화는 조직도에서 사람을 누르고 「1:1 대화」를 고르면 생깁니다."));return;}
         list.forEach(r=>nav.appendChild(roomBtn(r,k==="team"&&!!r.sub)));
       });
     }
@@ -827,9 +858,10 @@ function roomBtn(r,indent){
   const mid=el("div","mid");
   const nm=el("div","nm",r.name);
   if(r.dm){const tg=roleTag(r.person);if(tg)nm.appendChild(tg);}
-  else{const n=roomMembers(r.id).length;if(n)nm.appendChild(el("small",null,String(n)));}
+  else if(!r.group){const n=roomMembers(r.id).length;if(n)nm.appendChild(el("small",null,String(n)));}
   if(myMute[r.id])nm.appendChild(el("small",null,"🔕"));
   mid.appendChild(nm);
+  if(r.group)nm.appendChild(el("small",null,String(roomMembers(r.id).length)));
   mid.appendChild(el("div","pv",last?((r.id==="all"&&last.room!=="all"?"["+roomName(last.room)+"] ":"")+(last.name&&!r.dm?last.name+": ":"")+previewText(last).replace(/\s+/g," ").slice(0,60)):r.desc));
   b.appendChild(mid);
   const rt=el("div","rt");
@@ -879,6 +911,13 @@ function renderInfo(){
   });
   if(!mem.length)l.appendChild(el("div","more","명단이 등록되면 참여자가 표시됩니다."));
   if(isDm(room)){const lb=el("button","btn bad","🚪 1:1 대화방 나가기");lb.style.margin="14px 8px";lb.onclick=()=>leaveDm(room);l.appendChild(lb);}
+  if(isGroup(room)){
+    const g=el("div","gacts");
+    const a1=el("button","btn","✏️ 방 이름 바꾸기");a1.onclick=()=>renameGroup(room);g.appendChild(a1);
+    const a2=el("button","btn","➕ 초대하기");a2.onclick=()=>openGroupInvite(room);g.appendChild(a2);
+    const a3=el("button","btn bad","🚪 나가기");a3.onclick=()=>leaveGroup(room);g.appendChild(a3);
+    l.insertBefore(g,l.firstChild);
+  }
   box.appendChild(l);
 }
 let infoOpen=false;
@@ -895,7 +934,7 @@ function showView(){
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   $("popBtn").hidden=view!=="chat"||!room||isTouch();
   if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(document.createTextNode("💬 대화방을 선택하세요"));b.appendChild(e);}
-  else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
+  else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
   else if(view==="saved"){$("title").textContent="저장한 글";$("desc").textContent="중요한 글을 모아 둔 곳 · 나만 볼 수 있어요";renderSaved();}
   else{$("title").textContent="관리";$("desc").textContent="등록 승인 · 관리자 지정 · 직원 명단";renderAdmin();}
@@ -915,7 +954,7 @@ function route(){
   else if(h==="saved"){view="saved";mList=false;}
   else if(h==="admin"&&isAdmin){view="admin";mList=false;}
   else if(h==="org"){listTab="org";view="chat";mList=true;}
-  else if(h.indexOf("room-")===0&&(ROOMS.some(r=>r.id===h.slice(5))||dmOther(h.slice(5)))){
+  else if(h.indexOf("room-")===0&&(ROOMS.some(r=>r.id===h.slice(5))||dmOther(h.slice(5))||(isGroup(h.slice(5))&&(myGroup(h.slice(5))||gidx[h.slice(5)])))){
     const nr=h.slice(5);if(nr!==room&&(replyTo||editing)){if(editing)input.value="";replyTo=null;editing=null;}
     room=nr;view="chat";mList=false;if(isDm(room))watchRoom(room);}
   else{listTab="rooms";mList=true;view="chat";}
@@ -1116,7 +1155,7 @@ async function setReact(m,code){
   try{if(myReact(m)===code)await ref.remove();else await ref.set(code);}catch(e){toast("반응 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 const pinOf=r=>{const p=pins[r];return p&&p.id?p:null;};
-const canPin=m=>!!room&&!isDm(room)&&(isAdmin||isMine(m));
+const canPin=m=>!!room&&!isPriv(room)&&(isAdmin||isMine(m));
 async function pinMsg(m){
   try{await R("pins/"+room).set({id:m.id,mroom:m.room,text:previewText(m).replace(/\s+/g," ").slice(0,200),name:m.name,ts:SV,by:myKey});toast("이 방 상단에 고정했습니다.");}
   catch(e){toast("고정 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
@@ -1166,13 +1205,13 @@ async function toggleSave(m){
     else{await ref.set({room:m.room,name:m.name,text:previewText(m).replace(/\s+/g," ").slice(0,300),mts:m.ts,ts:SV});toast("⭐ 저장했습니다. 「저장」에서 모아 볼 수 있어요.");}
   }catch(e){toast("저장 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
-(()=>{const sel=$("sRoom");ROOMS.forEach(r=>sel.appendChild(new Option((r.sub?"  └ ":"")+r.name,r.id)));sel.appendChild(new Option("1:1 대화","dm"));})();
+(()=>{const sel=$("sRoom");ROOMS.forEach(r=>sel.appendChild(new Option((r.sub?"  └ ":"")+r.name,r.id)));sel.appendChild(new Option("1:1·그룹 대화","dm"));})();
 ["sq","sRoom"].forEach(id=>$(id).addEventListener(id==="sq"?"input":"change",()=>{if(view==="saved")renderSaved();}));
 function renderSaved(){
   const box=$("sRes");box.textContent="";
   const q=terms($("sq").value),fr=$("sRoom").value;
   const list=Object.entries(saved).map(([id,v])=>({id,v:v||{},m:byId.get(id)}))
-    .filter(x=>{const room=x.m?x.m.room:x.v.room;if(fr&&(fr==="dm"?!isDm(room):room!==fr))return false;
+    .filter(x=>{const room=x.m?x.m.room:x.v.room;if(fr&&(fr==="dm"?!isPriv(room):room!==fr))return false;
       if(q.length){const c=squash((x.m?msgText(x.m):x.v.text||"")+" "+(x.v.name||"")).c;if(!q.every(t=>c.includes(t)))return false;}return true;})
     .sort((a,b)=>(b.v.ts||0)-(a.v.ts||0));
   $("sCnt").textContent=list.length;
@@ -1182,7 +1221,7 @@ function renderSaved(){
     const h=el("div","hit"),meta=el("div","meta");
     meta.appendChild(el("span","rb",roomName(room)));meta.appendChild(el("span",null,(m?m.name:v.name)||""));
     const d=new Date(m?m.ts:(v.mts||v.ts||0));meta.appendChild(el("span",null,ymd(d)+" "+hm(d)));
-    if(!m&&!isDm(room)&&!(ROOMS.some(r=>r.id===room)))meta.appendChild(el("span",null,"(방 없음)"));
+    if(!m&&!isPriv(room)&&!(ROOMS.some(r=>r.id===room)))meta.appendChild(el("span",null,"(방 없음)"));
     const x=el("button","cx","×");x.title="저장 해제";x.setAttribute("aria-label","저장 해제");x.style.marginLeft="auto";x.style.fontSize="18px";
     x.onclick=ev=>{ev.stopPropagation();R("prefs/"+myKey+"/saved/"+id).remove().then(()=>toast("저장을 해제했습니다.")).catch(e=>toast("해제 실패: "+(e.code||e.message)));};meta.appendChild(x);
     h.appendChild(meta);
@@ -1305,6 +1344,78 @@ function afterSend(r,key){
   notifyOthers(r,key);
   const o=dmOther(r);
   if(o){const u={};u["dms/"+myKey+"/"+r+"/ts"]=SV;u["dms/"+o+"/"+r+"/ts"]=SV;db.ref("talk").update(u).catch(()=>{});}
+}
+/* 사람 고르기 창 (그룹방 만들기·초대 공통) */
+function openPeoplePicker(opt){
+  const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,opt.title));
+  const sel=new Set();
+  let nameIn=null;
+  if(opt.nameField){const d=el("div","f");d.style.marginTop="12px";const lb=el("label",null,"방 이름 (비워 두면 참여자 이름으로)");nameIn=el("input");nameIn.maxLength=40;nameIn.placeholder="예: XN-20 이슈 대응";d.appendChild(lb);d.appendChild(nameIn);c.appendChild(d);}
+  const fl=el("div","pkf");const q=el("input");q.type="search";q.placeholder="이름 검색";const tm=el("select");tm.appendChild(new Option("전체 팀",""));
+  [...new Set(rosterList().map(p=>p.team))].sort((a,b)=>teamRank(a)-teamRank(b)).forEach(t=>tm.appendChild(new Option(teamLabel(t),t)));
+  fl.appendChild(q);fl.appendChild(tm);c.appendChild(fl);
+  const list=el("div","plist pk");c.appendChild(list);
+  const foot=el("div","pkfoot");const cnt=el("span",null,"0명 선택");const ok=el("button","btn pri",opt.okLabel);ok.disabled=true;foot.appendChild(cnt);foot.appendChild(ok);c.appendChild(foot);
+  const people=rosterList().filter(p=>!(opt.exclude||new Set()).has(personKey(p.team,p.name))&&!(me&&p.name===me.name&&p.team===me.team)).sort(byTeamLead);
+  function draw(){
+    list.textContent="";const qq=q.value.replace(/\s+/g,""),t=tm.value;let g="";
+    const vis=people.filter(p=>(!t||p.team===t)&&(!qq||p.name.includes(qq)));
+    if(t){const all=el("button","pkall",vis.every(p=>sel.has(personKey(p.team,p.name)))?"이 팀 선택 해제":"이 팀 모두 선택");all.type="button";
+      all.onclick=()=>{const on=!vis.every(p=>sel.has(personKey(p.team,p.name)));vis.forEach(p=>{const k=personKey(p.team,p.name);on?sel.add(k):sel.delete(k);});draw();};list.appendChild(all);}
+    vis.forEach(p=>{
+      const key=teamLabel(p.team)+(p.office?" · "+p.office:"");if(key!==g){g=key;list.appendChild(el("div","grp",key));}
+      const k=personKey(p.team,p.name);const b=el("button",sel.has(k)?"on":"");b.type="button";
+      const l=el("span");l.appendChild(document.createTextNode((sel.has(k)?"☑ ":"☐ ")+p.name));const tg=roleTag(p);if(tg)l.appendChild(tg);b.appendChild(l);
+      b.onclick=()=>{sel.has(k)?sel.delete(k):sel.add(k);draw();};list.appendChild(b);
+    });
+    if(!vis.length)list.appendChild(el("div","none","찾는 사람이 없습니다."));
+    cnt.textContent=sel.size+"명 선택";ok.disabled=sel.size<(opt.min||1);
+  }
+  q.addEventListener("input",draw);tm.addEventListener("change",draw);draw();
+  ok.onclick=async()=>{ok.disabled=true;try{await opt.onDone([...sel],nameIn?nameIn.value.trim():"");}finally{ok.disabled=false;}};
+  $("pOv").hidden=false;setTimeout(()=>(nameIn||q).focus(),50);
+}
+function openGroupCreate(){
+  if(!me||!myKey)return;
+  openPeoplePicker({title:"새 그룹 대화방",nameField:true,okLabel:"만들기",min:1,onDone:async(keys,name)=>{
+    const id="g_"+R("groups").push().key;
+    const members={};members[myKey]=true;keys.forEach(k=>members[k]=true);
+    const u={};u["groups/"+id]={name:name.slice(0,40),by:myKey,ts:SV,members};
+    Object.keys(members).forEach(k=>{u["gidx/"+k+"/"+id]={ts:SV};});
+    try{await db.ref("talk").update(u);closeProfile();groups[id]={name,by:myKey,ts:Date.now(),members};gidx[id]={ts:Date.now()};watchGroup(id);watchRoom(id);listTab="rooms";go("room-"+id);toast("그룹 대화방을 만들었습니다 ("+Object.keys(members).length+"명).");}
+    catch(e){toast("만들기 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
+  }});
+}
+function openGroupInvite(id){
+  const g=groups[id];if(!g)return;
+  openPeoplePicker({title:"초대하기 — "+roomName(id),okLabel:"초대",min:1,exclude:new Set(Object.keys(g.members||{})),onDone:async keys=>{
+    const u={};keys.forEach(k=>{u["groups/"+id+"/members/"+k]=true;u["gidx/"+k+"/"+id]={ts:SV};});
+    try{await db.ref("talk").update(u);closeProfile();toast(keys.length+"명을 초대했습니다.");
+      const names=keys.map(k=>{const q=personByKey(k);return q?q.name:k;});
+      R("msgs/"+id).push({uid,name:me.name,text:"➕ "+names.join(", ")+"님을 초대했습니다.",ts:SV}).then(ref=>notifyOthers(id,ref.key)).catch(()=>{});}
+    catch(e){toast("초대 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
+  }});
+}
+async function renameGroup(id){
+  const cur=(groups[id]||{}).name||"";
+  const v=prompt("새 방 이름 (비워 두면 참여자 이름으로 표시)",cur);if(v===null)return;
+  const name=v.trim().slice(0,40);if(name===cur)return;
+  try{await R("groups/"+id+"/name").set(name);toast("방 이름을 바꿨습니다.");
+    R("msgs/"+id).push({uid,name:me.name,text:"✏️ 방 이름을 「"+(name||"참여자 이름")+"」(으)로 바꿨습니다.",ts:SV}).catch(()=>{});}
+  catch(e){toast("변경 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
+}
+async function leaveGroup(id){
+  if(!confirm("「"+roomName(id)+"」 방에서 나갈까요?\n나가면 이 방의 대화를 더 볼 수 없고, 다시 들어오려면 참여자가 초대해야 합니다."))return;
+  try{
+    await R("msgs/"+id).push({uid,name:me.name,text:"🚪 "+me.name+"님이 나갔습니다.",ts:SV}).catch(()=>{});
+    const u={};u["groups/"+id+"/members/"+myKey]=null;u["gidx/"+myKey+"/"+id]=null;
+    await db.ref("talk").update(u);
+    if(favs[id])R("prefs/"+myKey+"/fav/"+id).remove().catch(()=>{});
+    delete groups[id];delete gidx[id];msgs=msgs.filter(m=>m.room!==id);
+    toast("방에서 나갔습니다.");infoOpen=false;listTab="rooms";go("");
+  }catch(e){toast("나가기 실패: "+(e.code||e.message));}
 }
 async function leaveDm(id){
   const r=getRoom(id);
@@ -1507,7 +1618,7 @@ renderInstall();
 
 /* ---------- 프로필 (연락처·메일) ---------- */
 let profiles={};
-function closeProfile(){$("pOv").hidden=true;}
+function closeProfile(){$("pOv").hidden=true;$("pCard").classList.remove("wide");}
 $("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
@@ -1585,6 +1696,7 @@ async function refreshPush(){
 }
 /* 대화 목록 위 전체 알림 스위치 (이 기기 기준) */
 function renderAllBell(){
+  const nb=$("newRoomBtn");if(nb)nb.hidden=listTab!=="rooms";
   const b=$("allBell");if(!b)return;
   const show=listTab==="rooms"&&pushSupported()&&!(isIOS&&!isStandalone());
   b.hidden=!show;if(!show)return;
@@ -1595,6 +1707,7 @@ function renderAllBell(){
   b.appendChild(document.createTextNode(!pushOn()?"알림 켜기":on?"알림 켜짐":"알림 꺼짐"));
   b.title=!pushOn()?"이 기기에서 새 메시지 알림 받기":on?"눌러서 모든 대화방 알림 끄기 (이 기기)":"눌러서 알림 다시 켜기 (방별 설정은 그대로)";
 }
+$("newRoomBtn").onclick=()=>openGroupCreate();
 $("allBell").onclick=async()=>{
   if(!pushOn()){await enablePush();renderAllBell();return;}
   const off=!myMute._all;
