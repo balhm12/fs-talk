@@ -122,13 +122,13 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .row.mine.cont .bubble{border-radius:14px}
 .row.mine .tag{color:#BFE6FF}
 .pov{position:fixed;inset:0;background:rgba(15,25,40,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
-.pcard{background:var(--panel);border-radius:16px;width:min(360px,100%);padding:22px 20px 18px;text-align:center;position:relative}
+.pcard{background:var(--panel);border-radius:16px;width:min(360px,100%);padding:22px 20px 18px;text-align:center;position:relative;max-height:92vh;overflow:auto}
 .pcard .av{margin:0 auto 10px;width:72px;height:72px;font-size:20px}
 .pcard h3{margin:0;font-size:18px}
 .pcard .tm2{color:var(--sub);font-size:13px;margin-top:2px}
 .pcard .x{position:absolute;top:8px;right:10px;background:none;border:0;font-size:22px;color:var(--sub)}
 .pcard .acts{display:flex;flex-direction:column;gap:8px;margin-top:16px;text-align:left}
-.pcard .act{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none;font-size:15px;background:var(--panel)}
+.pcard .act{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none;font-size:15px;background:var(--panel);text-align:left;width:100%}
 .pcard .act:hover{border-color:var(--blue)}
 .pcard .act .ai2{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--sel);font-size:17px;flex:none}
 .pcard .act small{display:block;color:var(--sub);font-size:11px}
@@ -597,7 +597,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.42";
+const APP_VERSION="2026-10-28.43";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -957,7 +957,7 @@ function renderOrg(nav,q){
   const list=rosterList().filter(p=>!q||p.name.includes(q)||p.team.toLowerCase().replace(/\s+/g,"").includes(q))
     .sort(byTeamLead);
   $("lTitle").textContent="";$("lTitle").appendChild(document.createTextNode("조직도"));$("lTitle").appendChild(el("small",null,rosterList().length+"명"));
-  if(me){const pf=profiles[myKey]||{};const eb=el("button","myedit",(pf.phone||pf.email)?"✏️ 내 연락처 수정":"✏️ 내 연락처·메일 입력하기");eb.onclick=editMyProfile;nav.appendChild(eb);}
+  if(me){const eb=el("button","myedit","✏️ 내 정보 수정 · 사진·연락처·잠금·테마");eb.onclick=()=>openProfile({team:me.team,name:me.name,office:me.office||""});nav.appendChild(eb);}
   if(!list.length){nav.appendChild(el("div","more",rosterList().length?"찾는 사람이 없습니다.":"관리자가 명단을 아직 등록하지 않았습니다."));return;}
   let g="";
   list.forEach(p=>{
@@ -1773,7 +1773,7 @@ function openProfile(p){
     lt.appendChild(document.createTextNode("화면 잠금: "+(lc?"켜짐":"꺼짐")));lt.appendChild(el("small",null,lc?"PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]+" — 눌러서 바꾸기":"이 기기에서 PIN(지문·얼굴)으로 잠그기"));
     lk.appendChild(li);lk.appendChild(lt);lk.onclick=()=>openLockSettings();acts.appendChild(lk);
     const th=el("button","act");const i=el("span","ai2","🌗");const t=el("span");t.appendChild(document.createTextNode("화면 테마: "+THEME_LABEL[theme]));t.appendChild(el("small",null,"눌러서 바꾸기 (시스템 → 밝게 → 어둡게)"));th.appendChild(i);th.appendChild(t);th.onclick=()=>{cycleTheme();openProfile(p);};acts.appendChild(th);
-    const b=el("button","btn pri","✏️ 내 연락처 수정");b.onclick=editMyProfile;acts.appendChild(b);}
+    const pf=profiles[pk]||{};const b=el("button","btn pri",(pf.phone||pf.email)?"✏️ 연락처·메일 수정":"✏️ 연락처·메일 입력하기");b.onclick=editMyProfile;acts.appendChild(b);}
   else if(isAdmin&&avatars[pk]){const dl=el("button","btn bad","관리자: 이 사진 내리기");dl.style.marginTop="6px";dl.onclick=async()=>{if(!confirm(p.name+"님의 사진을 내릴까요?"))return;try{await R("avatars/"+pk).remove();toast("사진을 내렸습니다.");openProfile(p);}catch(e){toast("실패: "+(e.code||e.message));}};acts.appendChild(dl);}
   c.appendChild(acts);
   $("pOv").hidden=false;
