@@ -31,9 +31,11 @@ function doPost(e){
 
     const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {};
     const sc = ROOM_SCOPE[room], targets = [];
+    const me = users[uid] || {};   // 보낸 사람의 다른 기기(같은 이름·팀)에는 보내지 않음
     Object.keys(users).forEach(function(id){
       const u = users[id];
       if(!u || u.status!=='approved' || id===uid) return;
+      if(u.name===me.name && u.team===me.team) return;
       if(sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
       if(mute[id] && mute[id][room]) return;
       const t = tokens[id] || {};

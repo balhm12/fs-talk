@@ -325,7 +325,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.12";
+const APP_VERSION="2026-10-28.13";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -500,8 +500,9 @@ function avatar(label,color,cls){const a=el("div","av"+(cls?" "+cls:""),label);a
 function personAv(name,cls){const p=personTeam(name);return avatar(String(name||"?").slice(-2),(p&&TEAM_COLOR[p.team])||"#8A94A3",cls);}
 function roomAv(id,cls){const l=ROOM_LOOK[id]||["?","#8A94A3"];return avatar(l[0],l[1],"sq"+(cls?" "+cls:""));}
 function roomMembers(id){const sc=ROOM_SCOPE[id];const all=rosterList();if(!sc)return all;return all.filter(p=>p.team===sc[0]&&(!sc[1]||p.office===sc[1]));}
-function unread(id){return msgs.filter(m=>inRoom(m,id)&&m.ts>(seen[id]||0)&&m.author!==uid).length;}
-function totalUnread(){return msgs.filter(m=>m.author!==uid&&m.ts>(seen[m.room]||0)&&m.ts>(seen.all||0)).length;}
+const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 다른 기기에서 쓴 글도 내 글
+function unread(id){return msgs.filter(m=>inRoom(m,id)&&m.ts>(seen[id]||0)&&!isMine(m)).length;}
+function totalUnread(){return msgs.filter(m=>!isMine(m)&&m.ts>(seen[m.room]||0)&&m.ts>(seen.all||0)).length;}
 function fmtTime(ts){const d=new Date(ts),t=new Date();if(ymd(d)===ymd(t))return hm(d);const y=new Date(t);y.setDate(t.getDate()-1);if(ymd(d)===ymd(y))return "어제";return (d.getMonth()+1)+"월 "+d.getDate()+"일";}
 function renderNav(){
   const nav=$("nav");nav.textContent="";
@@ -654,7 +655,7 @@ function renderMsgs(scroll){
     if(day!==lastDay){box.appendChild(el("div","day",d.getFullYear()+"년 "+(d.getMonth()+1)+"월 "+d.getDate()+"일 "+"일월화수목금토"[d.getDay()]+"요일"));lastDay=day;}
     const prev=list[i-1],next=list[i+1];
     const cont=same(prev,m)&&ymd(new Date(prev.ts))===day,lastOfGroup=!same(m,next);
-    const mine=m.author===uid;
+    const mine=isMine(m);
     const row=el("div","row"+(mine?" mine":"")+(cont?" cont":"")+(selId===m.id?" sel":"")+(isAdmin&&!mine?" adm":""));row.id="m-"+m.id;
     if(!mine){const avs=el("div","avs");if(!cont)avs.appendChild(personAv(m.name,"s"));row.appendChild(avs);}
     const col=el("div","col");
@@ -713,7 +714,7 @@ function renderSearch(){
   const hits=msgs.filter(m=>{
     if(fr&&m.room!==fr)return false;
     if(since&&m.ts<since)return false;
-    if(fw==="me"&&m.author!==uid)return false;
+    if(fw==="me"&&!isMine(m))return false;
     if(ts.length){const c=squash(m.text).c;if(!ts.every(t=>c.includes(t)))return false;}
     return true;
   }).sort((a,b)=>b.ts-a.ts);
