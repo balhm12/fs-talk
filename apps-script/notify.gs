@@ -21,6 +21,7 @@ function doPost(e){
     if(req.type === 'register') return out_(notifyRegister_(req));
     if(req.type === 'testAdmin') return out_(testAdmin_(req));
     if(req.type === 'pushStatus') return out_(pushStatus_(req));
+    if(req.type === 'summary') return out_(summary_(req));
     if(req.type === 'upload') return out_(upload_(req));
     if(req.type === 'deleteFile') return out_(deleteFile_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
@@ -82,7 +83,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v8';
+const NOTIFY_VER = 'v9';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -134,6 +135,74 @@ function deleteFile_(req){
   f.setTrashed(true);
   return {ok:true,ver:NOTIFY_VER};
 }
+/* ---------- AI 대화 요약 (Groq — 무료, 보낸 내용을 학습에 쓰지 않음) ----------
+ * 스크립트 속성 GROQ_API_KEY 필요 (console.groq.com → API Keys). 선택: GROQ_MODEL
+ * 요청한 사람이 그 방을 읽을 수 있는지 서버에서 다시 확인한 뒤, 서버가 직접 대화를 읽어 요약함 */
+const FIXED_ROOMS = ['notice','ts','cs','west','east','central','daejeon','gwangju','south','busan','daegu','fss','fsom'];
+function summary_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const key = P_('GROQ_API_KEY');
+  if(!key) return {ok:false,err:'AI 요약이 아직 설정되지 않았습니다 (관리자: Apps Script 속성 GROQ_API_KEY)',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid) || {};
+  if(me.status !== 'approved') return {ok:false,err:'승인된 사용자가 아닙니다',ver:NOTIFY_VER};
+  const myKey = me.team + '_' + me.name;
+  const room = String(req.room||'');
+  const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room), isGroup = /^g_[-\w]{10,40}$/.test(room);
+  if(!(ROOM_NAME[room] || isDm || isGroup)) return {ok:false,err:'bad request',ver:NOTIFY_VER};
+  if(isDm && room.slice(3).split('__').indexOf(myKey) < 0) return {ok:false,err:'이 방을 볼 수 없습니다',ver:NOTIFY_VER};
+  let label = isDm ? '1:1 대화' : ROOM_NAME[room];
+  if(isGroup){ const gr = db_('talk/groups/'+room) || {}; if(!(gr.members||{})[myKey]) return {ok:false,err:'이 방을 볼 수 없습니다',ver:NOTIFY_VER}; label = gr.name || '그룹 대화'; }
+  // 너무 잦은 요청 막기 (한 사람당 15초)
+  const cache = CacheService.getScriptCache();
+  if(cache.get('sum:'+uid)) return {ok:false,err:'잠시 후 다시 눌러 주세요',ver:NOTIFY_VER};
+  cache.put('sum:'+uid,'1',15);
+  const since = Math.max(0, +req.since || 0), limit = Math.min(300, Math.max(10, +req.limit || 150));
+  const rooms = room === 'all' ? ['all'].concat(FIXED_ROOMS) : [room];
+  let msgs = [];
+  rooms.forEach(function(r){
+    const q = 'orderBy=%22ts%22' + (since ? '&startAt=' + (since+1) : '') + '&limitToLast=' + limit;
+    const v = dbQuery_('talk/msgs/'+encodeURIComponent(r), q) || {};
+    Object.keys(v).forEach(function(k){ const m = v[k]; if(m && typeof m.text === 'string') msgs.push({r:r,ts:+m.ts||0,name:m.name||'',text:m.text,file:m.file,re:m.re}); });
+  });
+  msgs.sort(function(a,b){ return a.ts-b.ts; });
+  msgs = msgs.slice(-limit);
+  if(!msgs.length) return {ok:true,count:0,summary:'',ver:NOTIFY_VER};
+  const fmt = function(ts){ return Utilities.formatDate(new Date(ts),'Asia/Seoul','MM-dd HH:mm'); };
+  let lines = msgs.map(function(m){
+    let t = String(m.text||'').replace(/\s+/g,' ');
+    if(m.file) t = (/^image\//.test(m.file.mime||'') ? '[사진]' : '[파일 '+(m.file.name||'')+']') + (t ? ' ' + t : '');
+    if(m.re) t = '(↪'+(m.re.name||'')+'에게 답장) ' + t;
+    return '['+fmt(m.ts)+(room==='all'&&m.r!=='all'?' '+(ROOM_NAME[m.r]||m.r):'')+'] '+m.name+': '+t.slice(0,600);
+  });
+  // 무료 등급 한도에 맞게 최근 글 위주로 약 9,000자까지만
+  let text = '', used = 0;
+  for(let i=lines.length-1;i>=0;i--){ if(text.length + lines[i].length > 9000) break; text = lines[i] + '\n' + text; used++; }
+  const sys = '너는 Sysmex Korea 필드서비스 조직(FSG)의 사내 메신저 대화를 요약하는 도우미다. 반드시 한국어로, 대화에 실제로 나온 내용만 쓴다. 추측하거나 없는 사실을 만들지 않는다. 장비 모델명·에러 코드·부품명·병원명·숫자는 원문 그대로 쓴다.';
+  const ask = '아래는 「'+label+'」 방의 대화 '+used+'건이다. 다음 형식으로 짧게 요약해라. 해당 내용이 없는 항목은 통째로 생략한다.\n'+
+    '■ 한눈에 보기: 2~4줄\n■ 결정·합의된 것: 글머리표\n■ 할 일: 「담당자 – 할 일 (기한)」 글머리표\n■ 장비·에러·부품 이슈: 「장비/에러 – 조치·상태」 글머리표\n■ 확인이 필요한 질문: 답이 아직 없는 질문\n\n대화:\n'+text;
+  const models = [P_('GROQ_MODEL') || 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
+  let last = '';
+  for(let i=0;i<models.length;i++){
+    const r = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions',{method:'post',contentType:'application/json',muteHttpExceptions:true,
+      headers:{Authorization:'Bearer '+key},
+      payload:JSON.stringify({model:models[i],temperature:0.2,max_tokens:1200,messages:[{role:'system',content:sys},{role:'user',content:ask}]})});
+    const c = r.getResponseCode(), body = r.getContentText();
+    if(c === 200){
+      const j = JSON.parse(body); const out = j.choices && j.choices[0] && j.choices[0].message ? String(j.choices[0].message.content||'').trim() : '';
+      if(out) return {ok:true,summary:out,count:used,total:msgs.length,model:models[i],ver:NOTIFY_VER};
+    }
+    last = c + ' ' + body.slice(0,160);
+    if(c === 429) return {ok:false,err:'오늘 무료 사용량을 다 썼거나 요청이 몰렸습니다. 잠시 후 다시 시도하세요.',ver:NOTIFY_VER};
+  }
+  return {ok:false,err:'AI 응답 실패: '+last,ver:NOTIFY_VER};
+}
+function dbQuery_(path, query){
+  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?'+query+'&access_token='+accessToken_(),{muteHttpExceptions:true});
+  if(r.getResponseCode()!==200) throw new Error('DB 읽기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,200));
+  return JSON.parse(r.getContentText());
+}
+
 function rootFolder_(n){ const it = DriveApp.getFoldersByName(n); return it.hasNext() ? it.next() : DriveApp.createFolder(n); }
 function subFolder_(parent, n){ const it = parent.getFoldersByName(n); return it.hasNext() ? it.next() : parent.createFolder(n); }
 
@@ -251,7 +320,7 @@ function dbDelete_(path){
 
 /** 설치 확인용: 편집기에서 한 번 실행 → 권한 승인 + 설정 점검 (실행 로그 확인) */
 function setupCheck(){
-  ['SA_JSON','API_KEY','PROJECT_ID','DB_URL'].forEach(function(k){ Logger.log(k+': '+(P_(k)?'있음':'❌ 없음')); });
+  ['SA_JSON','API_KEY','PROJECT_ID','DB_URL','GROQ_API_KEY'].forEach(function(k){ Logger.log(k+': '+(P_(k)?'있음':(k==='GROQ_API_KEY'?'없음 (AI 요약 안 씀)':'❌ 없음'))); });
   const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {};
   Logger.log('등록 사용자: '+Object.keys(users).length+'명 · 알림 켠 사용자: '+Object.keys(tokens).length+'명');
   Logger.log('✅ 서비스 계정 인증과 DB 읽기 성공');

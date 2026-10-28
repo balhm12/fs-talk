@@ -142,6 +142,15 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .newroom{display:block;width:calc(100% - 20px);margin:2px 10px 6px;padding:8px 10px;border:1px dashed var(--selline);background:var(--sel2);color:var(--link);border-radius:10px;font-size:13px;text-align:left}
 .gacts{display:flex;flex-wrap:wrap;gap:6px;padding:8px 8px 4px}
 .gacts .btn{font-size:12px;padding:6px 10px}
+.aiopts{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 8px}
+.aiopts .btn{font-size:13px}
+.aiout{min-height:20px;overflow:auto;flex:1}
+.aiwait{color:var(--sub);font-size:13px;padding:10px 0}
+.aimeta{font-size:12px;color:var(--sub);margin:4px 0 6px}
+.aibody{white-space:pre-wrap;line-height:1.6;font-size:14px;background:var(--soft);border-radius:10px;padding:12px 14px;max-height:52vh;overflow:auto}
+.aiacts{display:flex;gap:6px;margin-top:8px}
+.aiacts .btn{width:auto!important;margin:0!important;padding:7px 12px!important;font-size:13px}
+.aifoot{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.5}
 .myedit{display:flex;align-items:center;gap:8px;margin:0 10px 8px;padding:10px 12px;border:1px dashed var(--selline);border-radius:12px;background:var(--sel2);font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
 .clickable{cursor:pointer}
 .unr{color:#E8A317;font-weight:700;font-size:11px}
@@ -500,6 +509,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <div><h2 id="title"></h2><div class="desc" id="desc"></div></div>
       <div class="grow"></div>
       <button class="tb" id="favBtn" title="즐겨찾기" aria-label="즐겨찾기" hidden>☆</button>
+      <button class="tb" id="aiBtn" title="AI로 대화 요약" aria-label="AI로 대화 요약" hidden>✨</button>
       <button class="tb" id="popBtn" title="이 대화방을 작은 새 창으로 열기" aria-label="새 창으로 열기" hidden>⧉</button>
       <button class="tb" id="infoBtn" title="대화방 정보" aria-label="대화방 정보">☰</button>
     </div>
@@ -581,7 +591,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.39";
+const APP_VERSION="2026-10-28.40";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -989,6 +999,7 @@ function showView(){
   $("composer").hidden=view!=="chat"||!room;
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   $("popBtn").hidden=view!=="chat"||!room||isTouch();
+  $("aiBtn").hidden=view!=="chat"||!room;
   if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(document.createTextNode("💬 대화방을 선택하세요"));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
@@ -1012,6 +1023,7 @@ function route(){
   else if(h==="org"){listTab="org";view="chat";mList=true;}
   else if(h.indexOf("room-")===0&&(ROOMS.some(r=>r.id===h.slice(5))||dmOther(h.slice(5))||(isGroup(h.slice(5))&&(myGroup(h.slice(5))||gidx[h.slice(5)])))){
     const nr=h.slice(5);if(nr!==room&&(replyTo||editing)){if(editing)input.value="";replyTo=null;editing=null;}
+    if(nr!==room||mList||view!=="chat"){const ms=msgs.filter(m=>inRoom(m,nr)&&isUnread(m,nr));entryUnread[nr]={n:ms.length,since:ms.length?ms[0].ts-1:0};}
     room=nr;view="chat";mList=false;if(isDm(room))watchRoom(room);}
   else{listTab="rooms";mList=true;view="chat";}
   if(h!=="org"&&h.indexOf("room-")!==0)listTab="rooms";
@@ -1246,6 +1258,48 @@ async function toggleFav(){
   catch(e){toast("변경 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 $("favBtn").onclick=toggleFav;
+/* ---------- AI 대화 요약 ---------- */
+const entryUnread={};   // 방에 들어오기 직전의 안 읽은 글 (들어오면 바로 읽음 처리되므로 따로 기억)
+function openSummary(){
+  if(!room)return;
+  const r=room,eu=entryUnread[r]||{n:0,since:0},unr=Math.max(eu.n,unread(r));
+  const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"✨ AI 대화 요약"));
+  c.appendChild(el("div","tm2",roomName(r)+" · 어디까지 요약할까요?"));
+  const opts=el("div","aiopts");
+  const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  [[unr?"들어오기 전 안 읽은 글 ("+unr+"개)":"안 읽은 글 (없음)","unread",!unr],["오늘 대화","today",false],["최근 50개","r50",false],["최근 150개","r150",false]].forEach(([lab,k,dis])=>{
+    const b=el("button","btn",lab);b.disabled=dis;b.onclick=()=>runSummary(r,k==="unread"?{since:eu.n?eu.since:(readFor({room:r})||myRead(r)),limit:300}:k==="today"?{since:today-1,limit:300}:{since:0,limit:k==="r50"?50:150});opts.appendChild(b);
+  });
+  c.appendChild(opts);
+  const out=el("div","aiout");out.id="aiOut";c.appendChild(out);
+  c.appendChild(el("div","aifoot","AI 요약은 틀릴 수 있으니 중요한 내용은 원문을 확인하세요 · Groq(보낸 내용 학습 안 함)로 처리"));
+  $("pOv").hidden=false;
+}
+async function runSummary(r,opt){
+  const out=$("aiOut");if(!out)return;out.textContent="";out.appendChild(el("div","aiwait","✨ 요약하는 중… (10초 안팎)"));
+  [...document.querySelectorAll(".aiopts .btn")].forEach(b=>b.disabled=true);
+  try{
+    const idToken=await auth.currentUser.getIdToken();
+    const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({type:"summary",idToken,room:r},opt))});
+    const j=await res.json().catch(()=>null);
+    out.textContent="";
+    if(!j)throw new Error("알림 발송기 응답 없음");
+    if(!j.ok)throw new Error(j.ver?(j.err||"알 수 없음"):"Apps Script를 새 버전(v9)으로 배포해 주세요");
+    if(!j.count){out.appendChild(el("div","aiwait","요약할 대화가 없습니다."));return;}
+    out.appendChild(el("div","aimeta","대화 "+j.count+"건 요약"+(j.total>j.count?" (앞부분 "+(j.total-j.count)+"건은 길어서 제외)":"")));
+    const body=el("div","aibody");body.textContent=j.summary;out.appendChild(body);
+    const acts=el("div","aiacts");
+    const cp=el("button","btn","📋 복사");cp.onclick=()=>copyText("["+roomName(r)+" AI 요약]\n"+j.summary);acts.appendChild(cp);
+    const sh=el("button","btn","💬 이 방에 올리기");sh.onclick=async()=>{if(!confirm("요약을 이 방에 메시지로 올릴까요?"))return;
+      try{const ref=await R("msgs/"+r).push({uid,name:me.name,text:("✨ AI 요약\n"+j.summary).slice(0,4000),ts:SV});afterSend(r,ref.key);closeProfile();toast("요약을 올렸습니다.");}catch(e){toast("올리기 실패: "+(e.code||e.message));}};
+    if(r!=="all")acts.appendChild(sh);
+    out.appendChild(acts);
+  }catch(e){out.textContent="";const d=el("div","aiwait","요약하지 못했습니다: "+e.message);d.style.color="var(--bad)";out.appendChild(d);}
+  [...document.querySelectorAll(".aiopts .btn")].forEach(b=>{b.disabled=/없음\)$/.test(b.textContent);});
+}
+$("aiBtn").onclick=openSummary;
 $("popBtn").onclick=()=>{
   if(!room)return;
   const w=window.open(location.pathname+"#room-"+encodeURIComponent(room),"fstalk-"+room,"width=440,height=720,menubar=no,toolbar=no,location=no,status=no");
