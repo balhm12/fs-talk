@@ -736,7 +736,8 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <button class="lockforgot" id="lockForgot">PIN을 잊었어요</button>
   </div>
 </div>
-<script>try{if(JSON.parse(localStorage.getItem("fstalk-lock")||"null"))document.getElementById("lockOv").hidden=false;}catch(e){}</script>
+<script>try{var mob=/iPhone|iPad|iPod|Android/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)||matchMedia("(pointer:coarse)").matches;
+if(mob)localStorage.removeItem("fstalk-lock");else if(JSON.parse(localStorage.getItem("fstalk-lock")||"null"))document.getElementById("lockOv").hidden=false;}catch(e){}</script>
 <div class="toast" id="toast"></div>
 <button class="updbar" id="updBar" hidden>🔄 새 버전이 있습니다 · <b>눌러서 새로고침</b></button>
 
@@ -747,7 +748,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.49";
+const APP_VERSION="2026-10-28.50";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2062,9 +2063,9 @@ function openProfile(p){
     const ph=el("button","act");const pi=(()=>{const x=el("span","ai2");x.innerHTML=ic("camera",18);return x;})();const pt=el("span");pt.appendChild(document.createTextNode(avatars[pk]?"얼굴 사진 바꾸기":"얼굴 사진 넣기"));pt.appendChild(el("small",null,"이름 옆 동그라미 대신 사진이 보여요"));
     ph.appendChild(pi);ph.appendChild(pt);ph.onclick=()=>pickAvatar();acts.appendChild(ph);
     if(avatars[pk]){const dl=el("button","act");dl.appendChild((()=>{const x=el("span","ai2");x.innerHTML=ic("trash",18);return x;})());dl.appendChild(document.createTextNode("사진 지우기"));dl.onclick=async()=>{if(!confirm("얼굴 사진을 지울까요?"))return;try{await R("avatars/"+pk).remove();toast("사진을 지웠습니다.");openProfile(p);}catch(e){toast("지우기 실패: "+(e.code||e.message));}};acts.appendChild(dl);}
-    const lk=el("button","act");const li=(()=>{const x=el("span","ai2");x.innerHTML=ic("lock",18);return x;})();const lt=el("span");const lc=lockCfg();
+    if(!lockMobile()){const lk=el("button","act");const li=(()=>{const x=el("span","ai2");x.innerHTML=ic("lock",18);return x;})();const lt=el("span");const lc=lockCfg();
     lt.appendChild(document.createTextNode("화면 잠금: "+(lc?"켜짐":"꺼짐")));lt.appendChild(el("small",null,lc?"PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]+" — 눌러서 바꾸기":"이 기기에서 PIN(지문·얼굴)으로 잠그기"));
-    lk.appendChild(li);lk.appendChild(lt);lk.onclick=()=>openLockSettings();acts.appendChild(lk);
+    lk.appendChild(li);lk.appendChild(lt);lk.onclick=()=>openLockSettings();acts.appendChild(lk);}
     const th=el("button","act");const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("contrast",18);return x;})();const t=el("span");t.appendChild(document.createTextNode("화면 테마: "+THEME_LABEL[theme]));t.appendChild(el("small",null,"눌러서 바꾸기 (시스템 → 밝게 → 어둡게)"));th.appendChild(i);th.appendChild(t);th.onclick=()=>{cycleTheme();openProfile(p);};acts.appendChild(th);
     const pf=profiles[pk]||{};const b=el("button","btn pri",(pf.phone||pf.email)?"✏️ 연락처·메일 수정":"✏️ 연락처·메일 입력하기");b.onclick=editMyProfile;acts.appendChild(b);}
   else if(isAdmin&&avatars[pk]){const dl=el("button","btn bad","관리자: 이 사진 내리기");dl.style.marginTop="6px";dl.onclick=async()=>{if(!confirm(p.name+"님의 사진을 내릴까요?"))return;try{await R("avatars/"+pk).remove();toast("사진을 내렸습니다.");openProfile(p);}catch(e){toast("실패: "+(e.code||e.message));}};acts.appendChild(dl);}
@@ -2280,7 +2281,9 @@ function syncBadge(n){
 /* ---------- 화면 잠금 (기기별 PIN + 지문·얼굴·Windows Hello) ---------- */
 /* 저장: localStorage "fstalk-lock" = {salt, hash, delay(초), cred(생체 인증 키 id)} — PIN 원문은 저장하지 않음 */
 const LOCK_DELAYS=[0,60,300,1800],LOCK_DELAY_LABEL={0:"바로 잠금",60:"1분 뒤 잠금",300:"5분 뒤 잠금",1800:"30분 뒤 잠금"};
-function lockCfg(){try{return JSON.parse(localStorage.getItem("fstalk-lock")||"null");}catch(e){return null;}}
+/* 화면 잠금은 PC에서만 (휴대폰은 기기 자체 잠금을 쓰므로 사용 안 함) */
+const lockMobile=()=>isIOS||isAndroid||isTouch();
+function lockCfg(){if(lockMobile()){try{localStorage.removeItem("fstalk-lock");}catch(e){}return null;}try{return JSON.parse(localStorage.getItem("fstalk-lock")||"null");}catch(e){return null;}}
 function saveLockCfg(c){try{if(c)localStorage.setItem("fstalk-lock",JSON.stringify(c));else localStorage.removeItem("fstalk-lock");}catch(e){}}
 const b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
 const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -2417,8 +2420,8 @@ function renderSettings(){
   const seg=el("div","seg");[["system","시스템"],["light","밝게"],["dark","어둡게"]].forEach(([k,l])=>{const b=el("button",theme===k?"on":"",l);b.onclick=()=>{theme=k;try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();renderSettings();};seg.appendChild(b);});
   setRow(c,"contrast","화면 테마","",null,seg);
   // 보안
-  c=setSec(wrap,"보안");const lc=lockCfg();
-  setRow(c,"lock","화면 잠금",lc?"켜짐 · PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]:"꺼짐 · 이 기기에서 PIN(지문·얼굴)으로 잠그기",()=>openLockSettings());
+  if(!lockMobile()){c=setSec(wrap,"보안");const lc=lockCfg();
+  setRow(c,"lock","화면 잠금",lc?"켜짐 · PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]:"꺼짐 · 이 PC에서 PIN(Windows Hello)으로 잠그기",()=>openLockSettings());}
   // 바로가기
   c=setSec(wrap,"바로가기");
   [["box","설치일정","https://balhm12.github.io/Sysmex-schedule/index.html"],["calendar","근무일정","https://balhm12.github.io/Sysmex-schedule/work-schedule.html"],["compass","실마리 · Sysmex TS Guide","https://balhm12.github.io/sysmex-ts/"]].forEach(([i,t,u])=>setRow(c,i,t,"새 창으로 열기",()=>window.open(u,"_blank","noopener")));
