@@ -196,6 +196,10 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 .silchip{display:inline-flex;align-items:center;gap:5px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;border-radius:14px;padding:3px 10px;font-size:12px;max-width:100%}
 .silchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .silchip:hover{border-color:#005BAC}
+.silpart{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:6px 2px 8px}
+.silpart b{font-size:14px;color:var(--strong);font-family:ui-monospace,Menlo,Consolas,monospace}
+.silpart span{font-size:14px;color:var(--text)}
+.silpart small{font-size:12px;color:var(--sub);width:100%}
 html[data-theme=dark] .silchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
 html[data-theme=dark] .silhd{color:#8CC4F5}
 @media (pointer:coarse){.silchip{font-size:14px;padding:5px 12px}.silt b{font-size:16px}.silm{font-size:13px}.silhd b{font-size:16px}}
@@ -842,7 +846,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.65";
+const APP_VERSION="2026-10-28.66";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2138,6 +2142,24 @@ let sExpand=false,sExpandKey="";
    같은 사이트(balhm12.github.io)라 PC·안드로이드 크롬에서는 실마리에서 넣은 비밀번호를 그대로 씀. */
 const SIL_BASE="https://balhm12.github.io/sysmex-ts/",SIL_KEY="sysmex-ts-key";
 let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null,silBi=null,silParts=null;
+/* 부품 이름: 장비별 상세 데이터의 「교체 부품」 표에서 가져옴 (부품번호가 처음 나올 때 그 장비 데이터만 불러옴) */
+const silDevP={},silPN=new Map();
+function silLoadDev(d){
+  if(silDevP[d])return silDevP[d];
+  silDevP[d]=(async()=>{
+    const a=await silGetAuth();if(!silKey)throw new Error("locked");
+    const r=await fetch(SIL_BASE+"data/device/"+encodeURIComponent(d)+".json.enc",{cache:"no-cache"});if(!r.ok)throw new Error(d+" "+r.status);
+    const raw=await silOpen(silKey,await r.arrayBuffer());
+    const j=a.gz?await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).json():JSON.parse(new TextDecoder().decode(raw));
+    const det=j.detail||{};
+    ["p1","p2"].forEach(k=>Object.values(det[k]||{}).forEach(e=>{if(!e)return;const c=e.crm||{};(c.pn||e.pn||[]).forEach(x=>{if(!x)return;
+      if(x.pn&&x.name&&!silPN.has(String(x.pn).toLowerCase()))silPN.set(String(x.pn).toLowerCase(),String(x.name));
+      if(x.old&&x.oldname&&!silPN.has(String(x.old).toLowerCase()))silPN.set(String(x.old).toLowerCase(),String(x.oldname));});}));
+    schedule();if(view==="search")renderSil($("q").value);
+  })();
+  silDevP[d].catch(()=>{});return silDevP[d];
+}
+function silPartName(pn,rows){const k=String(pn).toLowerCase();if(silPN.has(k))return silPN.get(k);[...new Set((rows||[]).map(r=>r.d))].slice(0,3).forEach(d=>silLoadDev(d));return "";}
 const SIL_PART=/^(?=(?:[^0-9]*[0-9]){3})[a-z0-9][a-z0-9\-]{5,}$/;   // 부품번호처럼 보이는 말: 숫자 3개 이상·6자 이상
 /* 에러 이름의 핵심 단어 (흔한 말은 뺌) — 이름 일부만 써도(예: Waste Chamber) 연결되게 이어진 두 단어로 찾음 */
 const SIL_STOP=new Set(["error","err","errors","the","of","a","an","in","on","to","for","is","and","or","not","no","at","by","with","occurred","occur","fault","alarm","warning"]);
@@ -2217,6 +2239,8 @@ function renderSil(q){
     else{box.appendChild(el("div","more","실마리 불러오는 중…"));silLoad().catch(()=>{});}
     return;
   }
+  const pk=q.toLowerCase().replace(/\s+/g,""),prow=silParts&&silParts.get(pk);
+  if(prow){const nm=silPartName(pk,prow);const ph=el("div","silpart");ph.appendChild(el("b",null,q.toUpperCase()));ph.appendChild(el("span",null,nm||"부품 이름 불러오는 중…"));ph.appendChild(el("small",null,"이 부품이 들어가는 에러 "+prow.length+"건"));box.appendChild(ph);}
   const rows=silSearch(q,5);
   if(!rows.length){box.appendChild(el("div","more","실마리에 맞는 에러가 없습니다. 에러 이름 일부·코드·부품 번호로 찾아보세요."));return;}
   rows.forEach(r=>box.appendChild(silRowEl(r)));
@@ -2269,7 +2293,8 @@ function silChips(m){
   const mo=ms.more;
   ms.forEach(r=>{const b=el("button","silchip");b.appendChild(icEl("wrench","",13));b.appendChild(el("span",null,"실마리 · "+r.d+" · "+String(r.t||"").slice(0,26)));b.title=(r.t||"")+" — 원인·조치 보기";b.onclick=e=>{e.stopPropagation();silOpenUrl(silUrl(r));};w.appendChild(b);});
   (ms.parts||[]).forEach(pt=>{const b=el("button","silchip part");b.appendChild(icEl("wrench","",13));
-    const one=pt.rows.length===1;b.appendChild(el("span",null,"실마리 · 부품 "+pt.q.toUpperCase()+(one?" · "+String(pt.rows[0].t||"").slice(0,22):" 관련 에러 "+pt.rows.length+"건")));
+    const one=pt.rows.length===1,nm=silPartName(pt.q,pt.rows);
+    b.appendChild(el("span",null,"실마리 · "+pt.q.toUpperCase()+(nm?" "+nm.slice(0,24):"")+" · "+(one?String(pt.rows[0].t||"").slice(0,20):"관련 에러 "+pt.rows.length+"건")));b.title=(nm?nm+" ("+pt.q.toUpperCase()+")":pt.q.toUpperCase())+" — 실마리에서 보기";
     b.onclick=e=>{e.stopPropagation();silOpenUrl(one?silUrl(pt.rows[0]):SIL_BASE+"#/q/"+encodeURIComponent(pt.q));};w.appendChild(b);});
   if(mo){const b=el("button","silchip more");b.appendChild(icEl("search","",13));b.appendChild(el("span",null,"실마리에서 「"+mo.q+"」 "+mo.n+"건 모두 보기"));b.onclick=e=>{e.stopPropagation();silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(mo.q));};w.appendChild(b);}
   return w;
