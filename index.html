@@ -203,6 +203,17 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 html[data-theme=dark] .silchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
 html[data-theme=dark] .silhd{color:#8CC4F5}
 @media (pointer:coarse){.silchip{font-size:14px;padding:5px 12px}.silt b{font-size:16px}.silm{font-size:13px}.silhd b{font-size:16px}}
+/* 전체공지 고정 글 (대화 목록 맨 위) */
+.npin{display:flex;align-items:stretch;margin:2px 4px 6px;border:1px solid var(--selline);background:var(--sel2);border-radius:12px;overflow:hidden}
+.npinb{flex:1;min-width:0;display:flex;align-items:flex-start;gap:10px;background:none;border:0;text-align:left;padding:10px 4px 10px 12px;color:var(--text)}
+.npinb:hover{background:var(--sel)}
+.npinic{color:#E7413E;flex:none;margin-top:1px}
+.npint{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.npint b{font-size:12px;color:var(--link)}
+.npint span{font-size:13px;color:var(--strong);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+.npinx{flex:none;background:none;border:0;color:var(--sub);font-size:18px;width:34px}
+.npinx:hover{color:var(--text)}
+@media (pointer:coarse){.npint b{font-size:14px}.npint span{font-size:15px}.npinx{width:42px;font-size:22px}}
 /* 공지 확인 */
 .ackbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
 .row.mine .ackbar{justify-content:flex-end}
@@ -859,7 +870,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-29.71";
+const APP_VERSION="2026-10-29.72";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1112,7 +1123,7 @@ function start(){
   R("dms/"+myKey).on("value",s=>{dms=s.val()||{};Object.keys(dms).forEach(id=>{if(dmOther(id))watchRoom(id);});schedule();if(view==="chat"&&isDm(room))showView();},()=>{});
   R("gidx/"+myKey).on("value",s=>{gidx=s.val()||{};Object.keys(gidx).forEach(watchGroup);Object.keys(groups).forEach(id=>{if(!gidx[id]){delete groups[id];}});schedule();if(view==="chat"&&isGroup(room))showView();},()=>{});
   R("reacts").on("value",s=>{reacts=s.val()||{};schedule();},()=>{});
-  R("pins").on("value",s=>{pins=s.val()||{};renderPin();},()=>{});
+  R("pins").on("value",s=>{pins=s.val()||{};renderPin();renderNav();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
   setTimeout(()=>{silRecall().then(k=>{if(k){silKey=k;silLoad().catch(()=>{});}}).catch(()=>{});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
@@ -1259,6 +1270,14 @@ function renderNav(){
         ["all","전체",ROOMS.filter(r=>r.grp==="전체"&&!favs[r.id])],
         ["team","팀·사무소",ROOMS.filter(r=>r.grp==="팀"&&!favs[r.id])],
         ["dm","1:1·그룹 대화",dmRooms.filter(r=>!favs[r.id])]];
+      // 전체공지 방에 고정한 글은 대화 목록 맨 위에도 고정 (×로 접으면 다른 글이 고정될 때까지 숨김)
+      const np=pinOf("notice");let npHide="";try{npHide=localStorage.getItem("fstalk-npin-hide")||"";}catch(e){}
+      if(np&&npHide!==np.id+"|"+np.ts){const pm=byId.get(np.id),txt=pm&&pm.room==="notice"?previewText(pm):np.text,who=pm&&pm.room==="notice"?pm.name:np.name;
+        const c=el("div","npin");const b=el("button","npinb");b.appendChild(icEl("pin","npinic",18));
+        const t=el("span","npint");t.appendChild(el("b",null,"전체공지 고정 · "+who));t.appendChild(el("span",null,String(txt||"").replace(/\s+/g," ").slice(0,140)));b.appendChild(t);
+        b.onclick=()=>jumpTo(np.id);c.appendChild(b);
+        const x=el("button","npinx","×");x.setAttribute("aria-label","접기");x.title="접기 (새 글이 고정되면 다시 보여요)";x.onclick=e=>{e.stopPropagation();try{localStorage.setItem("fstalk-npin-hide",np.id+"|"+np.ts);}catch(er){}renderNav();};c.appendChild(x);
+        nav.appendChild(c);}
       const pn=pendingNotices();
       if(pn.length){const na=el("button","nalert");na.appendChild(icEl("megaphone","",20));const t=el("span","nat");t.appendChild(el("b",null,"확인 안 한 공지 "+pn.length+"건"));t.appendChild(el("small",null,(pn[0].name||"")+": "+previewText(pn[0]).replace(/\s+/g," ").slice(0,40)));na.appendChild(t);na.appendChild(el("span","nago","확인 ›"));na.onclick=()=>{noticePrompted=true;showNoticePrompt();};nav.appendChild(na);}
       groups.forEach(([k,label,list])=>{
