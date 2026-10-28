@@ -747,7 +747,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.49";
+const APP_VERSION="2026-10-28.51";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1001,6 +1001,8 @@ function start(){
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
+  R("lockreset/"+myKey).on("value",s=>{const v=+s.val()||0;const c=lockCfg();
+    if(v&&c&&(c.set||0)<v){saveLockCfg(null);if(isLocked())unlock();toast("관리자가 화면 잠금을 초기화했습니다. 필요하면 설정에서 다시 켜 주세요.");if(view==="settings")renderSettings();}},()=>{});
   if(isAdmin)watchUsers();
   route();
 }
@@ -1970,6 +1972,7 @@ function renderAdmin(){
   const list=Object.entries(users).filter(([,u])=>u&&u.name);
   const nameCount={};list.forEach(([,u])=>{if(u.status==="approved"||u.status==="pending")nameCount[u.name]=(nameCount[u.name]||0)+1;});
   const groups=[["pending","승인 대기"],["approved","승인됨"],["rejected","거절됨"]];
+  const nameShown={};   // 같은 사람의 기기가 여러 대여도 「잠금 초기화」는 한 번만
   groups.forEach(([st,label])=>{
     const rows=list.filter(([,u])=>u.status===st).sort((a,b)=>st==="approved"?((b[1].approvedAt||b[1].createdAt||0)-(a[1].approvedAt||a[1].createdAt||0)):(a[1].team+a[1].name).localeCompare(b[1].team+b[1].name,"ko"));
     body.appendChild(el("div","sec",label+" "+rows.length+"명(기기)"));
@@ -1986,6 +1989,11 @@ function renderAdmin(){
       const dev=/iPhone|iPad/.test(u.ua||"")?"iPhone":/Android/.test(u.ua||"")?"Android":"PC";
       const dt=t=>{const d=new Date(t);return ymd(d)+" "+pad(d.getHours())+":"+pad(d.getMinutes());};
       r.appendChild(el("span","meta",u.team+(u.office?" · "+u.office:"")+" · "+dev+(u.createdAt?" · 요청 "+dt(u.createdAt):"")+(st==="approved"&&u.approvedAt?" · 승인 "+dt(u.approvedAt):"")));
+      if(st==="approved"){const lr=el("button","btn","잠금 초기화");lr.title="이 사람의 모든 기기에서 화면 잠금(PIN)을 풉니다";
+        lr.onclick=async()=>{if(!confirm(u.name+"님의 화면 잠금(PIN)을 초기화할까요?\n\n이 사람의 모든 기기에서 잠금이 풀립니다. 본인 확인(전화 등)을 한 뒤에만 눌러 주세요."))return;
+          try{await R("lockreset/"+personKey(u.team,u.name)).set(SV);toast(u.name+"님의 잠금을 초기화했습니다. 앱을 열면 바로 풀립니다.");}
+          catch(e){toast("초기화 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}};
+        if(!nameShown[u.name+"|"+u.team]){nameShown[u.name+"|"+u.team]=1;r.appendChild(lr);}}
       if(st!=="approved"){const b=el("button","btn pri","승인");b.onclick=()=>setStatus(id,"approved");r.appendChild(b);}
       if(st==="pending"){const b=el("button","btn bad","거절");b.onclick=()=>setStatus(id,"rejected");r.appendChild(b);}
       if(st==="approved"&&id!==uid){
@@ -2330,7 +2338,7 @@ async function lockKey(k){
 document.addEventListener("keydown",e=>{if(!isLocked())return;if(/^\d$/.test(e.key))lockKey(e.key);else if(e.key==="Backspace")lockKey("del");});
 $("lockBio").onclick=async()=>{const c=lockCfg();if(!c||!c.cred)return;try{await bioCheck(c.cred);unlock();}catch(e){$("lockMsg").textContent="생체 인증을 하지 못했어요. PIN을 입력하세요.";}};
 $("lockForgot").onclick=async()=>{
-  if(!confirm("PIN을 잊었으면 이 기기의 잠금을 지우고 처음부터 다시 등록해야 합니다.\n(대화 내용은 서버에 그대로 있고, 관리자 승인을 다시 받으면 이어서 볼 수 있습니다)\n\n이 기기를 초기화할까요?"))return;
+  if(!confirm("PIN을 잊으셨나요?\n\n방법 1) 관리자(FSS팀)에게 「잠금 초기화」를 요청하면, 이 화면을 그대로 둔 채 잠시 후 자동으로 풀립니다.\n\n방법 2) 지금 이 기기를 초기화하고 다시 등록합니다 (관리자 승인 필요, 대화 내용은 그대로).\n\n방법 2로 지금 초기화할까요? (취소를 누르면 관리자 초기화를 기다립니다)"))return;
   saveLockCfg(null);try{await auth.signOut();}catch(e){}
   try{localStorage.removeItem("fstalk-seen");}catch(e){}
   location.hash="";location.reload();
@@ -2376,7 +2384,7 @@ async function openLockSettings(){
       if(bioCb.checked&&!cfg.cred){try{cfg.cred=await bioRegister();}catch(err){toast("생체 인증 등록을 건너뛰었어요 (PIN으로만 잠금).");delete cfg.cred;}}
       if(!bioCb.checked)delete cfg.cred;
     }
-    saveLockCfg(cfg);toast(cur?"잠금 설정을 바꿨습니다.":"화면 잠금을 켰습니다. 앱을 떠났다 돌아오면 잠깁니다.");closeProfile();
+    cfg.set=Date.now();saveLockCfg(cfg);toast(cur?"잠금 설정을 바꿨습니다.":"화면 잠금을 켰습니다. 앱을 떠났다 돌아오면 잠깁니다.");closeProfile();
   });
   c.appendChild(f);$("pOv").hidden=false;setTimeout(()=>$(cur?"lkOld":"lkNew").focus(),50);
 }

@@ -319,6 +319,13 @@
             ".validate": false
           }
         }
+      },
+      "lockreset": {
+        "$p": {
+          ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && ($p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) || root.child('talk/admins/' + auth.uid).val() === true)",
+          ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+          ".validate": "newData.isNumber()"
+        }
       }
     }
   }
