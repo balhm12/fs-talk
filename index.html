@@ -288,6 +288,22 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .app.info-on .info{position:fixed;right:0;top:0;bottom:0;width:280px;z-index:20;box-shadow:-8px 0 24px rgba(0,0,0,.12)}
 }
 @media (min-width:821px){.sheetov{align-items:center}.sheet{border-radius:18px}}
+@media (min-width:821px) and (max-width:1100px){
+  .app,.app.info-on{grid-template-columns:56px 248px 1fr}
+  .rail{padding:10px 0}
+  .rail .logo{width:34px;height:34px;font-size:13px;margin-bottom:8px}
+  .rail button{width:44px;height:44px;font-size:0;gap:0}
+  .rail button .ri{font-size:20px}
+  .lhead{padding:12px 12px 8px}
+  .lhead h2{font-size:16px}
+  .li{padding:7px 8px;gap:8px}
+  .li .av{width:34px;height:34px;font-size:11px}
+  .li .tm{display:none}
+  .top{min-height:52px;padding:8px 12px}
+  .top .desc{display:none}
+  .msgs{padding:10px 12px}
+  .row .col{max-width:82%}
+}
 @media (max-width:820px){
   html,body{height:100%;overflow:hidden}
   .app,.app.info-on{grid-template-columns:1fr;height:100dvh}
@@ -466,7 +482,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.28";
+const APP_VERSION="2026-10-28.29";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -810,7 +826,7 @@ function renderOrg(nav,q){
     nav.appendChild(b);
   });
 }
-let infoOn=(()=>{try{return localStorage.getItem("fstalk-info")!=="0";}catch(e){return true;}})();
+let infoOn=(()=>{try{return localStorage.getItem("fstalk-info")==="1";}catch(e){return false;}})();
 function renderInfo(){
   const box=$("info");box.textContent="";
   const on=view==="chat"&&!!room&&!(isM()&&mList)&&(isM()||window.innerWidth<=1200?infoOpen:infoOn);
@@ -1286,8 +1302,8 @@ $("composer").addEventListener("submit",async e=>{
   try{const ref=await R("msgs/"+r).push(data);afterSend(r,ref.key);}
   catch(err){input.value=t;replyTo=rt;renderCbar();toast("전송 실패: "+(err.code||err.message));}
 });
-function setPlaceholder(){input.placeholder=isM()?"메시지 입력 · @이름":"메시지 입력 · Enter 전송 · @이름 알림 · #태그 · 사진 붙여넣기";}
-setPlaceholder();window.matchMedia("(max-width:820px)").addEventListener("change",setPlaceholder);
+function setPlaceholder(){input.placeholder=(isM()||window.innerWidth<=1100)?"메시지 입력 · @이름":"메시지 입력 · Enter 전송 · @이름 알림 · #태그 · 사진 붙여넣기";}
+setPlaceholder();window.matchMedia("(max-width:820px)").addEventListener("change",setPlaceholder);window.matchMedia("(max-width:1100px)").addEventListener("change",setPlaceholder);
 
 /* ---------- 검색 ---------- */
 $("fRoom").appendChild(new Option("모든 방",""));ROOMS.forEach(r=>$("fRoom").appendChild(new Option((r.sub?"  └ ":"")+(r.id==="all"?"전체방에 직접 쓴 글":r.name),r.id)));
