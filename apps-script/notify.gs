@@ -20,57 +20,84 @@ function doPost(e){
     const req = JSON.parse(e.postData.contents);
     if(req.type === 'register') return out_(notifyRegister_(req));
     if(req.type === 'testAdmin') return out_(testAdmin_(req));
+    if(req.type === 'upload') return out_(upload_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
-    if(!ROOM_NAME[room] || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request'});
+    const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
+    if((!ROOM_NAME[room] && !isDm) || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request',ver:NOTIFY_VER});
     const uid = verifyUser_(String(req.idToken||''));
-    if(!uid) return out_({ok:false,err:'auth'});
-    const msg = db_('talk/msgs/'+room+'/'+msgId);
-    if(!msg || msg.uid !== uid) return out_({ok:false,err:'message'});
+    if(!uid) return out_({ok:false,err:'auth',ver:NOTIFY_VER});
+    const msg = db_('talk/msgs/'+encodeURIComponent(room)+'/'+msgId);
+    if(!msg || msg.uid !== uid) return out_({ok:false,err:'message',ver:NOTIFY_VER});
     // 같은 메시지로 두 번 보내지 않기
     const cache = CacheService.getScriptCache();
-    if(cache.get('sent:'+msgId)) return out_({ok:true,dup:true});
+    if(cache.get('sent:'+msgId)) return out_({ok:true,dup:true,ver:NOTIFY_VER});
     cache.put('sent:'+msgId,'1',600);
 
     const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {};
-    const sc = ROOM_SCOPE[room], targets = [];
     const me = users[uid] || {};   // 보낸 사람의 다른 기기(같은 이름·팀)에는 보내지 않음
+    const myKey = me.team + '_' + me.name;
+    const dmKeys = isDm ? room.slice(3).split('__') : null;
+    if(isDm && dmKeys.indexOf(myKey) < 0) return out_({ok:false,err:'dm',ver:NOTIFY_VER});
+    const mentioned = isDm ? {} : mentions_(String(msg.text||''), users);
+    const sc = ROOM_SCOPE[room], targets = [];
+    const roomLabel = isDm ? '1:1' : ROOM_NAME[room];
     Object.keys(users).forEach(function(id){
       const u = users[id];
       if(!u || u.status!=='approved' || id===uid) return;
       if(u.name===me.name && u.team===me.team) return;
-      if(sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
-      if(mute[id] && mute[id][room]) return;
+      const ment = !!mentioned[u.name];
+      if(isDm){ if(dmKeys.indexOf(u.team + '_' + u.name) < 0) return; }
+      else if(!ment && sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
+      if(!ment && mute[id] && mute[id][room]) return;     // 멘션은 방 알림을 꺼 둬도 보냄
       const t = tokens[id] || {};
-      Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token}); });
+      Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token,
+        title: ment ? '🔔 ' + (msg.name||'') + '님이 나를 언급 · ' + roomLabel : null}); });
     });
-    if(!targets.length) return out_({ok:true,sent:0});
-
-    const at = accessToken_();
-    const title = ROOM_NAME[room] + ' · ' + (msg.name||'');
-    const body = String(msg.text||'').replace(/\s+/g,' ').slice(0,140);
-    const reqs = targets.map(function(t){ return {
-      url:'https://fcm.googleapis.com/v1/projects/'+P_('PROJECT_ID')+'/messages:send',
-      method:'post', contentType:'application/json', muteHttpExceptions:true,
-      headers:{Authorization:'Bearer '+at},
-      payload:JSON.stringify({message:{token:t.token,data:{room:room},
-        webpush:{notification:{title:title,body:body,icon:APP_URL+'icons/icon-192.png',tag:'room-'+room,renotify:true},
-                 fcm_options:{link:APP_URL+'#room-'+room}}}})
-    };});
-    const res = UrlFetchApp.fetchAll(reqs);
-    let sent = 0;
-    res.forEach(function(r,i){
-      const c = r.getResponseCode();
-      if(c===200){ sent++; return; }
-      // 앱 삭제·알림 해제로 더 이상 쓸 수 없는 토큰만 정리
-      if(c===404 || /UNREGISTERED/.test(r.getContentText())) dbDelete_('talk/tokens/'+targets[i].uid+'/'+targets[i].key);
-    });
-    return out_({ok:true,sent:sent,targets:targets.length});
+    if(!targets.length) return out_({ok:true,sent:0,ver:NOTIFY_VER});
+    const title = isDm ? '💬 ' + (msg.name||'') + ' (1:1)' : ROOM_NAME[room] + ' · ' + (msg.name||'');
+    let body = String(msg.text||'').replace(/\s+/g,' ');
+    if(msg.file) body = (/^image\//.test(msg.file.mime||'') ? '📷 사진' : '📎 ' + (msg.file.name||'파일')) + (body ? ' ' + body : '');
+    if(msg.re) body = '↪ ' + body;
+    const sent = send_(targets, title, body.slice(0,140), APP_URL + '#room-' + encodeURIComponent(room), 'room-' + room, {room:room});
+    return out_({ok:true,sent:sent,targets:targets.length,ver:NOTIFY_VER});
   }catch(err){
     return out_({ok:false,err:String(err)});
   }
 }
 
-const NOTIFY_VER = 'v3';
+const NOTIFY_VER = 'v4';
+
+/** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
+function mentions_(text, users){
+  const names = {}; Object.keys(users).forEach(function(id){ const u = users[id]; if(u && u.name) names[u.name] = true; });
+  const list = Object.keys(names).sort(function(a,b){ return b.length - a.length; });
+  const out = {}; const re = /@([^\s@]+)/g; let m;
+  while((m = re.exec(text))){ for(let i=0;i<list.length;i++){ if(m[1].indexOf(list[i]) === 0){ out[list[i]] = true; break; } } }
+  return out;
+}
+
+/* ---------- 사진·파일 첨부 → Google 드라이브 「FS Talk 첨부」/yyyy-MM ---------- */
+const UPLOAD_FOLDER = 'FS Talk 첨부';
+function upload_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const u = db_('talk/users/'+uid);
+  if(!u || u.status !== 'approved') return {ok:false,err:'승인된 사용자가 아닙니다',ver:NOTIFY_VER};
+  const data = String(req.data||'');
+  if(!data) return {ok:false,err:'빈 파일',ver:NOTIFY_VER};
+  const bytes = Utilities.base64Decode(data);
+  if(bytes.length > 10*1024*1024) return {ok:false,err:'10MB를 넘습니다',ver:NOTIFY_VER};
+  const name = String(req.name||'파일').replace(/[\\\/:*?"<>|]/g,'_').slice(0,200);
+  const mime = String(req.mime||'application/octet-stream').slice(0,100);
+  const month = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM');
+  const f = subFolder_(rootFolder_(UPLOAD_FOLDER), month).createFile(Utilities.newBlob(bytes, mime, name));
+  f.setDescription('FS Talk · ' + u.team + ' ' + u.name);
+  try{ f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }
+  catch(e){ f.setTrashed(true); return {ok:false,err:'드라이브 공유 설정 실패: '+e,ver:NOTIFY_VER}; }
+  return {ok:true,id:f.getId(),ver:NOTIFY_VER};
+}
+function rootFolder_(n){ const it = DriveApp.getFoldersByName(n); return it.hasNext() ? it.next() : DriveApp.createFolder(n); }
+function subFolder_(parent, n){ const it = parent.getFoldersByName(n); return it.hasNext() ? it.next() : parent.createFolder(n); }
 
 /** 관리자 기기 목록 — 관리자로 지정된 기기 + 그 사람(같은 이름·팀)의 다른 기기 전부 */
 function adminTargets_(){
@@ -123,7 +150,7 @@ function send_(targets, title, body, link, tag, data){
     method:'post', contentType:'application/json', muteHttpExceptions:true,
     headers:{Authorization:'Bearer '+at},
     payload:JSON.stringify({message:{token:t.token,data:data||{},
-      webpush:{notification:{title:title,body:body,icon:APP_URL+'icons/icon-192.png',tag:tag,renotify:true},fcm_options:{link:link}}}})
+      webpush:{notification:{title:t.title||title,body:body,icon:APP_URL+'icons/icon-192.png',tag:tag,renotify:true},fcm_options:{link:link}}}})
   };});
   let sent = 0;
   UrlFetchApp.fetchAll(reqs).forEach(function(r,i){
@@ -230,7 +257,7 @@ function restoreMissing(){
   const bak = JSON.parse(it.next().getBlob().getDataAsString());
   const now = db_('talk') || {};
   let added = 0;
-  ['msgs','users','roster','admins','mute'].forEach(function(sec){
+  ['msgs','users','roster','admins','mute','profiles','reacts','pins','dms','prefs'].forEach(function(sec){
     const b = bak[sec] || {}, c = now[sec] || {};
     Object.keys(b).forEach(function(k1){
       const bv = b[k1], cv = c[k1];
