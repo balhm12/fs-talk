@@ -26,6 +26,7 @@ function doPost(e){
     if(req.type === 'deleteFile') return out_(deleteFile_(req));
     if(req.type === 'remind') return out_(remind_(req));
     if(req.type === 'voice') return out_(voice_(req));
+    if(req.type === 'link') return out_(link_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -96,7 +97,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v15';
+const NOTIFY_VER = 'v16';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -105,6 +106,32 @@ function mentions_(text, users){
   const out = {}; const re = /@([^\s@]+)/g; let m;
   while((m = re.exec(text))){ for(let i=0;i<list.length;i++){ if(m[1].indexOf(list[i]) === 0){ out[list[i]] = true; break; } } }
   return out;
+}
+
+/* ---------- 기기 연결: 쓰던 기기에서 만든 6자리 코드로, 새 브라우저·앱을 같은 사람으로 바로 승인 ----------
+ * (카톡 링크로 열린 브라우저·사파리·새 PC처럼 저장 공간이 다른 곳에서 다시 등록·승인받지 않게)
+ * 코드는 talk/linkcodes/{코드} = {p:팀_이름, uid:만든 기기, exp:만료시각} — 5분, 한 번만 */
+function link_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const code = String(req.code||'').replace(/\D/g,'');
+  if(!/^\d{6}$/.test(code)) return {ok:false,err:'6자리 숫자 코드를 넣어 주세요',ver:NOTIFY_VER};
+  // 무작위로 맞혀 보기 막기: 이 기기 10분에 5번, 전체 10분에 60번
+  const cache = CacheService.getScriptCache(), k1 = 'lnk:'+uid, n1 = +(cache.get(k1)||0), n2 = +(cache.get('lnk:all')||0);
+  if(n1 >= 5 || n2 >= 60) return {ok:false,err:'시도가 너무 많습니다. 10분 뒤 다시 해 주세요',ver:NOTIFY_VER};
+  cache.put(k1, String(n1+1), 600); cache.put('lnk:all', String(n2+1), 600);
+  const lc = db_('talk/linkcodes/'+code);
+  if(!lc || !(+lc.exp > Date.now()) || +lc.exp > Date.now() + 10*60*1000) return {ok:false,err:'코드가 맞지 않거나 시간이 지났습니다. 쓰던 기기에서 새 코드를 만들어 주세요',ver:NOTIFY_VER};
+  const src = db_('talk/users/'+String(lc.uid||'')) || {};
+  if(src.status !== 'approved' || (src.team + '_' + src.name) !== String(lc.p||'')) return {ok:false,err:'코드를 만든 기기가 승인 상태가 아닙니다',ver:NOTIFY_VER};
+  const cur = db_('talk/users/'+uid);
+  if(cur && cur.status === 'approved' && !(cur.team === src.team && cur.name === src.name)) return {ok:false,err:'이 기기는 이미 다른 사람으로 승인되어 있습니다',ver:NOTIFY_VER};
+  const now = Date.now();
+  const rec = {name:src.name, team:src.team, status:'approved', createdAt:now, approvedAt:now, ua:String(req.ua||'').slice(0,200)};
+  if(src.office) rec.office = src.office;
+  dbPut_('talk/users/'+uid, rec);
+  dbDelete_('talk/linkcodes/'+code);   // 한 번 쓰면 끝
+  return {ok:true,name:src.name,team:src.team,ver:NOTIFY_VER};
 }
 
 /* ---------- 말로 보내기: 음성 → 글자(Groq Whisper) → (명령이면) 보낼 방·내용 나누기(Groq) ----------

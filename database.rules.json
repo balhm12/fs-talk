@@ -338,6 +338,31 @@
             ".validate": "newData.isNumber()"
           }
         }
+      },
+      "linkcodes": {
+        "$code": {
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $code.matches(/^[0-9]{6}$/) && ((!data.exists() && newData.child('p').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() === auth.uid))",
+          ".validate": "newData.hasChildren(['p','uid','exp']) && newData.child('exp').isNumber() && newData.child('exp').val() <= now + 600000",
+          "p": {
+            ".validate": "newData.isString()"
+          },
+          "uid": {
+            ".validate": "newData.isString()"
+          },
+          "exp": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "seen": {
+        ".read": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+        "$uid": {
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && auth.uid === $uid",
+          ".validate": "newData.isNumber()"
+        }
       }
     }
   }
