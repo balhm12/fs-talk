@@ -170,7 +170,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <div class="f"><label for="rTeam">소속</label>
       <select id="rTeam">
         <option value="">선택하세요</option>
-        <option>FS WEST</option><option>FS EAST</option><option>FS CENTRAL</option><option>FS SOUTH</option><option>FSS Team</option><option>기타</option>
+        <option>FS WEST</option><option>FS EAST</option><option>FS CENTRAL</option><option>FS SOUTH</option><option>FSS Team</option><option>FSOM Team</option><option>기타</option>
       </select></div>
     <div class="f" id="rOfficeBox" hidden><label for="rOffice">사무소</label><select id="rOffice"></select></div>
     <button type="button" class="linkbtn" id="toPick" hidden>← 명단에서 고르기</button>
@@ -239,7 +239,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.4";
+const APP_VERSION="2026-10-28.5";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -262,7 +262,8 @@ const ROOMS=[
   {id:"south",name:"FS SOUTH",icon:"S",desc:"FS SOUTH 팀 전체방 (부산·대구 사무소)",grp:"팀"},
   {id:"busan",name:"부산 사무소",icon:"└",desc:"FS SOUTH · 부산 사무소",grp:"팀",sub:1},
   {id:"daegu",name:"대구 사무소",icon:"└",desc:"FS SOUTH · 대구 사무소",grp:"팀",sub:1},
-  {id:"fss",name:"FSS Team",icon:"F",desc:"FSS 팀방",grp:"팀"}
+  {id:"fss",name:"FSS Team",icon:"F",desc:"FSS 팀방",grp:"팀"},
+  {id:"fsom",name:"FSOM Team",icon:"O",desc:"FSOM 팀방",grp:"팀"}
 ];
 const OFFICES={"FS CENTRAL":["대전","광주"],"FS SOUTH":["부산","대구"]};
 const PER_ROOM=500;           // 방마다 최근 몇 건을 불러올지 (검색 범위)
@@ -314,7 +315,7 @@ auth.onAuthStateChanged(u=>{
 /* ---------- 등록 ---------- */
 let roster={},picked=null,manual=false;
 function rosterList(){const out=[];Object.keys(roster).forEach(t=>{const g=roster[t]||{};Object.keys(g).forEach(n=>out.push({team:t,name:n,office:typeof g[n]==="string"?g[n]:""}));});return out;}
-const TEAM_ORDER=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team"];
+const TEAM_ORDER=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
 function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};syncPickMode();if(view==="admin")renderAdmin();},()=>{rosterWatched=false;roster={};syncPickMode();});}
