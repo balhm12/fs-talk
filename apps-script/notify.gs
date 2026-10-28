@@ -73,18 +73,22 @@ function doPost(e){
     const stats = {myOther:st.myOther, people:Object.keys(st.people).length, pushPeople:Object.keys(st.pushPeople).length, muted:st.muted,
       noPush:Object.keys(st.noPush).filter(function(k){ return !st.pushPeople[k]; }).map(function(k){ return st.noPush[k]; }).slice(0,30)};
     if(!targets.length) return out_({ok:true,sent:0,targets:0,stats:stats,ver:NOTIFY_VER});
-    const title = isDm ? '💬 ' + (msg.name||'') + ' (1:1)' : isGroup ? '👥 ' + groupName + ' · ' + (msg.name||'') : ROOM_NAME[room] + ' · ' + (msg.name||'');
+    const isNotice = room === 'notice';
+    const title = isDm ? '💬 ' + (msg.name||'') + ' (1:1)' : isGroup ? '👥 ' + groupName + ' · ' + (msg.name||'') : isNotice ? '📢 [공지] ' + (msg.name||'') : ROOM_NAME[room] + ' · ' + (msg.name||'');
+    if(isNotice) targets.forEach(function(t){ t.title = null; });   // 공지는 멘션이 있어도 공지 제목으로
     let body = String(msg.text||'').replace(/\s+/g,' ');
     if(msg.file) body = (/^image\//.test(msg.file.mime||'') ? '📷 사진' : '📎 ' + (msg.file.name||'파일')) + (body ? ' ' + body : '');
     if(msg.re) body = '↪ ' + body;
-    const sent = send_(targets, title, body.slice(0,140), APP_URL + '#room-' + encodeURIComponent(room), 'room-' + room, {room:room});
+    // 공지: 눌러서 확인할 때까지 화면에 남김(PC·안드로이드) + 진동을 길게
+    const extra = isNotice ? {requireInteraction:true, vibrate:[200,100,200,100,500]} : null;
+    const sent = send_(targets, title, body.slice(0,140), APP_URL + '#room-' + encodeURIComponent(room), 'room-' + room, {room:room}, extra);
     return out_({ok:true,sent:sent,targets:targets.length,stats:stats,ver:NOTIFY_VER});
   }catch(err){
     return out_({ok:false,err:String(err)});
   }
 }
 
-const NOTIFY_VER = 'v10';
+const NOTIFY_VER = 'v11';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -124,7 +128,7 @@ function remind_(req){
   let body = String(msg.text||'').replace(/\s+/g,' ');
   if(msg.file) body = (/^image\//.test(msg.file.mime||'') ? '📷 사진' : '📎 ' + (msg.file.name||'파일')) + (body ? ' ' + body : '');
   const n = Object.keys(people).length, np = Object.keys(pushPeople).length;
-  const sent = targets.length ? send_(targets, '📢 확인이 필요한 공지 · ' + (msg.name||''), ('눌러서 확인해 주세요 — ' + body).slice(0,140), APP_URL + '#room-notice', 'room-notice', {room:'notice'}) : 0;
+  const sent = targets.length ? send_(targets, '📢 [공지·확인 요청] ' + (msg.name||''), ('눌러서 확인해 주세요 — ' + body).slice(0,140), APP_URL + '#room-notice', 'room-notice', {room:'notice'}, {requireInteraction:true, vibrate:[200,100,200,100,500]}) : 0;
   cache.put('remind:'+msgId, '1', 1800);
   return {ok:true, sent:sent, people:n, noPush:n - np, ver:NOTIFY_VER};
 }
@@ -294,7 +298,7 @@ function testAdmin_(req){
 }
 
 /** FCM 발송 공통 (쓸 수 없는 토큰은 정리) */
-function send_(targets, title, body, link, tag, data){
+function send_(targets, title, body, link, tag, data, extra){
   if(!targets.length) return 0;
   const at = accessToken_();
   const reqs = targets.map(function(t){ return {
@@ -302,7 +306,7 @@ function send_(targets, title, body, link, tag, data){
     method:'post', contentType:'application/json', muteHttpExceptions:true,
     headers:{Authorization:'Bearer '+at},
     payload:JSON.stringify({message:{token:t.token,data:data||{},
-      webpush:{notification:{title:t.title||title,body:body,icon:APP_URL+'icons/icon-192.png',tag:tag,renotify:true},fcm_options:{link:link}}}})
+      webpush:{notification:Object.assign({title:t.title||title,body:body,icon:APP_URL+'icons/icon-192.png',tag:tag,renotify:true}, extra||{}),fcm_options:{link:link}}}})
   };});
   let sent = 0;
   UrlFetchApp.fetchAll(reqs).forEach(function(r,i){

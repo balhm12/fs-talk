@@ -794,7 +794,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.56";
+const APP_VERSION="2026-10-28.57";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1721,7 +1721,7 @@ function openAckList(m){
       const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"remind",idToken,msgId:m.id})});
       const j=await res.json().catch(()=>null);
       if(!j)throw new Error("알림 발송기 응답 없음");
-      if(!j.ok)throw new Error(j.ver==="v9"||!j.ver?"Apps Script를 새 버전(v10)으로 배포해 주세요":(j.err||"알 수 없음"));
+      if(!j.ok)throw new Error(j.ver==="v9"||!j.ver?"Apps Script를 새 버전으로 배포해 주세요":(j.err||"알 수 없음"));
       toast(j.people+"명("+j.sent+"대 기기)에게 다시 알렸습니다."+(j.noPush?" 알림을 안 켠 "+j.noPush+"명은 앱을 열 때 안내가 뜹니다.":""));
     }catch(e){toast("다시 알림 실패: "+e.message);}
     rb.textContent="미확인 사람에게 다시 알림 보내기";draw();
@@ -2426,11 +2426,12 @@ if(messaging){
     const focused=document.visibilityState==="visible"&&document.hasFocus();
     const adminNote=!r;   // 등록 요청·알림 테스트 같은 관리자 알림은 창을 보고 있어도 윈도우 알림으로
     if(!adminNote&&focused&&view==="chat"&&room===r&&!(isM()&&mList))return;   // 지금 보고 있는 방
+    if(r==="notice"&&focused){setTimeout(()=>{if($("pOv").hidden&&!isLocked()&&pendingNotices().length)showNoticePrompt();else if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));},900);return;}   // 앱을 보고 있을 때 온 공지는 안내창으로
     if(!adminNote&&focused){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));return;}
     try{
       const reg=await getSwReg();
       await reg.showNotification(n.title||"FS Talk",{body:n.body||"",icon:"icons/icon-192.png",badge:"icons/icon-192.png",
-        tag:r?"room-"+r:"fstalk-admin",renotify:true,requireInteraction:adminNote,data:{url:location.pathname+(r?"#room-"+encodeURIComponent(r):"#admin")}});
+        tag:r?"room-"+r:"fstalk-admin",renotify:true,requireInteraction:adminNote||r==="notice",vibrate:r==="notice"?[200,100,200,100,500]:undefined,data:{url:location.pathname+(r?"#room-"+encodeURIComponent(r):"#admin")}});
     }catch(e){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));}
   });
 }
