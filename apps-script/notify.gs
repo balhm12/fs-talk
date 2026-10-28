@@ -18,6 +18,7 @@ function out_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setM
 function doPost(e){
   try{
     const req = JSON.parse(e.postData.contents);
+    if(req.type === 'register') return out_(notifyRegister_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     if(!ROOM_NAME[room] || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request'});
     const uid = verifyUser_(String(req.idToken||''));
@@ -66,6 +67,47 @@ function doPost(e){
   }catch(err){
     return out_({ok:false,err:String(err)});
   }
+}
+
+/** 등록 요청 → 관리자 기기로 알림 */
+function notifyRegister_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth'};
+  const u = db_('talk/users/'+uid);
+  if(!u || u.status !== 'pending') return {ok:false,err:'not pending'};
+  const cache = CacheService.getScriptCache();
+  if(cache.get('reg:'+uid)) return {ok:true,dup:true};     // 10분 안 중복 요청은 한 번만
+  cache.put('reg:'+uid,'1',600);
+  const admins = db_('talk/admins') || {}, tokens = db_('talk/tokens') || {};
+  const targets = [];
+  Object.keys(admins).forEach(function(id){
+    if(admins[id] !== true) return;
+    const t = tokens[id] || {};
+    Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token}); });
+  });
+  const dev = /iPhone|iPad/.test(u.ua||'') ? 'iPhone' : /Android/.test(u.ua||'') ? 'Android' : 'PC';
+  const sent = send_(targets, '👥 등록 요청', u.name + ' · ' + u.team + (u.office ? ' ' + u.office : '') + ' · ' + dev + ' — 승인이 필요합니다', APP_URL + '#admin', 'admin-register', {room:''});
+  return {ok:true,sent:sent,targets:targets.length};
+}
+
+/** FCM 발송 공통 (쓸 수 없는 토큰은 정리) */
+function send_(targets, title, body, link, tag, data){
+  if(!targets.length) return 0;
+  const at = accessToken_();
+  const reqs = targets.map(function(t){ return {
+    url:'https://fcm.googleapis.com/v1/projects/'+P_('PROJECT_ID')+'/messages:send',
+    method:'post', contentType:'application/json', muteHttpExceptions:true,
+    headers:{Authorization:'Bearer '+at},
+    payload:JSON.stringify({message:{token:t.token,data:data||{},
+      webpush:{notification:{title:title,body:body,icon:APP_URL+'icons/icon-192.png',tag:tag,renotify:true},fcm_options:{link:link}}}})
+  };});
+  let sent = 0;
+  UrlFetchApp.fetchAll(reqs).forEach(function(r,i){
+    const c = r.getResponseCode();
+    if(c===200){ sent++; return; }
+    if(c===404 || /UNREGISTERED/.test(r.getContentText())) dbDelete_('talk/tokens/'+targets[i].uid+'/'+targets[i].key);
+  });
+  return sent;
 }
 
 function doGet(){ return out_({ok:true,app:'FS Talk notify'}); }

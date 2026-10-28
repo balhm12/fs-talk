@@ -325,7 +325,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.13";
+const APP_VERSION="2026-10-28.14";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -451,7 +451,7 @@ $("regForm").addEventListener("submit",async e=>{
   name=picked.name;team=picked.team;office=picked.office||"";
   const data={name,team,office,status:"pending",createdAt:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent.slice(0,180)};
   $("regBtn").disabled=true;
-  try{await R("users/"+uid).set(data);}catch(err){toast("등록 실패: "+(err.code||err.message));}
+  try{await R("users/"+uid).set(data);notifyRegister();}catch(err){toast("등록 실패: "+(err.code||err.message));}
   finally{$("regBtn").disabled=false;}
 });
 $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("pSel").hidden=true;$("rName").value=me.name||"";$("rTeam").value=me.team||"";syncOffice();$("rOffice").value=me.office||"";syncPickMode();};
@@ -874,6 +874,10 @@ function renderPushCard(){
   if(Notification.permission==="denied"){c.appendChild(document.createTextNode("알림이 차단돼 있어요. 휴대폰(또는 브라우저) 설정 → 알림에서 FS Talk을 허용한 뒤 다시 열어 주세요."));}
   else{c.appendChild(document.createTextNode("앱을 닫아 둬도 새 메시지가 오면 알려 드려요."));c.appendChild(el("br"));const b=el("button","btn pri","알림 켜기");b.onclick=enablePush;c.appendChild(b);}
   box.appendChild(c);
+}
+async function notifyRegister(){
+  if(!NOTIFY_URL)return;
+  try{const idToken=await auth.currentUser.getIdToken();await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"register",idToken})});}catch(e){}
 }
 async function notifyOthers(r,msgId){
   if(!NOTIFY_URL)return;
