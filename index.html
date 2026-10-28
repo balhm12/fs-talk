@@ -163,6 +163,7 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .rc{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:1px 8px;font-size:12px;color:var(--text)}
 .rc.on{border-color:var(--blue);background:var(--sel);color:var(--link);font-weight:700}
 .edt{font-size:10px;color:#8A94A3}
+.svd{font-size:11px;line-height:1}
 .pinbar{display:flex;align-items:flex-start;gap:10px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .pinbar .pt{flex:1;min-width:0;cursor:pointer}
 .pinbar .pt b{color:var(--link);font-size:12px;display:block;margin-bottom:2px}
@@ -360,6 +361,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <button id="rChat" title="대화"><span class="ri">💬</span>대화</button>
     <button id="rOrg" title="조직도"><span class="ri">👥</span>조직도</button>
     <button id="rSearch" title="검색"><span class="ri">🔍</span>검색</button>
+    <button id="rSaved" title="저장한 글"><span class="ri">⭐</span>저장</button>
     <button id="rAdmin" title="관리" hidden><span class="ri">⚙️</span>관리</button>
     <div class="grow"></div>
     <button id="rTheme" title="화면 테마 (시스템 → 밝게 → 어둡게)"><span class="ri">🌙</span>테마</button>
@@ -415,6 +417,15 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       </div>
     </section>
 
+    <section class="view" id="savedView">
+      <div class="sw">
+        <div class="filters"><input type="search" id="sq" placeholder="저장한 글에서 찾기"><select id="sRoom"><option value="">모든 방</option></select></div>
+        <div class="hint">메시지를 누르고 「⭐ 저장」을 고르면 여기에 모입니다. 나만 볼 수 있고, 휴대폰·PC에서 똑같이 보입니다. 누르면 그 대화로 이동합니다.</div>
+        <div class="sum"><span>저장한 글 <b id="sCnt">0</b>건</span></div>
+        <div class="res" id="sRes"></div>
+      </div>
+    </section>
+
     <section class="view" id="adminView">
       <div class="sw" id="adminBody"></div>
     </section>
@@ -424,6 +435,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <button id="tChat"><span class="ri">💬</span>대화</button>
     <button id="tOrg"><span class="ri">👥</span>조직도</button>
     <button id="tSearch"><span class="ri">🔍</span>검색</button>
+    <button id="tSaved"><span class="ri">⭐</span>저장</button>
     <button id="tAdmin" hidden><span class="ri">⚙️</span>관리</button>
   </nav>
 </div>
@@ -438,7 +450,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.24";
+const APP_VERSION="2026-10-28.25";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -621,6 +633,7 @@ function start(){
   R("reacts").on("value",s=>{reacts=s.val()||{};schedule();},()=>{});
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
+  R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
   if(isAdmin)watchUsers();
   route();
 }
@@ -651,6 +664,7 @@ function schedule(){if(renderQ)return;renderQ=true;requestAnimationFrame(()=>{re
 function refresh(){
   if(view==="chat"&&room){renderMsgs(false);renderPin();if(!(isM()&&mList))markSeen();}
   else if(view==="search")renderSearch();
+  else if(view==="saved")renderSaved();
   renderNav();
 }
 /* 읽음 상태: talk/reads/{방}/{팀_이름} = 마지막으로 읽은 메시지 시각 (기기 간 공유) */
@@ -728,8 +742,8 @@ function renderNav(){
   // 레일·탭바 상태
   renderAllBell();
   const tu=totalUnread();
-  [["rChat","tChat"],["rOrg","tOrg"],["rSearch","tSearch"],["rAdmin","tAdmin"]].forEach(([a,b],i)=>{
-    const on=i===0?(view==="chat"&&listTab==="rooms"):i===1?listTab==="org"&&(view==="chat"):i===2?view==="search":view==="admin";
+  [["rChat","tChat"],["rOrg","tOrg"],["rSearch","tSearch"],["rAdmin","tAdmin"],["rSaved","tSaved"]].forEach(([a,b],i)=>{
+    const on=i===0?(view==="chat"&&listTab==="rooms"):i===1?listTab==="org"&&(view==="chat"):i===2?view==="search":i===3?view==="admin":view==="saved";
     const onM=isM()?(i===0?(mList&&listTab==="rooms"):i===1?(mList&&listTab==="org"):on):on;
     $(a).classList.toggle("on",on);$(b).classList.toggle("on",onM);
     [a,b].forEach(id=>{const e=$(id);const old=e.querySelector(".dot");if(old)old.remove();
@@ -808,13 +822,14 @@ $("infoBtn").onclick=()=>{
 };
 document.addEventListener("click",e=>{if(infoOpen&&!$("info").contains(e.target)&&e.target!==$("infoBtn")){infoOpen=false;renderInfo();}});
 function showView(){
-  ["chatView","searchView","adminView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
+  ["chatView","searchView","savedView","adminView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
   $("composer").hidden=view!=="chat"||!room;
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(document.createTextNode("💬 대화방을 선택하세요"));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
+  else if(view==="saved"){$("title").textContent="저장한 글";$("desc").textContent="중요한 글을 모아 둔 곳 · 나만 볼 수 있어요";renderSaved();}
   else{$("title").textContent="관리";$("desc").textContent="등록 승인 · 관리자 지정 · 직원 명단";renderAdmin();}
   renderPin();renderCbar();renderMbox();
   const ml=isM()&&mList;
@@ -829,6 +844,7 @@ function route(){
   const h=curHash();
   infoOpen=false;
   if(h==="search"){view="search";mList=false;}
+  else if(h==="saved"){view="saved";mList=false;}
   else if(h==="admin"&&isAdmin){view="admin";mList=false;}
   else if(h==="org"){listTab="org";view="chat";mList=true;}
   else if(h.indexOf("room-")===0&&(ROOMS.some(r=>r.id===h.slice(5))||dmOther(h.slice(5)))){
@@ -846,6 +862,7 @@ $("backBtn").onclick=()=>{if(history.length>1&&location.hash)history.back();else
 $("rChat").onclick=$("tChat").onclick=()=>{listTab="rooms";$("lq").value="";isM()?go(""):(view!=="chat"?go(room?"room-"+room:""):renderNav());};
 $("rOrg").onclick=$("tOrg").onclick=()=>{$("lq").value="";if(isM())go("org");else{listTab="org";if(view!=="chat")go(room?"room-"+room:"org");else renderNav();}};
 $("rSearch").onclick=$("tSearch").onclick=()=>{go("search");setTimeout(()=>$("q").focus(),30);};
+$("rSaved").onclick=$("tSaved").onclick=()=>go("saved");
 $("rAdmin").onclick=$("tAdmin").onclick=()=>go("admin");
 $("lq").addEventListener("input",renderNav);
 
@@ -939,6 +956,7 @@ function renderMsgs(scroll){
     line.appendChild(b);
     const meta=el("div","meta2");
     const un=unreadPeople(m);if(un>0)meta.appendChild(el("span","unr",String(un)));
+    if(saved[m.id]){const sv=el("span","svd","⭐");sv.title="저장한 글";meta.appendChild(sv);}
     if(m.edited)meta.appendChild(el("span","edt","수정됨"));
     if(lastOfGroup||m.edited)meta.appendChild(el("span",null,hm(d)));
     line.appendChild(meta);
@@ -1032,6 +1050,45 @@ async function toggleFav(){
 }
 $("favBtn").onclick=toggleFav;
 
+/* ---------- 저장한 글 (메시지 즐겨찾기) ---------- */
+let saved={};
+async function toggleSave(m){
+  const ref=R("prefs/"+myKey+"/saved/"+m.id);
+  try{
+    if(saved[m.id]){await ref.remove();toast("저장을 해제했습니다.");}
+    else{await ref.set({room:m.room,name:m.name,text:previewText(m).replace(/\s+/g," ").slice(0,300),mts:m.ts,ts:SV});toast("⭐ 저장했습니다. 「저장」에서 모아 볼 수 있어요.");}
+  }catch(e){toast("저장 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
+}
+(()=>{const sel=$("sRoom");ROOMS.forEach(r=>sel.appendChild(new Option((r.sub?"  └ ":"")+r.name,r.id)));sel.appendChild(new Option("1:1 대화","dm"));})();
+["sq","sRoom"].forEach(id=>$(id).addEventListener(id==="sq"?"input":"change",()=>{if(view==="saved")renderSaved();}));
+function renderSaved(){
+  const box=$("sRes");box.textContent="";
+  const q=terms($("sq").value),fr=$("sRoom").value;
+  const list=Object.entries(saved).map(([id,v])=>({id,v:v||{},m:byId.get(id)}))
+    .filter(x=>{const room=x.m?x.m.room:x.v.room;if(fr&&(fr==="dm"?!isDm(room):room!==fr))return false;
+      if(q.length){const c=squash((x.m?msgText(x.m):x.v.text||"")+" "+(x.v.name||"")).c;if(!q.every(t=>c.includes(t)))return false;}return true;})
+    .sort((a,b)=>(b.v.ts||0)-(a.v.ts||0));
+  $("sCnt").textContent=list.length;
+  if(!list.length){box.appendChild(el("div","more",Object.keys(saved).length?"찾는 글이 없습니다.":"아직 저장한 글이 없습니다. 메시지를 누르고 「⭐ 저장」을 골라 보세요."));return;}
+  list.forEach(({id,v,m})=>{
+    const room=m?m.room:v.room;
+    const h=el("div","hit"),meta=el("div","meta");
+    meta.appendChild(el("span","rb",roomName(room)));meta.appendChild(el("span",null,(m?m.name:v.name)||""));
+    const d=new Date(m?m.ts:(v.mts||v.ts||0));meta.appendChild(el("span",null,ymd(d)+" "+hm(d)));
+    if(!m&&!isDm(room)&&!(ROOMS.some(r=>r.id===room)))meta.appendChild(el("span",null,"(방 없음)"));
+    const x=el("button","cx","×");x.title="저장 해제";x.setAttribute("aria-label","저장 해제");x.style.marginLeft="auto";x.style.fontSize="18px";
+    x.onclick=ev=>{ev.stopPropagation();R("prefs/"+myKey+"/saved/"+id).remove().then(()=>toast("저장을 해제했습니다.")).catch(e=>toast("해제 실패: "+(e.code||e.message)));};meta.appendChild(x);
+    h.appendChild(meta);
+    const tx=el("div","tx");
+    if(m){if(m.file&&isImgF(m.file)){const i=el("img");i.src=driveThumb(m.file.id,400);i.alt="사진";i.style.cssText="max-width:160px;max-height:160px;border-radius:8px;display:block;margin-bottom:4px";i.referrerPolicy="no-referrer";tx.appendChild(i);}
+      tx.appendChild(richText(previewText(m).length>600?previewText(m).slice(0,600)+"…":previewText(m),q));}
+    else{tx.appendChild(richText(v.text||"",q));tx.appendChild(el("div","more","원문을 아직 불러오지 않았거나 삭제된 글입니다."));}
+    h.appendChild(tx);
+    h.onclick=()=>{if(m){jumpId=id;jumpTerms=null;go("room-"+m.room);}else if(room&&getRoom(room)){go("room-"+room);toast("원문이 화면에 없어요. 「이전 대화 더 보기」로 불러와 주세요.");}else toast("원문을 찾을 수 없습니다.");};
+    box.appendChild(h);
+  });
+}
+
 /* ---------- 메시지 메뉴 (누르면 열림) ---------- */
 function openActions(m){
   const s=$("act");s.textContent="";
@@ -1039,6 +1096,7 @@ function openActions(m){
   const er=el("div","emos");REACTS.forEach(([c,e])=>{const b=el("button","emo"+(myReact(m)===c?" on":""),e);b.title=e;b.onclick=()=>{closeActions();setReact(m,c);};er.appendChild(b);});s.appendChild(er);
   const add=(icon,label,fn,cls)=>{const b=el("button","aitem"+(cls?" "+cls:""));if(icon)b.appendChild(el("span","ai",icon));b.appendChild(document.createTextNode(label));b.onclick=()=>{closeActions();fn();};s.appendChild(b);};
   add("↩️","답장",()=>startReply(m));
+  add("⭐",saved[m.id]?"저장 해제":"저장 (나중에 다시 보기)",()=>toggleSave(m));
   if(m.text)add("📋","복사",()=>copyText(m.text));
   if(m.file)add("⬇️","파일 열기",()=>window.open(driveView(m.file.id),"_blank","noopener"));
   if(canPin(m)){const pinned=!!pinOf(room)&&pinOf(room).id===m.id;add("📌",pinned?"상단 고정 해제":"이 방 상단에 고정",()=>pinned?unpin(room):pinMsg(m));}

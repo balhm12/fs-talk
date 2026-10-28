@@ -233,6 +233,29 @@
           },
           "$other": {
             ".validate": false
+          },
+          "saved": {
+            "$msg": {
+              ".validate": "newData.hasChildren(['room', 'name', 'text', 'mts', 'ts'])",
+              "room": {
+                ".validate": "newData.isString() && newData.val().length <= 120"
+              },
+              "name": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "text": {
+                ".validate": "newData.isString() && newData.val().length <= 300"
+              },
+              "mts": {
+                ".validate": "newData.isNumber()"
+              },
+              "ts": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
           }
         }
       }
