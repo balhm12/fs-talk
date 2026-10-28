@@ -842,7 +842,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.63";
+const APP_VERSION="2026-10-28.64";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2137,7 +2137,10 @@ let sExpand=false,sExpandKey="";
    실마리 데이터는 비밀번호로 잠겨 있음(AES-256-GCM). 키는 이 기기에만 두고(실마리와 같은 방식·같은 저장 이름, 30일) 서버로 보내지 않음.
    같은 사이트(balhm12.github.io)라 PC·안드로이드 크롬에서는 실마리에서 넣은 비밀번호를 그대로 씀. */
 const SIL_BASE="https://balhm12.github.io/sysmex-ts/",SIL_KEY="sysmex-ts-key";
-let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null;
+let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null,silBi=null;
+/* 에러 이름의 핵심 단어 (흔한 말은 뺌) — 이름 일부만 써도(예: Waste Chamber) 연결되게 이어진 두 단어로 찾음 */
+const SIL_STOP=new Set(["error","err","errors","the","of","a","an","in","on","to","for","is","and","or","not","no","at","by","with","occurred","occur","fault","alarm","warning"]);
+const silWords=t=>(String(t).toLowerCase().match(/[a-z][a-z0-9]*|[0-9]+[a-z][a-z0-9]*/g)||[]).filter(w=>w.length>=2&&!SIL_STOP.has(w));
 const silB64=s=>{const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;};
 const silToB64=buf=>{let s="";const a=new Uint8Array(buf);for(let i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s);};
 async function silGetAuth(){if(!silAuth){const r=await fetch(SIL_BASE+"data/_auth.json",{cache:"no-cache"});if(!r.ok)throw new Error("실마리 연결 실패 "+r.status);silAuth=await r.json();}return silAuth;}
@@ -2167,9 +2170,10 @@ function silLoad(){                                    // 검색용 목록(에�
     let raw;try{raw=await silOpen(silKey,await r.arrayBuffer());}catch(e){try{localStorage.removeItem(SIL_KEY);}catch(x){}silKey=null;const er=new Error("locked");er.locked=true;throw er;}
     const j=a.gz?await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).json():JSON.parse(new TextDecoder().decode(raw));
     silIdx=j.rows||[];silVer++;silErr="";
-    silCodes=new Map();silTitles=[];
+    silCodes=new Map();silTitles=[];silBi=new Map();
     silIdx.forEach(r=>{(r.c||[]).forEach(c=>{const k=String(c).toLowerCase();if(k.length>=3){if(!silCodes.has(k))silCodes.set(k,[]);silCodes.get(k).push(r);}});
-      const t=String(r.t||"").toLowerCase();if(t.length>=8)silTitles.push([t,r]);});
+      const t=String(r.t||"").toLowerCase();if(t.length>=8)silTitles.push([t,r]);
+      const w=silWords(t);for(let i=0;i<w.length-1;i++){const bg=w[i]+" "+w[i+1];if(bg.length<9)continue;if(!silBi.has(bg))silBi.set(bg,[]);const l=silBi.get(bg);if(l[l.length-1]!==r)l.push(r);}});
     schedule();if(view==="search")renderSil($("q").value);
     return silIdx;
   })();
@@ -2239,13 +2243,22 @@ function silMatches(m){
     const rows=silCodes.get(tok);if(!rows)return;
     rows.forEach(r=>{const dev=t.indexOf(String(r.d).toLowerCase())>=0;if(!errW&&!dev)return;const k=r.d+"/"+r.p+"/"+r.i;if(!found.has(k))found.set(k,{r,s:dev?1.5:1});});
   });
-  const out=[...found.values()].sort((a,b)=>b.s-a.s||b.r.n-a.r.n).slice(0,3).map(x=>x.r);
+  // 이름 일부: 핵심 단어 두 개가 이어서 나오면 (장비 이름이 같이 있으면 그 장비를 먼저)
+  const mw=silWords(t);let phrase="",phraseN=0;
+  for(let i=0;i<mw.length-1;i++){const bg=mw[i]+" "+mw[i+1];const rows=silBi.get(bg);if(!rows)continue;
+    if(rows.length>phraseN){phrase=bg;phraseN=rows.length;}
+    rows.forEach(r=>{const k=r.d+"/"+r.p+"/"+r.i;const dev=t.indexOf(String(r.d).toLowerCase())>=0;const o=found.get(k);const add=1+(dev?0.6:0);if(o){if(o.s<2)o.s+=add;}else found.set(k,{r,s:add});});}
+  let out=[...found.values()].sort((a,b)=>b.s-a.s||b.r.n-a.r.n).map(x=>x.r);
+  const more=out.length>3&&phrase?{q:phrase,n:out.length}:null;
+  out=out.slice(0,more?2:3);if(more)out.more=more;
   m._silv=silVer;m._sil=out;return out;
 }
 function silChips(m){
   const ms=silMatches(m);if(!ms.length)return null;
   const w=el("div","silchips");
+  const mo=ms.more;
   ms.forEach(r=>{const b=el("button","silchip");b.appendChild(icEl("wrench","",13));b.appendChild(el("span",null,"실마리 · "+r.d+" · "+String(r.t||"").slice(0,26)));b.title=(r.t||"")+" — 원인·조치 보기";b.onclick=e=>{e.stopPropagation();silOpenUrl(silUrl(r));};w.appendChild(b);});
+  if(mo){const b=el("button","silchip more");b.appendChild(icEl("search","",13));b.appendChild(el("span",null,"실마리에서 「"+mo.q+"」 "+mo.n+"건 모두 보기"));b.onclick=e=>{e.stopPropagation();silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(mo.q));};w.appendChild(b);}
   return w;
 }
 let tmr;["q","fRoom","fPeriod","fWho"].forEach(id=>$(id).addEventListener(id==="q"?"input":"change",()=>{clearTimeout(tmr);tmr=setTimeout(renderSearch,120);}));
