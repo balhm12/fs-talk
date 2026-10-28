@@ -842,7 +842,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.64";
+const APP_VERSION="2026-10-28.65";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2137,7 +2137,8 @@ let sExpand=false,sExpandKey="";
    실마리 데이터는 비밀번호로 잠겨 있음(AES-256-GCM). 키는 이 기기에만 두고(실마리와 같은 방식·같은 저장 이름, 30일) 서버로 보내지 않음.
    같은 사이트(balhm12.github.io)라 PC·안드로이드 크롬에서는 실마리에서 넣은 비밀번호를 그대로 씀. */
 const SIL_BASE="https://balhm12.github.io/sysmex-ts/",SIL_KEY="sysmex-ts-key";
-let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null,silBi=null;
+let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null,silBi=null,silParts=null;
+const SIL_PART=/^(?=(?:[^0-9]*[0-9]){3})[a-z0-9][a-z0-9\-]{5,}$/;   // 부품번호처럼 보이는 말: 숫자 3개 이상·6자 이상
 /* 에러 이름의 핵심 단어 (흔한 말은 뺌) — 이름 일부만 써도(예: Waste Chamber) 연결되게 이어진 두 단어로 찾음 */
 const SIL_STOP=new Set(["error","err","errors","the","of","a","an","in","on","to","for","is","and","or","not","no","at","by","with","occurred","occur","fault","alarm","warning"]);
 const silWords=t=>(String(t).toLowerCase().match(/[a-z][a-z0-9]*|[0-9]+[a-z][a-z0-9]*/g)||[]).filter(w=>w.length>=2&&!SIL_STOP.has(w));
@@ -2170,9 +2171,12 @@ function silLoad(){                                    // 검색용 목록(에�
     let raw;try{raw=await silOpen(silKey,await r.arrayBuffer());}catch(e){try{localStorage.removeItem(SIL_KEY);}catch(x){}silKey=null;const er=new Error("locked");er.locked=true;throw er;}
     const j=a.gz?await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).json():JSON.parse(new TextDecoder().decode(raw));
     silIdx=j.rows||[];silVer++;silErr="";
-    silCodes=new Map();silTitles=[];silBi=new Map();
-    silIdx.forEach(r=>{(r.c||[]).forEach(c=>{const k=String(c).toLowerCase();if(k.length>=3){if(!silCodes.has(k))silCodes.set(k,[]);silCodes.get(k).push(r);}});
+    silCodes=new Map();silTitles=[];silBi=new Map();silParts=new Map();
+    const addCode=(k,r)=>{if(k.length<3)return;if(!silCodes.has(k))silCodes.set(k,[]);const l=silCodes.get(k);if(l[l.length-1]!==r)l.push(r);};
+    silIdx.forEach(r=>{(r.c||[]).forEach(c=>{const k=String(c).toLowerCase().trim();addCode(k,r);(k.match(/[a-z0-9][a-z0-9.\-]*/g)||[]).forEach(x=>{if(x!==k&&x.length>=4&&/\d/.test(x))addCode(x,r);});});
       const t=String(r.t||"").toLowerCase();if(t.length>=8)silTitles.push([t,r]);
+      const codeSet=new Set((r.c||[]).map(c=>String(c).toLowerCase()));
+      (String(r.k2||"")+" "+String(r.k3||"")).toLowerCase().split(/[^a-z0-9\-]+/).forEach(x=>{x=x.replace(/^-+|-+$/g,"");if(!SIL_PART.test(x)||codeSet.has(x))return;if(!silParts.has(x))silParts.set(x,[]);const l=silParts.get(x);if(l[l.length-1]!==r)l.push(r);});
       const w=silWords(t);for(let i=0;i<w.length-1;i++){const bg=w[i]+" "+w[i+1];if(bg.length<9)continue;if(!silBi.has(bg))silBi.set(bg,[]);const l=silBi.get(bg);if(l[l.length-1]!==r)l.push(r);}});
     schedule();if(view==="search")renderSil($("q").value);
     return silIdx;
@@ -2239,9 +2243,12 @@ function silMatches(m){
   const t=m.text.toLowerCase(),found=new Map();
   silTitles.forEach(([tt,r])=>{if(t.indexOf(tt)>=0)found.set(r.d+"/"+r.p+"/"+r.i,{r,s:2});});
   const errW=SIL_ERRW.test(t);
+  const flat=t.replace(/\s+/g,"");
+  // 「37005」「37005 떴어요」처럼 거의 코드뿐인 짧은 글은 코드만 있어도 연결 (4자리 숫자는 시간·번호와 헷갈려 제외)
+  const bareOk=tok=>(tok.length>=5||/[a-z]/.test(tok))&&flat.replace(tok,"").length<=8;
   (t.match(/[a-z0-9][a-z0-9.\-]{2,}/g)||[]).forEach(tok=>{
     const rows=silCodes.get(tok);if(!rows)return;
-    rows.forEach(r=>{const dev=t.indexOf(String(r.d).toLowerCase())>=0;if(!errW&&!dev)return;const k=r.d+"/"+r.p+"/"+r.i;if(!found.has(k))found.set(k,{r,s:dev?1.5:1});});
+    rows.forEach(r=>{const dev=t.indexOf(String(r.d).toLowerCase())>=0;if(!errW&&!dev&&!bareOk(tok))return;const k=r.d+"/"+r.p+"/"+r.i;if(!found.has(k))found.set(k,{r,s:dev?1.5:1});});
   });
   // 이름 일부: 핵심 단어 두 개가 이어서 나오면 (장비 이름이 같이 있으면 그 장비를 먼저)
   const mw=silWords(t);let phrase="",phraseN=0;
@@ -2251,13 +2258,19 @@ function silMatches(m){
   let out=[...found.values()].sort((a,b)=>b.s-a.s||b.r.n-a.r.n).map(x=>x.r);
   const more=out.length>3&&phrase?{q:phrase,n:out.length}:null;
   out=out.slice(0,more?2:3);if(more)out.more=more;
+  // 부품번호: 부품 하나가 여러 에러에 쓰이므로 실마리의 부품 검색으로 연결 (에러가 하나뿐이면 그 에러로 바로)
+  const parts=[];(t.match(/[a-z0-9][a-z0-9\-]{5,}/g)||[]).forEach(x=>{x=x.replace(/-+$/,"");const rows=silParts.get(x);if(rows&&!parts.some(p=>p.q===x))parts.push({q:x,rows});});
+  if(parts.length)out.parts=parts.slice(0,2);
   m._silv=silVer;m._sil=out;return out;
 }
 function silChips(m){
-  const ms=silMatches(m);if(!ms.length)return null;
+  const ms=silMatches(m);if(!ms.length&&!ms.parts)return null;
   const w=el("div","silchips");
   const mo=ms.more;
   ms.forEach(r=>{const b=el("button","silchip");b.appendChild(icEl("wrench","",13));b.appendChild(el("span",null,"실마리 · "+r.d+" · "+String(r.t||"").slice(0,26)));b.title=(r.t||"")+" — 원인·조치 보기";b.onclick=e=>{e.stopPropagation();silOpenUrl(silUrl(r));};w.appendChild(b);});
+  (ms.parts||[]).forEach(pt=>{const b=el("button","silchip part");b.appendChild(icEl("wrench","",13));
+    const one=pt.rows.length===1;b.appendChild(el("span",null,"실마리 · 부품 "+pt.q.toUpperCase()+(one?" · "+String(pt.rows[0].t||"").slice(0,22):" 관련 에러 "+pt.rows.length+"건")));
+    b.onclick=e=>{e.stopPropagation();silOpenUrl(one?silUrl(pt.rows[0]):SIL_BASE+"#/q/"+encodeURIComponent(pt.q));};w.appendChild(b);});
   if(mo){const b=el("button","silchip more");b.appendChild(icEl("search","",13));b.appendChild(el("span",null,"실마리에서 「"+mo.q+"」 "+mo.n+"건 모두 보기"));b.onclick=e=>{e.stopPropagation();silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(mo.q));};w.appendChild(b);}
   return w;
 }
