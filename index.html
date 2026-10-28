@@ -113,6 +113,8 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .row.sel .del{display:inline-block}
 .row.adm .bubble{cursor:pointer}
 .tag{color:var(--blue);font-weight:500}
+.lead{display:inline-block;margin-left:5px;padding:0 6px;border-radius:8px;background:#FFF1DE;color:#B26100;font-size:10px;font-weight:700;line-height:16px;vertical-align:1px;letter-spacing:0}
+.pcard h3 .lead{font-size:11px;line-height:18px;vertical-align:2px}
 mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .composer{display:flex;gap:8px;padding:10px 14px;background:#fff;border-top:1px solid var(--line);align-items:flex-end}
 .composer textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:20px;padding:9px 14px;min-height:40px;max-height:160px;line-height:1.5;min-width:0;background:#F7F9FC}
@@ -140,6 +142,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 .filters input,.filters select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
 .filters input[type=search]{flex:1;min-width:220px}
 .hint{font-size:12px;color:var(--sub);margin-bottom:12px;line-height:1.6}
+.nthint{font-size:13px;color:var(--sub);margin-bottom:10px;line-height:1.6}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .chip{border:1px solid var(--line);background:#fff;border-radius:14px;padding:3px 10px;font-size:12px;color:var(--sub)}
 .chip:hover{border-color:var(--blue);color:var(--blue)}
@@ -343,7 +346,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.19";
+const APP_VERSION="2026-10-28.21";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -425,7 +428,16 @@ function applyMe(){
 
 /* ---------- 등록 ---------- */
 let roster={},picked=null,manual=false,rosterVer=0;
-function rosterList(){const out=[];Object.keys(roster).forEach(t=>{const g=roster[t]||{};Object.keys(g).forEach(n=>out.push({team:t,name:n,office:typeof g[n]==="string"?g[n]:""}));});return out;}
+function rosterList(){const out=[];Object.keys(roster).forEach(t=>{const g=roster[t]||{};Object.keys(g).forEach(n=>{const v=g[n];const o=typeof v==="string"?v:(v&&typeof v.o==="string"?v.o:"");out.push({team:t,name:n,office:o,lead:!!(v&&typeof v==="object"&&v.lead)});});});return out;}
+/* 팀장은 팀 맨 위: 팀 → 팀장이 있는 사무소 → 팀장 → 이름 순 */
+function leadOffice(team){const l=rosterList().find(p=>p.team===team&&p.lead);return l?l.office:null;}
+function byTeamLead(a,b){
+  const lo=t=>leadOffice(t);
+  return teamRank(a.team)-teamRank(b.team)||a.team.localeCompare(b.team,"ko")
+    ||((a.office===lo(a.team)?0:1)-(b.office===lo(b.team)?0:1))||(a.office||"").localeCompare(b.office||"","ko")
+    ||((b.lead?1:0)-(a.lead?1:0))||a.name.localeCompare(b.name,"ko");
+}
+function roleTag(p){if(!p)return null;if(p.team==="FSG")return el("span","lead","그룹장");if(p.lead)return el("span","lead","팀장");return null;}
 const TEAM_ORDER=["FSG","FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
 const teamLabel=t=>t==="FSG"?"FSG 그룹장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
@@ -443,13 +455,13 @@ function syncPickMode(){
 function renderPick(){
   const q=$("pQ").value.replace(/\s+/g,""),t=$("pTeam").value,box=$("pList");box.textContent="";
   const list=rosterList().filter(p=>(!t||p.team===t)&&(!q||p.name.replace(/\s+/g,"").includes(q)))
-    .sort((a,b)=>teamRank(a.team)-teamRank(b.team)||a.team.localeCompare(b.team,"ko")||a.name.localeCompare(b.name,"ko"));
+    .sort(byTeamLead);
   if(!list.length){box.appendChild(el("div","none","찾는 이름이 없습니다."));return;}
   let g="";
   list.forEach(p=>{
     if(p.team!==g){g=p.team;box.appendChild(el("div","grp",teamLabel(g)));}
     const b=el("button",picked&&picked.name===p.name&&picked.team===p.team?"on":"");b.type="button";
-    b.appendChild(el("span",null,p.name));b.appendChild(el("small",null,p.office?p.office+" 사무소":""));
+    const nmS=el("span",null,p.name);const tg=roleTag(p);if(tg)nmS.appendChild(tg);b.appendChild(nmS);b.appendChild(el("small",null,p.office?p.office+" 사무소":""));
     b.onclick=()=>{picked=p;$("pSel").hidden=false;$("pSel").textContent="선택: "+p.name+" · "+teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"");renderPick();};
     box.appendChild(b);
   });
@@ -588,7 +600,7 @@ function renderNav(){
 }
 function renderOrg(nav,q){
   const list=rosterList().filter(p=>!q||p.name.includes(q)||p.team.toLowerCase().replace(/\s+/g,"").includes(q))
-    .sort((a,b)=>teamRank(a.team)-teamRank(b.team)||(a.office||"").localeCompare(b.office||"","ko")||a.name.localeCompare(b.name,"ko"));
+    .sort(byTeamLead);
   $("lTitle").textContent="";$("lTitle").appendChild(document.createTextNode("조직도"));$("lTitle").appendChild(el("small",null,rosterList().length+"명"));
   if(me){const pf=profiles[myKey]||{};const eb=el("button","myedit",(pf.phone||pf.email)?"✏️ 내 연락처 수정":"✏️ 내 연락처·메일 입력하기");eb.onclick=editMyProfile;nav.appendChild(eb);}
   if(!list.length){nav.appendChild(el("div","more",rosterList().length?"찾는 사람이 없습니다.":"관리자가 명단을 아직 등록하지 않았습니다."));return;}
@@ -599,7 +611,7 @@ function renderOrg(nav,q){
     const b=el("button","li");
     b.appendChild(personAv(p.name));
     const pf=profiles[personKey(p.team,p.name)]||{};
-    const mid=el("div","mid");mid.appendChild(el("div","nm",p.name+(me&&me.name===p.name?" (나)":"")));mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")+(pf.phone?" · "+pf.phone:"")));
+    const mid=el("div","mid");const nmD=el("div","nm",p.name+(me&&me.name===p.name?" (나)":""));const tg=roleTag(p);if(tg)nmD.appendChild(tg);mid.appendChild(nmD);mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")+(pf.phone?" · "+pf.phone:"")));
     b.appendChild(mid);
     const target=Object.keys(ROOM_SCOPE).find(k=>{const sc=ROOM_SCOPE[k];return sc[0]===p.team&&sc[1]&&sc[1]===p.office;})||Object.keys(ROOM_SCOPE).find(k=>ROOM_SCOPE[k][0]===p.team&&!ROOM_SCOPE[k][1]);
     b.onclick=()=>openProfile(p);
@@ -617,8 +629,8 @@ function renderInfo(){
   if(pushOn()){const muted=!!myMute[room];const mb=el("button","btn",muted?"🔕 이 방 알림 꺼짐":"🔔 이 방 알림 켜짐");mb.style.marginTop="10px";mb.onclick=()=>setMute(room,!muted);h.appendChild(el("br"));h.appendChild(mb);}
   box.appendChild(h);
   const l=el("div","il");l.appendChild(el("div","lgrp","참여자 "+mem.length+"명"));
-  mem.sort((a,b)=>teamRank(a.team)-teamRank(b.team)||a.name.localeCompare(b.name,"ko")).forEach(p=>{
-    const m=el("div","mem clickable");m.onclick=()=>openProfile(p);m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
+  mem.sort(byTeamLead).forEach(p=>{
+    const m=el("div","mem clickable");m.onclick=()=>openProfile(p);m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));const tg=roleTag(p);if(tg)t.appendChild(tg);t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
   });
   if(!mem.length)l.appendChild(el("div","more","명단이 등록되면 참여자가 표시됩니다."));
   box.appendChild(l);
@@ -737,7 +749,7 @@ function renderMsgs(scroll){
     const col=el("div","col");
     if(!cont&&(!mine||(room==="all"&&m.room!=="all"))){
       const who=el("div","who");
-      if(!mine)who.appendChild(el("b",null,m.name||"알 수 없음"));
+      if(!mine){who.appendChild(el("b",null,m.name||"알 수 없음"));const tg=roleTag(personTeam(m.name));if(tg)who.appendChild(tg);}
       if(room==="all"&&m.room!=="all")who.appendChild(el("span","rb",roomName(m.room)));
       col.appendChild(who);
     }
@@ -828,22 +840,22 @@ async function setStatus(id,status){
   try{await R("users/"+id+"/status").set(status);toast(status==="approved"?"승인했습니다.":status==="rejected"?"거절했습니다.":"변경했습니다.");}
   catch(e){toast("변경 실패: "+(e.code||e.message));}
 }
-function rosterText(){return rosterList().sort((a,b)=>teamRank(a.team)-teamRank(b.team)||a.name.localeCompare(b.name,"ko")).map(p=>p.team+","+p.name+(p.office?","+p.office:"")).join("\n");}
+function rosterText(){return rosterList().sort(byTeamLead).map(p=>p.team+","+p.name+(p.office||p.lead?","+p.office:"")+(p.lead?",팀장":"")).join("\n");}
 async function saveRoster(text){
   const out={};let n=0;const bad=[];
   text.split(/\r?\n/).forEach((line,i)=>{
     const t=line.trim();if(!t)return;
-    const [team,name,office]=t.split(/\s*,\s*/);
+    const [team,name,office,role]=t.split(/\s*,\s*/);
     if(!team||!name||/[.#$\[\]\/]/.test(team+name)){bad.push(i+1);return;}
-    (out[team]=out[team]||{})[name]=office||"";n++;
+    (out[team]=out[team]||{})[name]=role==="팀장"?{o:office||"",lead:true}:(office||"");n++;
   });
   if(bad.length){toast("형식이 잘못된 줄: "+bad.slice(0,5).join(", ")+"번째");return;}
   try{await R("roster").set(n?out:null);toast("명단 "+n+"명을 저장했습니다.");}catch(e){toast("저장 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 function renderRosterEditor(body){
   body.appendChild(el("div","sec","등록용 직원 명단 ("+rosterList().length+"명)"));
-  body.appendChild(el("div","hint","한 줄에 한 명: 팀,이름,사무소 (사무소는 FS CENTRAL·FS SOUTH만). 직원이 처음 접속할 때 이 명단에서 팀과 이름을 골라 등록합니다."));
-  const ta=el("textarea","rost");ta.value=rosterText();ta.placeholder="FS WEST,홍길동\nFS SOUTH,김철수,부산";
+  body.appendChild(el("div","hint","한 줄에 한 명: 팀,이름,사무소,팀장 — 사무소는 FS CENTRAL·FS SOUTH만, 팀장이면 끝에 「팀장」을 붙입니다 (예: FS WEST,홍길동,,팀장 / FS SOUTH,김철수,부산,팀장). 팀장은 각 팀 맨 위에 「팀장」 표시로 나옵니다."));
+  const ta=el("textarea","rost");ta.value=rosterText();ta.placeholder="FS WEST,홍길동,,팀장\nFS WEST,이영희\nFS SOUTH,김철수,부산";
   body.appendChild(ta);
   const b=el("button","btn pri","명단 저장");b.style.margin="8px 0 24px";b.onclick=()=>saveRoster(ta.value);body.appendChild(b);
 }
@@ -878,6 +890,10 @@ function renderAdmin(){
     body.appendChild(ul);
   });
   renderRosterEditor(body);
+  body.appendChild(el("div","sec","등록 요청 알림"));
+  body.appendChild(el("div","nthint","새 직원이 등록을 요청하면 관리자(같은 사람의 휴대폰·PC 모두)에게 알림이 갑니다. 안 오면 아래 버튼으로 확인하세요."));
+  const nb=el("button","btn","🔔 등록 알림 테스트");nb.onclick=()=>testAdminNotify(nb);body.appendChild(nb);
+  const nr=el("div","nthint");nr.id="ntRes";nr.style.margin="8px 0 24px";body.appendChild(nr);
 }
 
 /* ---------- 홈 화면 설치 (PWA) ---------- */
@@ -922,7 +938,7 @@ function teamRoomOf(p){return Object.keys(ROOM_SCOPE).find(k=>{const sc=ROOM_SCO
 function openProfile(p){
   const c=$("pCard");c.textContent="";
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
-  c.appendChild(personAv(p.name));c.appendChild(el("h3",null,p.name));
+  c.appendChild(personAv(p.name));const h3=el("h3",null,p.name);const tg=roleTag(rosterList().find(x=>x.name===p.name&&x.team===p.team)||p);if(tg)h3.appendChild(tg);c.appendChild(h3);
   c.appendChild(el("div","tm2",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")));
   const pf=profiles[personKey(p.team,p.name)]||{};
   const acts=el("div","acts");
@@ -1004,6 +1020,23 @@ function renderPushCard(){
 async function notifyRegister(){
   if(!NOTIFY_URL)return;
   try{const idToken=await auth.currentUser.getIdToken();await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"register",idToken})});}catch(e){}
+}
+async function testAdminNotify(btn){
+  if(!NOTIFY_URL)return;
+  btn.disabled=true;const box=$("ntRes");box.textContent="보내는 중…";
+  try{
+    const idToken=await auth.currentUser.getIdToken();
+    const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"testAdmin",idToken})});
+    const j=await res.json().catch(()=>null);
+    let t;
+    if(!j)t="❌ 알림 발송기 응답이 없습니다.";
+    else if(!j.ver)t="❌ Apps Script가 예전 버전입니다. GitHub의 apps-script/notify.gs로 코드를 바꾸고 「배포 관리 → ✏️ → 새 버전 → 배포」를 해 주세요.";
+    else if(!j.ok)t="❌ 실패: "+(j.err||"알 수 없음");
+    else if(!j.targets)t="⚠️ 알림을 켠 관리자 기기가 없습니다 (관리자 "+j.people+"명 · 기기 "+j.devices+"대). 관리자 휴대폰에서 FS Talk을 열고 「알림 켜기」를 눌러 주세요.";
+    else t="✅ 관리자 기기 "+j.targets+"대 중 "+j.sent+"대로 보냈습니다. 휴대폰에 알림이 왔는지 확인하세요."+(pushOn()?"":" (이 기기는 알림이 꺼져 있어요)");
+    box.textContent=t;
+  }catch(e){box.textContent="❌ 알림 발송기 연결 실패: "+e.message;}
+  btn.disabled=false;
 }
 async function notifyOthers(r,msgId){
   if(!NOTIFY_URL)return;

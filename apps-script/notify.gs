@@ -19,6 +19,7 @@ function doPost(e){
   try{
     const req = JSON.parse(e.postData.contents);
     if(req.type === 'register') return out_(notifyRegister_(req));
+    if(req.type === 'testAdmin') return out_(testAdmin_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     if(!ROOM_NAME[room] || !/^[-\w]{10,40}$/.test(msgId)) return out_({ok:false,err:'bad request'});
     const uid = verifyUser_(String(req.idToken||''));
@@ -69,25 +70,48 @@ function doPost(e){
   }
 }
 
-/** 등록 요청 → 관리자 기기로 알림 */
-function notifyRegister_(req){
-  const uid = verifyUser_(String(req.idToken||''));
-  if(!uid) return {ok:false,err:'auth'};
-  const u = db_('talk/users/'+uid);
-  if(!u || u.status !== 'pending') return {ok:false,err:'not pending'};
-  const cache = CacheService.getScriptCache();
-  if(cache.get('reg:'+uid)) return {ok:true,dup:true};     // 10분 안 중복 요청은 한 번만
-  cache.put('reg:'+uid,'1',600);
-  const admins = db_('talk/admins') || {}, tokens = db_('talk/tokens') || {};
+const NOTIFY_VER = 'v3';
+
+/** 관리자 기기 목록 — 관리자로 지정된 기기 + 그 사람(같은 이름·팀)의 다른 기기 전부 */
+function adminTargets_(){
+  const admins = db_('talk/admins') || {}, users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {};
+  const people = {};
+  Object.keys(admins).forEach(function(id){ if(admins[id] === true && users[id]) people[users[id].team + '_' + users[id].name] = true; });
+  const ids = Object.keys(users).filter(function(id){
+    const u = users[id];
+    return (admins[id] === true) || (u && u.status === 'approved' && people[u.team + '_' + u.name]);
+  });
   const targets = [];
-  Object.keys(admins).forEach(function(id){
-    if(admins[id] !== true) return;
+  ids.forEach(function(id){
     const t = tokens[id] || {};
     Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token}); });
   });
+  return {targets:targets, devices:ids.length, people:Object.keys(people).length};
+}
+
+/** 등록 요청 → 관리자 기기로 알림 */
+function notifyRegister_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const u = db_('talk/users/'+uid);
+  if(!u || u.status !== 'pending') return {ok:false,err:'not pending',ver:NOTIFY_VER};
+  const cache = CacheService.getScriptCache();
+  if(cache.get('reg:'+uid)) return {ok:true,dup:true,ver:NOTIFY_VER};     // 10분 안 중복 요청은 한 번만
+  cache.put('reg:'+uid,'1',600);
+  const a = adminTargets_();
   const dev = /iPhone|iPad/.test(u.ua||'') ? 'iPhone' : /Android/.test(u.ua||'') ? 'Android' : 'PC';
-  const sent = send_(targets, '👥 등록 요청', u.name + ' · ' + u.team + (u.office ? ' ' + u.office : '') + ' · ' + dev + ' — 승인이 필요합니다', APP_URL + '#admin', 'admin-register', {room:''});
-  return {ok:true,sent:sent,targets:targets.length};
+  const sent = send_(a.targets, '👥 등록 요청', u.name + ' · ' + u.team + (u.office ? ' ' + u.office : '') + ' · ' + dev + ' — 승인이 필요합니다', APP_URL + '#admin', 'admin-register', {room:''});
+  return {ok:true,sent:sent,targets:a.targets.length,ver:NOTIFY_VER};
+}
+
+/** 관리 화면의 「등록 알림 테스트」 — 관리자만 */
+function testAdmin_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  if((db_('talk/admins/'+uid)) !== true) return {ok:false,err:'관리자가 아님',ver:NOTIFY_VER};
+  const a = adminTargets_();
+  const sent = send_(a.targets, '🔔 등록 알림 테스트', '이 알림이 보이면 등록 요청 알림도 이 기기로 옵니다.', APP_URL + '#admin', 'admin-test', {room:''});
+  return {ok:true,sent:sent,targets:a.targets.length,devices:a.devices,people:a.people,ver:NOTIFY_VER};
 }
 
 /** FCM 발송 공통 (쓸 수 없는 토큰은 정리) */
@@ -110,7 +134,7 @@ function send_(targets, title, body, link, tag, data){
   return sent;
 }
 
-function doGet(){ return out_({ok:true,app:'FS Talk notify'}); }
+function doGet(){ return out_({ok:true,app:'FS Talk notify',ver:NOTIFY_VER}); }
 
 /** Firebase 로그인 토큰 확인 → uid */
 function verifyUser_(idToken){
