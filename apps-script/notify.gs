@@ -107,7 +107,7 @@ function dbDelete_(path){
 }
 
 /** 설치 확인용: 편집기에서 한 번 실행 → 권한 승인 + 설정 점검 (실행 로그 확인) */
-function 설정_점검(){
+function setupCheck(){
   ['SA_JSON','API_KEY','PROJECT_ID','DB_URL'].forEach(function(k){ Logger.log(k+': '+(P_(k)?'있음':'❌ 없음')); });
   const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {};
   Logger.log('등록 사용자: '+Object.keys(users).length+'명 · 알림 켠 사용자: '+Object.keys(tokens).length+'명');
