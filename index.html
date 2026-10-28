@@ -83,6 +83,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* 아바타 */
 .av{flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;letter-spacing:-.5px}
 .av.sq{border-radius:12px;font-size:12px}
+.av.ph{background-size:cover!important;background-position:center!important;background-color:var(--soft)!important}
 .av.s{width:32px;height:32px;font-size:11px}
 /* 대화 영역 */
 .main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--chat)}
@@ -591,7 +592,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.40";
+const APP_VERSION="2026-10-28.41";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -781,6 +782,7 @@ function start(){
   R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
   R("reads").on("value",s=>{reads=s.val()||{};schedule();},()=>{});
   R("profiles").on("value",s=>{profiles=s.val()||{};if(listTab==="org")renderNav();},()=>{});
+  R("avatars").on("value",s=>{avatars=s.val()||{};schedule();renderInfo();},()=>{});
   refreshPush();
   ROOMS.forEach(r=>watchRoom(r.id));
   R("dms/"+myKey).on("value",s=>{dms=s.val()||{};Object.keys(dms).forEach(id=>{if(dmOther(id))watchRoom(id);});schedule();if(view==="chat"&&isDm(room))showView();},()=>{});
@@ -859,7 +861,15 @@ const ROOM_LOOK={all:["전체","#1A3A6B"],notice:["공지","#E5484D"],ts:["FS","
 const ROOM_SCOPE={west:["FS WEST"],east:["FS EAST"],central:["FS CENTRAL"],daejeon:["FS CENTRAL","대전"],gwangju:["FS CENTRAL","광주"],south:["FS SOUTH"],busan:["FS SOUTH","부산"],daegu:["FS SOUTH","대구"],fss:["FSS Team"],fsom:["FSOM Team"]};
 function personTeam(name){const p=rosterList().find(x=>x.name===name);return p||null;}
 function avatar(label,color,cls){const a=el("div","av"+(cls?" "+cls:""),label);a.style.background=color;return a;}
-function personAv(name,cls){const p=personTeam(name);return avatar(String(name||"?").slice(-2),(p&&TEAM_COLOR[p.team])||"#8A94A3",cls);}
+/* 얼굴 사진: talk/avatars/{팀_이름} = {d:"data:image/jpeg;base64,…"(160px), ts} — 없으면 이름 두 글자 동그라미 */
+let avatars={};
+function personAv(name,cls){
+  const p=personTeam(name);
+  const a=avatar(String(name||"?").slice(-2),(p&&TEAM_COLOR[p.team])||"#8A94A3",cls);
+  const ph=p&&avatars[personKey(p.team,p.name)];
+  if(ph&&typeof ph.d==="string"&&ph.d.indexOf("data:image/jpeg;base64,")===0){a.textContent="";a.classList.add("ph");a.style.backgroundImage="url("+ph.d+")";a.title=name||"";}
+  return a;
+}
 function roomAv(id,cls){if(isGroup(id)){const r=getRoom(id);const n=r?r.name.replace(/\s+/g,""):"그룹";return avatar(n.slice(0,2),"#5B6B82","sq"+(cls?" "+cls:""));}if(isDm(id)){const r=getRoom(id);return personAv(r?r.name:"?",cls);}const l=ROOM_LOOK[id]||["?","#8A94A3"];return avatar(l[0],l[1],"sq"+(cls?" "+cls:""));}
 function roomMembers(id){if(isGroup(id))return Object.keys((groups[id]||{}).members||{}).map(personByKey).filter(Boolean);if(isDm(id))return [personByKey(myKey),personByKey(dmOther(id))].filter(Boolean);const sc=ROOM_SCOPE[id];const all=rosterList();if(!sc)return all;return all.filter(p=>p.team===sc[0]&&(!sc[1]||p.office===sc[1]));}
 const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 다른 기기에서 쓴 글도 내 글
@@ -1749,14 +1759,36 @@ function openProfile(p){
   if(me&&!(p.name===me.name&&p.team===me.team)){const b=el("button","act");const i=el("span","ai2","💬");const t=el("span");t.appendChild(document.createTextNode("1:1 대화"));t.appendChild(el("small",null,p.name+"님과 둘만 보는 대화"));b.appendChild(i);b.appendChild(t);b.onclick=()=>openDm(p);acts.appendChild(b);}
   const tr=teamRoomOf(p);
   if(tr){const b=el("button","act");const i=el("span","ai2","💬");const t=el("span");t.appendChild(document.createTextNode(roomName(tr)+" 방 열기"));b.appendChild(i);b.appendChild(t);b.onclick=()=>{closeProfile();listTab="rooms";go("room-"+tr);};acts.appendChild(b);}
+  const pk=personKey(p.team,p.name);
   if(me&&p.name===me.name&&p.team===me.team){
+    const ph=el("button","act");const pi=el("span","ai2","📷");const pt=el("span");pt.appendChild(document.createTextNode(avatars[pk]?"얼굴 사진 바꾸기":"얼굴 사진 넣기"));pt.appendChild(el("small",null,"이름 옆 동그라미 대신 사진이 보여요"));
+    ph.appendChild(pi);ph.appendChild(pt);ph.onclick=()=>pickAvatar();acts.appendChild(ph);
+    if(avatars[pk]){const dl=el("button","act");dl.appendChild(el("span","ai2","🗑"));dl.appendChild(document.createTextNode("사진 지우기"));dl.onclick=async()=>{if(!confirm("얼굴 사진을 지울까요?"))return;try{await R("avatars/"+pk).remove();toast("사진을 지웠습니다.");openProfile(p);}catch(e){toast("지우기 실패: "+(e.code||e.message));}};acts.appendChild(dl);}
     const lk=el("button","act");const li=el("span","ai2","🔒");const lt=el("span");const lc=lockCfg();
     lt.appendChild(document.createTextNode("화면 잠금: "+(lc?"켜짐":"꺼짐")));lt.appendChild(el("small",null,lc?"PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]+" — 눌러서 바꾸기":"이 기기에서 PIN(지문·얼굴)으로 잠그기"));
     lk.appendChild(li);lk.appendChild(lt);lk.onclick=()=>openLockSettings();acts.appendChild(lk);
     const th=el("button","act");const i=el("span","ai2","🌗");const t=el("span");t.appendChild(document.createTextNode("화면 테마: "+THEME_LABEL[theme]));t.appendChild(el("small",null,"눌러서 바꾸기 (시스템 → 밝게 → 어둡게)"));th.appendChild(i);th.appendChild(t);th.onclick=()=>{cycleTheme();openProfile(p);};acts.appendChild(th);
     const b=el("button","btn pri","✏️ 내 연락처 수정");b.onclick=editMyProfile;acts.appendChild(b);}
+  else if(isAdmin&&avatars[pk]){const dl=el("button","btn bad","관리자: 이 사진 내리기");dl.style.marginTop="6px";dl.onclick=async()=>{if(!confirm(p.name+"님의 사진을 내릴까요?"))return;try{await R("avatars/"+pk).remove();toast("사진을 내렸습니다.");openProfile(p);}catch(e){toast("실패: "+(e.code||e.message));}};acts.appendChild(dl);}
   c.appendChild(acts);
   $("pOv").hidden=false;
+}
+/* 얼굴 사진 고르기 → 가운데 정사각형으로 잘라 160px JPEG */
+function pickAvatar(){
+  const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+  inp.onchange=async()=>{
+    const f=inp.files&&inp.files[0];if(!f)return;
+    try{
+      const img=await loadImg(f);const sz=Math.min(img.naturalWidth,img.naturalHeight);
+      const c=document.createElement("canvas");c.width=c.height=160;const x=c.getContext("2d");
+      x.fillStyle="#fff";x.fillRect(0,0,160,160);
+      x.drawImage(img,(img.naturalWidth-sz)/2,(img.naturalHeight-sz)/2,sz,sz,0,0,160,160);
+      let q=0.85,d=c.toDataURL("image/jpeg",q);while(d.length>30000&&q>0.4){q-=0.1;d=c.toDataURL("image/jpeg",q);}
+      await R("avatars/"+myKey).set({d,ts:SV});
+      toast("얼굴 사진을 넣었습니다.");openProfile({team:me.team,name:me.name,office:me.office||""});
+    }catch(e){toast("사진 넣기 실패: "+(e.code||e.message)+(/PERMISSION/.test(String(e.code||e.message))?" — DB 규칙이 최신인지 확인하세요.":""));}
+  };
+  inp.click();
 }
 function editMyProfile(){
   const c=$("pCard");c.textContent="";

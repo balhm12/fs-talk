@@ -303,6 +303,22 @@
             }
           }
         }
+      },
+      "avatars": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$p": {
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && ($p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) || (root.child('talk/admins/' + auth.uid).val() === true && !newData.exists()))",
+          ".validate": "newData.hasChildren(['d', 'ts'])",
+          "d": {
+            ".validate": "newData.isString() && newData.val().length <= 40000 && newData.val().beginsWith('data:image/jpeg;base64,')"
+          },
+          "ts": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
       }
     }
   }
