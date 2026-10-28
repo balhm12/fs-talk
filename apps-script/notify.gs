@@ -45,6 +45,7 @@ function doPost(e){
       const u = users[id];
       if(!u || u.status!=='approved' || id===uid) return;
       if(u.name===me.name && u.team===me.team) return;
+      if(mute[id] && mute[id]._all) return;               // 이 기기는 전체 알림 꺼짐 (멘션·1:1 포함)
       const ment = !!mentioned[u.name];
       if(isDm){ if(dmKeys.indexOf(u.team + '_' + u.name) < 0) return; }
       else if(!ment && sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
@@ -65,7 +66,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v4';
+const NOTIFY_VER = 'v5';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
