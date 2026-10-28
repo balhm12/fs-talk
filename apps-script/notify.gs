@@ -33,10 +33,14 @@ function doPost(e){
     if(!uid) return out_({ok:false,err:'auth',ver:NOTIFY_VER});
     const msg = db_('talk/msgs/'+encodeURIComponent(room)+'/'+msgId);
     if(!msg || msg.uid !== uid) return out_({ok:false,err:'message',ver:NOTIFY_VER});
-    // 같은 메시지로 두 번 보내지 않기
+    // 예전 글로 알림을 다시 보내지 못하게: 방금(5분 안) 쓴 글만
+    if(!(+msg.ts > Date.now() - 5*60*1000)) return out_({ok:false,err:'old message',ver:NOTIFY_VER});
+    // 같은 메시지로 두 번 보내지 않기 (보내기에 성공한 뒤에 표시 — 중간에 실패하면 다시 보낼 수 있게)
     const cache = CacheService.getScriptCache();
     if(cache.get('sent:'+msgId)) return out_({ok:true,dup:true,ver:NOTIFY_VER});
-    cache.put('sent:'+msgId,'1',600);
+    const lock = LockService.getScriptLock(); try{ lock.waitLock(5000); }catch(e){}
+    if(cache.get('sent:'+msgId)){ try{lock.releaseLock();}catch(e){} return out_({ok:true,dup:true,ver:NOTIFY_VER}); }
+    cache.put('sent:'+msgId,'1',600); try{ lock.releaseLock(); }catch(e){}
 
     const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {};
     const me = users[uid] || {};   // 보낸 사람의 다른 기기(같은 이름·팀)에는 보내지 않음
@@ -81,14 +85,17 @@ function doPost(e){
     if(msg.re) body = '↪ ' + body;
     // 공지: 눌러서 확인할 때까지 화면에 남김(PC·안드로이드) + 진동을 길게
     const extra = isNotice ? {requireInteraction:true, vibrate:[200,100,200,100,500]} : null;
-    const sent = send_(targets, title, body.slice(0,140), APP_URL + '#room-' + encodeURIComponent(room), 'room-' + room, {room:room}, extra);
+    let sent = 0;
+    try{ sent = send_(targets, title, body.slice(0,140), APP_URL + '#room-' + encodeURIComponent(room), 'room-' + room, {room:room}, extra); }
+    catch(e){ cache.remove('sent:'+msgId); throw e; }
     return out_({ok:true,sent:sent,targets:targets.length,stats:stats,ver:NOTIFY_VER});
   }catch(err){
-    return out_({ok:false,err:String(err)});
+    console.error(err);   // 자세한 내용은 Apps Script 실행 기록에만 (응답에 토큰 등이 섞이지 않게)
+    return out_({ok:false,err:'서버 오류 — 잠시 뒤 다시 시도해 주세요',ver:NOTIFY_VER});
   }
 }
 
-const NOTIFY_VER = 'v13';
+const NOTIFY_VER = 'v14';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -140,6 +147,9 @@ function upload_(req){
   if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const u = db_('talk/users/'+uid);
   if(!u || u.status !== 'approved') return {ok:false,err:'승인된 사용자가 아닙니다',ver:NOTIFY_VER};
+  // 한 사람이 드라이브 용량을 다 쓰지 않게: 1시간에 40개·200MB까지
+  const uc = CacheService.getScriptCache(), uk = 'up:'+u.team+'_'+u.name, ust = JSON.parse(uc.get(uk)||'{"n":0,"b":0}');
+  if(ust.n >= 40 || ust.b >= 200*1024*1024) return {ok:false,err:'1시간에 보낼 수 있는 첨부를 넘었습니다. 잠시 뒤 다시 보내 주세요',ver:NOTIFY_VER};
   const data = String(req.data||'');
   if(!data) return {ok:false,err:'빈 파일',ver:NOTIFY_VER};
   const bytes = Utilities.base64Decode(data);
@@ -148,6 +158,7 @@ function upload_(req){
   const mime = String(req.mime||'application/octet-stream').slice(0,100);
   const month = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM');
   const f = subFolder_(rootFolder_(UPLOAD_FOLDER), month).createFile(Utilities.newBlob(bytes, mime, name));
+  uc.put(uk, JSON.stringify({n:ust.n+1, b:ust.b+bytes.length}), 3600);
   f.setDescription('FS Talk · ' + u.team + ' ' + u.name);
   try{ f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }
   catch(e){ f.setTrashed(true); return {ok:false,err:'드라이브 공유 설정 실패: '+e,ver:NOTIFY_VER}; }
@@ -170,6 +181,8 @@ function deleteFile_(req){
   const ps = f.getParents();
   while(ps.hasNext() && !inUpload){ const pf = ps.next(); const gp = pf.getParents(); while(gp.hasNext()){ if(gp.next().getName() === UPLOAD_FOLDER){ inUpload = true; break; } } }
   if(!inUpload || String(f.getDescription()||'').indexOf('FS Talk · ') !== 0) return {ok:false,err:'FS Talk 첨부 파일이 아닙니다',ver:NOTIFY_VER};
+  // 올린 사람 본인 파일만 (업로드 때 적어 둔 「FS Talk · 팀 이름」으로 확인 — 남의 파일 id를 내 글에 넣어 지우는 것을 막음)
+  if(String(f.getDescription()) !== 'FS Talk · ' + me.team + ' ' + me.name) return {ok:false,err:'내가 올린 파일만 지울 수 있습니다',ver:NOTIFY_VER};
   if(f.isTrashed()) return {ok:true,gone:true,ver:NOTIFY_VER};
   f.setTrashed(true);
   return {ok:true,ver:NOTIFY_VER};
@@ -237,7 +250,7 @@ function summary_(req){
   return {ok:false,err:'AI 응답 실패: '+last,ver:NOTIFY_VER};
 }
 function dbQuery_(path, query){
-  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?'+query+'&access_token='+accessToken_(),{muteHttpExceptions:true});
+  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?'+query,{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('DB 읽기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,200));
   return JSON.parse(r.getContentText());
 }
@@ -271,6 +284,9 @@ function notifyRegister_(req){
   const cache = CacheService.getScriptCache();
   if(cache.get('reg:'+uid)) return {ok:true,dup:true,ver:NOTIFY_VER};     // 10분 안 중복 요청은 한 번만
   cache.put('reg:'+uid,'1',600);
+  const rc = +(cache.get('reg:count')||0);                                   // 전체 합쳐 1시간에 20번까지만 관리자에게 알림 (장난 방지)
+  if(rc >= 20) return {ok:true,limited:true,ver:NOTIFY_VER};
+  cache.put('reg:count', String(rc+1), 3600);
   const a = adminTargets_();
   const dev = /iPhone|iPad/.test(u.ua||'') ? 'iPhone' : /Android/.test(u.ua||'') ? 'Android' : 'PC';
   const sent = send_(a.targets, '👥 등록 요청', u.name + ' · ' + u.team + (u.office ? ' ' + u.office : '') + ' · ' + dev + ' — 승인이 필요합니다', APP_URL + '#admin', 'admin-register', {room:''});
@@ -349,12 +365,12 @@ function accessToken_(){
 }
 
 function db_(path){
-  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?access_token='+accessToken_(),{muteHttpExceptions:true});
+  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('DB 읽기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,200));
   return JSON.parse(r.getContentText());
 }
 function dbDelete_(path){
-  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?access_token='+accessToken_(),{method:'delete',muteHttpExceptions:true});
+  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'delete',headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
 }
 
 /** 설치 확인용: 편집기에서 한 번 실행 → 권한 승인 + 설정 점검 (실행 로그 확인) */
@@ -413,7 +429,8 @@ function restoreMissing(){
   const bak = JSON.parse(it.next().getBlob().getDataAsString());
   const now = db_('talk') || {};
   let added = 0;
-  ['msgs','users','roster','admins','mute','profiles','reacts','pins','dms','prefs','groups','gidx'].forEach(function(sec){
+  // 관리자 지정·사용자 승인 상태는 되살리지 않음 (백업 뒤 해제·중지한 권한이 돌아오지 않게)
+  ['msgs','roster','mute','profiles','reacts','pins','dms','prefs','groups','gidx'].forEach(function(sec){
     const b = bak[sec] || {}, c = now[sec] || {};
     Object.keys(b).forEach(function(k1){
       const bv = b[k1], cv = c[k1];
@@ -428,8 +445,8 @@ function restoreMissing(){
   Logger.log('✅ 복구 완료: 없던 항목 ' + added + '개를 되살렸습니다. (기존 내용은 그대로)');
 }
 function dbPut_(path, val){
-  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?access_token='+accessToken_(),{method:'put',contentType:'application/json',payload:JSON.stringify(val)});
+  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'put',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
 }
 function dbPatch_(path, val){
-  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?access_token='+accessToken_(),{method:'patch',contentType:'application/json',payload:JSON.stringify(val)});
+  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'patch',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
 }

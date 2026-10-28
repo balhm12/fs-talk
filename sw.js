@@ -54,7 +54,7 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   // 앱 화면: 항상 최신을 먼저, 안 되면 저장본
   if (req.mode === "navigate" && url.origin === location.origin) {
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); return r; })
+    e.respondWith(fetch(req).then(r => { if (r.ok && r.type === "basic" && !r.redirected) { const copy = r.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); } return r; })   // 오류 화면·와이파이 로그인 화면은 저장하지 않음
       .catch(() => caches.match("./index.html")));
     return;
   }

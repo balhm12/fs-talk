@@ -16,7 +16,7 @@
         "$uid": {
           ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true || (auth.uid === $uid && (!data.exists() || data.child('status').val() !== 'approved') && newData.child('status').val() === 'pending'))",
-          ".validate": "newData.hasChildren(['name', 'team', 'status']) && root.child('talk/roster/' + newData.child('team').val() + '/' + newData.child('name').val()).exists()",
+          ".validate": "newData.hasChildren(['name', 'team', 'status']) && (newData.child('status').val() !== 'pending' || root.child('talk/roster/' + newData.child('team').val() + '/' + newData.child('name').val()).exists())",
           "name": {
             ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20"
           },
@@ -182,8 +182,8 @@
       "pins": {
         ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
         "$room": {
-          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && !$room.beginsWith('dm_') && !$room.beginsWith('g_') && (root.child('talk/admins/' + auth.uid).val() === true || (newData.exists() && root.child('talk/msgs/' + newData.child('mroom').val() + '/' + newData.child('id').val() + '/name').val() === root.child('talk/users/' + auth.uid + '/name').val()) || (!newData.exists() && (data.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) || root.child('talk/msgs/' + data.child('mroom').val() + '/' + data.child('id').val() + '/name').val() === root.child('talk/users/' + auth.uid + '/name').val())))",
-          ".validate": "newData.hasChildren(['id', 'mroom', 'text', 'name', 'ts', 'by']) && newData.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())",
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && !$room.beginsWith('dm_') && !$room.beginsWith('g_') && (root.child('talk/admins/' + auth.uid).val() === true || (newData.exists() && root.child('talk/msgs/' + newData.child('mroom').val() + '/' + newData.child('id').val() + '/name').val() === root.child('talk/users/' + auth.uid + '/name').val() && (!data.exists() || data.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()))) || (!newData.exists() && (data.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) || root.child('talk/msgs/' + data.child('mroom').val() + '/' + data.child('id').val() + '/name').val() === root.child('talk/users/' + auth.uid + '/name').val())))",
+          ".validate": "newData.hasChildren(['id', 'mroom', 'text', 'name', 'ts', 'by']) && newData.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) && (newData.child('mroom').val() === $room || ($room === 'all' && (newData.child('mroom').val() === 'ts' || newData.child('mroom').val() === 'cs')))",
           "id": {
             ".validate": "newData.isString() && newData.val().length <= 40"
           },
@@ -211,10 +211,11 @@
         "$p": {
           ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())",
           "$room": {
-            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $room.beginsWith('dm_') && ($room.beginsWith('dm_' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) + '__') || $room.endsWith('__' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()))) && ($room.beginsWith('dm_' + $p + '__') || $room.endsWith('__' + $p))",
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $room.beginsWith('dm_') && ($room.beginsWith('dm_' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) + '__') || $room.endsWith('__' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()))) && ($room.beginsWith('dm_' + $p + '__') || $room.endsWith('__' + $p)) && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())",
             ".validate": "newData.hasChildren(['ts'])",
             "ts": {
-              ".validate": "newData.isNumber()"
+              ".validate": "newData.isNumber()",
+              ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $room.beginsWith('dm_') && ($room.beginsWith('dm_' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) + '__') || $room.endsWith('__' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()))) && ($room.beginsWith('dm_' + $p + '__') || $room.endsWith('__' + $p))"
             },
             "$other": {
               ".validate": false
@@ -265,10 +266,11 @@
       "groups": {
         "$gid": {
           ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && root.child('talk/groups/' + $gid + '/members/' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())).val() === true",
-          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $gid.beginsWith('g_') && (root.child('talk/groups/' + $gid + '/members/' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())).val() === true || (!data.exists() && newData.child('members/' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())).val() === true && newData.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())))",
+          ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $gid.beginsWith('g_') && ((!data.exists() && newData.child('members/' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())).val() === true && newData.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())) || (data.exists() && !newData.exists() && data.child('by').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())))",
           ".validate": "newData.hasChildren(['by', 'ts'])",
           "name": {
-            ".validate": "newData.isString() && newData.val().length <= 40"
+            ".validate": "newData.isString() && newData.val().length <= 40",
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && root.child('talk/groups/' + $gid + '/members/' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())).val() === true"
           },
           "by": {
             ".validate": "newData.isString() && newData.val().length <= 60"
@@ -278,7 +280,8 @@
           },
           "members": {
             "$p": {
-              ".validate": "newData.isBoolean() && newData.val() === true"
+              ".validate": "newData.isBoolean() && newData.val() === true",
+              ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && root.child('talk/groups/' + $gid + '/members/' + (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())).val() === true && (newData.val() === true || $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()))"
             }
           },
           "$other": {
@@ -310,7 +313,7 @@
           ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && ($p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) || (root.child('talk/admins/' + auth.uid).val() === true && !newData.exists()))",
           ".validate": "newData.hasChildren(['d', 'ts'])",
           "d": {
-            ".validate": "newData.isString() && newData.val().length <= 40000 && newData.val().beginsWith('data:image/jpeg;base64,')"
+            ".validate": "newData.isString() && newData.val().length <= 40000 && newData.val().matches(/^data:image\\/jpeg;base64,[A-Za-z0-9+\\/=]+$/)"
           },
           "ts": {
             ".validate": "newData.isNumber()"
