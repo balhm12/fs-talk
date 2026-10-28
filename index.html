@@ -176,6 +176,7 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 .myedit{display:flex;align-items:center;gap:10px;margin:0 10px 8px;padding:10px 12px;border:1px solid var(--selline);border-radius:12px;background:var(--sel2);font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
 .myedit:hover{border-color:var(--blue)}
 /* 실마리 연동 */
+.morehits{display:block;width:100%;margin:4px 0 0;padding:10px;font-size:14px}
 .pkhint{font-size:13px;color:var(--sub);margin:8px 0 10px;line-height:1.5}
 .silbox{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin:14px 0 12px}
 .silhd{display:flex;align-items:center;gap:6px;color:#005BAC;margin-bottom:6px}
@@ -817,7 +818,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.60";
+const APP_VERSION="2026-10-28.61";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2093,7 +2094,9 @@ function renderSearch(){
   $("cnt").textContent=hits.length;
   if(allRoomIds().some(k=>hasMore[k])){const b=el("button","btn","🕘 오래된 대화까지 검색");b.style.margin="0 0 10px";b.onclick=()=>{b.disabled=true;b.textContent="불러오는 중…";loadAllHistory();};res.appendChild(b);}
   if(!hits.length){res.appendChild(el("div","more","찾는 내용이 없습니다. 단어를 줄이거나 다른 표현으로 검색해 보세요."));return;}
-  hits.slice(0,200).forEach(m=>{
+  const qKey=[$("q").value,fr,fp,fw].join("|");if(sExpandKey!==qKey){sExpandKey=qKey;sExpand=false;}
+  const SHOW=5,lim=sExpand?200:SHOW;                       // 처음엔 5건만 — 아래 실마리 결과가 바로 보이게
+  hits.slice(0,lim).forEach(m=>{
     const h=el("div","hit"),meta=el("div","meta");
     meta.appendChild(el("span","rb",roomName(m.room)));meta.appendChild(el("span",null,m.name));
     const d=new Date(m.ts);meta.appendChild(el("span",null,ymd(d)+" "+hm(d)));
@@ -2102,8 +2105,10 @@ function renderSearch(){
     h.onclick=()=>{jumpId=m.id;jumpTerms=ts;go("room-"+m.room);};
     res.appendChild(h);
   });
-  if(hits.length>200)res.appendChild(el("div","more","최근 200건만 표시했습니다. 검색어를 더 구체적으로 넣어 보세요."));
+  if(!sExpand&&hits.length>SHOW){const mb=el("button","btn morehits","대화 결과 더 보기 ("+(Math.min(hits.length,200)-SHOW)+"건 더)");mb.onclick=()=>{sExpand=true;renderSearch();};res.appendChild(mb);}
+  else if(hits.length>200)res.appendChild(el("div","more","최근 200건만 표시했습니다. 검색어를 더 구체적으로 넣어 보세요."));
 }
+let sExpand=false,sExpandKey="";
 /* ---------- 실마리(Sysmex TS Guide) 연동: 검색에서 관련 에러·조치 보기 + 대화 속 에러 자동 연결 ----------
    실마리 데이터는 비밀번호로 잠겨 있음(AES-256-GCM). 키는 이 기기에만 두고(실마리와 같은 방식·같은 저장 이름, 30일) 서버로 보내지 않음.
    같은 사이트(balhm12.github.io)라 PC·안드로이드 크롬에서는 실마리에서 넣은 비밀번호를 그대로 씀. */
