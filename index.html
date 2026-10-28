@@ -511,7 +511,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.32";
+const APP_VERSION="2026-10-28.33";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1621,7 +1621,8 @@ async function testAdminNotify(btn){
     else if(!j.ver)t="❌ Apps Script가 예전 버전입니다. GitHub의 apps-script/notify.gs로 코드를 바꾸고 「배포 관리 → ✏️ → 새 버전 → 배포」를 해 주세요.";
     else if(!j.ok)t="❌ 실패: "+(j.err||"알 수 없음");
     else if(!j.targets)t="⚠️ 알림을 켠 관리자 기기가 없습니다 (관리자 "+j.people+"명 · 기기 "+j.devices+"대). 관리자 휴대폰에서 FS Talk을 열고 「알림 켜기」를 눌러 주세요.";
-    else t="✅ 관리자 기기 "+j.targets+"대 중 "+j.sent+"대로 보냈습니다. 휴대폰에 알림이 왔는지 확인하세요."+(pushOn()?"":" (이 기기는 알림이 꺼져 있어요)");
+    else t="✅ 관리자 기기 "+j.targets+"대 중 "+j.sent+"대로 보냈습니다. 각 기기에 알림이 왔는지 확인하세요."+
+      (pushOn()?" 이 기기도 대상입니다 — 안 뜨면 윈도우 「설정 → 시스템 → 알림」에서 Microsoft Edge(또는 FS Talk) 알림과 방해 금지를 확인하세요.":" (이 기기는 아직 알림을 안 켰어요 — 대화 목록 위 「🔔 알림 켜기」)");
     box.textContent=t;
   }catch(e){box.textContent="❌ 알림 발송기 연결 실패: "+e.message;}
   btn.disabled=false;
@@ -1649,12 +1650,13 @@ if(messaging){
     const r=p&&p.data&&p.data.room||"";
     const n=(p&&p.notification)||{};
     const focused=document.visibilityState==="visible"&&document.hasFocus();
-    if(focused&&r&&view==="chat"&&room===r&&!(isM()&&mList))return;   // 지금 보고 있는 방
-    if(focused){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));return;}
+    const adminNote=!r;   // 등록 요청·알림 테스트 같은 관리자 알림은 창을 보고 있어도 윈도우 알림으로
+    if(!adminNote&&focused&&view==="chat"&&room===r&&!(isM()&&mList))return;   // 지금 보고 있는 방
+    if(!adminNote&&focused){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));return;}
     try{
       const reg=await getSwReg();
       await reg.showNotification(n.title||"FS Talk",{body:n.body||"",icon:"icons/icon-192.png",badge:"icons/icon-192.png",
-        tag:r?"room-"+r:"fstalk",renotify:true,data:{url:location.pathname+(r?"#room-"+encodeURIComponent(r):"")}});
+        tag:r?"room-"+r:"fstalk-admin",renotify:true,requireInteraction:adminNote,data:{url:location.pathname+(r?"#room-"+encodeURIComponent(r):"#admin")}});
     }catch(e){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));}
   });
 }
