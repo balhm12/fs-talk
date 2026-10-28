@@ -511,7 +511,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.33";
+const APP_VERSION="2026-10-28.34";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -561,7 +561,11 @@ const isTouch=()=>window.matchMedia("(pointer:coarse)").matches;   // 손가락 
 const SV=firebase.database.ServerValue.TIMESTAMP;
 /* 1:1 대화방: dm_{팀_이름}__{팀_이름} (두 사람 키를 정렬해서 붙임) */
 const isDm=id=>typeof id==="string"&&id.indexOf("dm_")===0;
-const inRoom=(m,id)=>id==="all"?!isDm(m.room):m.room===id;
+/* 1:1은 전체방에 절대 안 보임. 나간 1:1은 나간 시점 이전 대화를 내 화면에서 숨김 */
+const dmLeft=id=>{const d=dms[id];return d&&d.left?+d.left:0;};
+const dmVisible=id=>{const d=dms[id];return !!d&&(!d.left||(+d.ts||0)>+d.left);};
+const shown=m=>!isDm(m.room)||m.ts>dmLeft(m.room);
+const inRoom=(m,id)=>id==="all"?!isDm(m.room):(m.room===id&&shown(m));
 let dms={};
 function dmOther(id){if(!isDm(id)||!myKey)return null;const ks=id.slice(3).split("__");if(ks.length!==2||ks[0]===ks[1])return null;return ks[0]===myKey?ks[1]:ks[1]===myKey?ks[0]:null;}
 function personByKey(k){return rosterList().find(p=>personKey(p.team,p.name)===k)||null;}
@@ -768,7 +772,7 @@ const readFor=m=>isDm(m.room)?myRead(m.room):Math.max(myRead(m.room),myRead("all
 const isUnread=(m,id)=>!isMine(m)&&m.ts>Math.max(myRead(id),readFor(m));
 function unread(id){return msgs.filter(m=>inRoom(m,id)&&isUnread(m,id)).length;}
 function unreadMention(id){return msgs.some(m=>inRoom(m,id)&&isUnread(m,id)&&mentionsMe(m));}
-function totalUnread(){return msgs.filter(m=>!isMine(m)&&m.ts>readFor(m)).length;}
+function totalUnread(){return msgs.filter(m=>shown(m)&&!isMine(m)&&m.ts>readFor(m)).length;}
 const isImgF=f=>/^image\//.test(f&&f.mime||"");
 function previewText(m){if(m.text)return m.text;if(m.file)return isImgF(m.file)?"📷 사진":"📎 "+m.file.name;return "";}
 const msgText=m=>m.text+(m.file?" "+m.file.name:"");
@@ -780,7 +784,7 @@ function renderNav(){
   else{
     $("lTitle").textContent="대화";
     const lastTs=id=>{const l=msgs.filter(m=>inRoom(m,id)).pop();return l?l.ts:((dms[id]||{}).ts||0);};
-    const dmRooms=Object.keys(dms).filter(id=>dmOther(id)).map(getRoom).sort((a,b)=>lastTs(b.id)-lastTs(a.id));
+    const dmRooms=Object.keys(dms).filter(id=>dmOther(id)&&dmVisible(id)).map(getRoom).sort((a,b)=>lastTs(b.id)-lastTs(a.id));
     if(q){
       ROOMS.concat(dmRooms).filter(r=>r.name.replace(/\s+/g,"").toLowerCase().includes(q)).forEach(r=>nav.appendChild(roomBtn(r,false)));
       if(!nav.children.length)nav.appendChild(el("div","more","찾는 대화방이 없습니다."));
@@ -874,6 +878,7 @@ function renderInfo(){
     const m=el("div","mem clickable");m.onclick=()=>openProfile(p);m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));const tg=roleTag(p);if(tg)t.appendChild(tg);t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
   });
   if(!mem.length)l.appendChild(el("div","more","명단이 등록되면 참여자가 표시됩니다."));
+  if(isDm(room)){const lb=el("button","btn bad","🚪 1:1 대화방 나가기");lb.style.margin="14px 8px";lb.onclick=()=>leaveDm(room);l.appendChild(lb);}
   box.appendChild(l);
 }
 let infoOpen=false;
@@ -1301,11 +1306,20 @@ function afterSend(r,key){
   const o=dmOther(r);
   if(o){const u={};u["dms/"+myKey+"/"+r+"/ts"]=SV;u["dms/"+o+"/"+r+"/ts"]=SV;db.ref("talk").update(u).catch(()=>{});}
 }
+async function leaveDm(id){
+  const r=getRoom(id);
+  if(!confirm((r?r.name+"님과의 ":"")+"1:1 대화방에서 나갈까요?\n\n· 지금까지의 대화가 내 목록과 화면에서 사라집니다.\n· 상대가 새 메시지를 보내면 방이 다시 나타나고, 그 뒤의 대화만 보입니다.\n· 상대방 화면의 대화는 그대로 남습니다."))return;
+  try{
+    await R("dms/"+myKey+"/"+id+"/left").set(SV);
+    if(favs[id])R("prefs/"+myKey+"/fav/"+id).remove().catch(()=>{});
+    toast("1:1 대화방에서 나갔습니다.");infoOpen=false;listTab="rooms";go("");
+  }catch(e){toast("나가기 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
+}
 async function openDm(p){
   if(!me||!myKey)return;
   const id=dmId(p);if(!dmOther(id)){toast("나와의 대화는 만들 수 없어요.");return;}
   closeProfile();
-  if(!dms[id]){dms[id]={ts:Date.now()};R("dms/"+myKey+"/"+id).set({ts:SV}).catch(e=>toast("1:1 대화 만들기 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요."));}
+  if(!dms[id]||!dmVisible(id)){dms[id]=Object.assign({},dms[id]||{},{ts:Date.now()});R("dms/"+myKey+"/"+id+"/ts").set(SV).catch(e=>toast("1:1 대화 만들기 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요."));}
   watchRoom(id);listTab="rooms";go("room-"+id);
 }
 const input=$("input");
@@ -1353,6 +1367,7 @@ function renderSearch(){
   if(!ts.length&&!fr&&!fw&&!fp){$("cnt").textContent="–";res.appendChild(el("div","more","검색어를 입력하거나 방·기간을 고르세요."));return;}
   const since=fp?Date.now()-fp*864e5:0;
   const hits=msgs.filter(m=>{
+    if(!shown(m))return false;
     if(fr&&m.room!==fr)return false;
     if(since&&m.ts<since)return false;
     if(fw==="me"&&!isMine(m))return false;
