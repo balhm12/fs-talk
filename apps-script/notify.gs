@@ -25,6 +25,7 @@ function doPost(e){
     if(req.type === 'upload') return out_(upload_(req));
     if(req.type === 'deleteFile') return out_(deleteFile_(req));
     if(req.type === 'remind') return out_(remind_(req));
+    if(req.type === 'voice') return out_(voice_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -95,7 +96,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v14';
+const NOTIFY_VER = 'v15';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -104,6 +105,59 @@ function mentions_(text, users){
   const out = {}; const re = /@([^\s@]+)/g; let m;
   while((m = re.exec(text))){ for(let i=0;i<list.length;i++){ if(m[1].indexOf(list[i]) === 0){ out[list[i]] = true; break; } } }
   return out;
+}
+
+/* ---------- 말로 보내기: 음성 → 글자(Groq Whisper) → (명령이면) 보낼 방·내용 나누기(Groq) ----------
+ * 스크립트 속성 GROQ_API_KEY (AI 요약과 같은 키). 음성 파일은 저장하지 않고 바로 버림.
+ * mode 'dictate': 받아쓰기만 / 'command': 「○○방에 ~라고 보내줘」 → {room, message} */
+function voice_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const key = P_('GROQ_API_KEY');
+  if(!key) return {ok:false,err:'음성 기능이 아직 설정되지 않았습니다 (관리자: Apps Script 속성 GROQ_API_KEY)',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid) || {};
+  if(me.status !== 'approved') return {ok:false,err:'승인된 사용자가 아닙니다',ver:NOTIFY_VER};
+  // 한 사람당 1시간 60번까지 (무료 한도 보호)
+  const cache = CacheService.getScriptCache(), ck = 'voice:'+me.team+'_'+me.name, n = +(cache.get(ck)||0);
+  if(n >= 60) return {ok:false,err:'1시간에 쓸 수 있는 음성 횟수를 넘었습니다. 잠시 뒤 다시 해 주세요',ver:NOTIFY_VER};
+  cache.put(ck, String(n+1), 3600);
+  const data = String(req.data||'');
+  if(!data || data.length > 4*1024*1024) return {ok:false,err:'녹음이 비었거나 너무 깁니다 (30초 이내)',ver:NOTIFY_VER};
+  const mime = /^audio\/[\w.+-]+/.exec(String(req.mime||''));
+  const mt = mime ? mime[0] : 'audio/webm';
+  const ext = /mp4|m4a|aac/.test(mt) ? 'm4a' : /ogg/.test(mt) ? 'ogg' : /wav/.test(mt) ? 'wav' : /mpeg|mp3/.test(mt) ? 'mp3' : 'webm';
+  const rooms = (Array.isArray(req.rooms) ? req.rooms : []).map(function(x){ return String(x).replace(/[\r\n]+/g,' ').slice(0,40); }).filter(String).slice(0,200);
+  // 1) 받아쓰기 — 방 이름·장비 용어를 힌트로 주면 더 정확함
+  const hint = ('FS Talk 사내 메신저. 방: ' + rooms.slice(0,40).join(', ') + '. 장비: XN, XN-L, UF, UC, SP-50, CN, HISCL, CS-1600, CA-620.').slice(0,600);
+  const blob = Utilities.newBlob(Utilities.base64Decode(data), mt, 'voice.'+ext);
+  const tr = UrlFetchApp.fetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'post',muteHttpExceptions:true,
+    headers:{Authorization:'Bearer '+key},
+    payload:{file:blob, model:'whisper-large-v3-turbo', language:'ko', response_format:'json', temperature:'0', prompt:hint}});
+  const tc = tr.getResponseCode();
+  if(tc === 429) return {ok:false,err:'요청이 몰렸습니다. 잠시 후 다시 해 주세요',ver:NOTIFY_VER};
+  if(tc !== 200){ console.error('whisper '+tc+' '+tr.getContentText().slice(0,300)); return {ok:false,err:'음성을 글자로 바꾸지 못했습니다',ver:NOTIFY_VER}; }
+  const text = String((JSON.parse(tr.getContentText())||{}).text||'').trim();
+  if(!text) return {ok:false,err:'말소리를 알아듣지 못했습니다. 조금 더 크게 다시 말해 주세요',ver:NOTIFY_VER};
+  if(req.mode !== 'command' || !rooms.length) return {ok:true,text:text,ver:NOTIFY_VER};
+  // 2) 보낼 방·내용 나누기
+  const sys = '너는 사내 메신저의 음성 명령을 해석한다. 사용자가 말한 문장에서 메시지를 보낼 대화방과 보낼 내용을 나눈다. '+
+    '방은 반드시 아래 목록에 있는 이름 중 하나를 그대로 고르고, 알 수 없으면 빈 문자열로 둔다. 사람 이름만 말하면 그 사람과의 1:1 방이다. '+
+    '보낼 내용에서는 「○○방에」「~라고 보내줘」「~라고 전해줘」 같은 명령 부분만 빼고, 나머지는 사용자가 한 말 그대로 둔다(내용을 바꾸거나 덧붙이지 말 것, 띄어쓰기·문장부호만 정리). '+
+    '결과는 JSON 하나만: {"room":"방 이름","message":"보낼 내용"}';
+  const ask = '방 목록:\n' + rooms.map(function(r,i){ return (i+1)+'. '+r; }).join('\n') + '\n\n사용자가 한 말: ' + text;
+  const models = [P_('GROQ_MODEL') || 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
+  for(let i=0;i<models.length;i++){
+    const r = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions',{method:'post',contentType:'application/json',muteHttpExceptions:true,
+      headers:{Authorization:'Bearer '+key},
+      payload:JSON.stringify({model:models[i],temperature:0,max_tokens:400,response_format:{type:'json_object'},messages:[{role:'system',content:sys},{role:'user',content:ask}]})});
+    if(r.getResponseCode() !== 200) continue;
+    try{
+      const j = JSON.parse(r.getContentText()); const o = JSON.parse(j.choices[0].message.content);
+      const room = rooms.indexOf(String(o.room||'')) >= 0 ? String(o.room) : '';
+      return {ok:true,text:text,room:room,message:String(o.message||text).slice(0,2000),ver:NOTIFY_VER};
+    }catch(e){}
+  }
+  return {ok:true,text:text,room:'',message:text,ver:NOTIFY_VER};   // 해석이 안 되면 받아쓴 글만 돌려줌 (방은 사용자가 고름)
 }
 
 /* ---------- 공지 다시 알림: 공지를 쓴 사람(같은 사람의 다른 기기 포함)이나 관리자만, 확인 안 한 사람에게만 ---------- */
