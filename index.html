@@ -870,7 +870,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-29.72";
+const APP_VERSION="2026-10-29.73";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1275,7 +1275,7 @@ function renderNav(){
       if(np&&npHide!==np.id+"|"+np.ts){const pm=byId.get(np.id),txt=pm&&pm.room==="notice"?previewText(pm):np.text,who=pm&&pm.room==="notice"?pm.name:np.name;
         const c=el("div","npin");const b=el("button","npinb");b.appendChild(icEl("pin","npinic",18));
         const t=el("span","npint");t.appendChild(el("b",null,"전체공지 고정 · "+who));t.appendChild(el("span",null,String(txt||"").replace(/\s+/g," ").slice(0,140)));b.appendChild(t);
-        b.onclick=()=>jumpTo(np.id);c.appendChild(b);
+        b.onclick=()=>{if(byId.get(np.id))jumpTo(np.id);else go("room-notice");};c.appendChild(b);
         const x=el("button","npinx","×");x.setAttribute("aria-label","접기");x.title="접기 (새 글이 고정되면 다시 보여요)";x.onclick=e=>{e.stopPropagation();try{localStorage.setItem("fstalk-npin-hide",np.id+"|"+np.ts);}catch(er){}renderNav();};c.appendChild(x);
         nav.appendChild(c);}
       const pn=pendingNotices();
@@ -1611,7 +1611,7 @@ async function removeMsg(m){
 function jumpTo(id){
   const m=byId.get(id);
   if(!m){toast("원래 메시지를 찾을 수 없습니다 (삭제됐거나 아직 불러오지 않은 오래된 대화).");return;}
-  if(view==="chat"&&inRoom(m,room)){const e=document.getElementById("m-"+id);if(e){e.scrollIntoView({block:"center",behavior:"smooth"});e.classList.remove("hl");void e.offsetWidth;e.classList.add("hl");}return;}
+  /* 휴대폰에서 목록을 보고 있으면 방을 연 것이 아님 */ if(view==="chat"&&inRoom(m,room)&&!(isM()&&mList)){const e=document.getElementById("m-"+id);if(e){e.scrollIntoView({block:"center",behavior:"smooth"});e.classList.remove("hl");void e.offsetWidth;e.classList.add("hl");}return;}
   jumpId=id;jumpTerms=null;go("room-"+m.room);
 }
 
