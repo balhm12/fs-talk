@@ -334,10 +334,12 @@ a.lnk[href^="tel:"]{white-space:nowrap;word-break:normal}
 #chatView{position:relative}
 .newmsg{position:absolute;right:16px;bottom:78px;z-index:5;display:flex;align-items:center;gap:4px;background:var(--blue);color:#fff;border:0;border-radius:18px;padding:7px 14px 7px 10px;font-size:13px;box-shadow:0 4px 14px rgba(0,50,100,.3)}
 .row .line{position:relative}
-.hov{display:none;gap:2px;align-self:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:2px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+/* 마우스를 올리면 뜨는 도구 막대: 말풍선 위에 떠서 표시 — 자리를 차지하지 않아 말풍선이 움직이지 않음 */
+.hov{display:flex;visibility:hidden;opacity:0;position:absolute;top:-20px;right:0;z-index:3;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:2px;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:opacity .12s}
+.row.mine .hov{right:auto;left:0}
 .hov button{width:28px;height:28px;border:0;background:none;color:var(--sub);border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0}
 .hov button:hover{background:var(--soft);color:var(--text)}
-@media (hover:hover){.row:hover .hov{display:flex}}
+@media (hover:hover){.row:hover .hov,.hov:focus-within{visibility:visible;opacity:1}}
 .qreact{position:fixed;z-index:60;display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
 .qreact button{width:36px;height:36px;border:0;background:none;border-radius:50%;font-size:20px;padding:0}
 .qreact button:hover,.qreact button.on{background:var(--sel)}
@@ -792,7 +794,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.55";
+const APP_VERSION="2026-10-28.56";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
