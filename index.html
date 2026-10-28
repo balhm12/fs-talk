@@ -158,10 +158,13 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .rc{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:1px 8px;font-size:12px;color:var(--text)}
 .rc.on{border-color:var(--blue);background:var(--sel);color:var(--link);font-weight:700}
 .edt{font-size:10px;color:#8A94A3}
-.pinbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px}
-.pinbar .pt{flex:1;min-width:0;cursor:pointer;display:flex;gap:6px}
-.pinbar .pt b{flex:none;color:var(--link)}
-.pinbar .pt span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pinbar{display:flex;align-items:flex-start;gap:10px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.pinbar .pt{flex:1;min-width:0;cursor:pointer}
+.pinbar .pt b{color:var(--link);font-size:12px;display:block;margin-bottom:2px}
+.pinbar .pt .pb{white-space:pre-wrap;word-break:break-word;line-height:1.5;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.pinbar.open .pt .pb{display:block;-webkit-line-clamp:unset;max-height:45vh;overflow:auto}
+.pinbar .pacts{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.pinbar .pk{background:none;border:0;color:var(--link);font-size:12px;padding:2px 0;white-space:nowrap}
 .cx{background:none;border:0;font-size:22px;color:var(--sub);padding:0 4px;line-height:1;flex:none}
 .cbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--soft);border-top:1px solid var(--line);font-size:13px}
 .cbar .ct{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -430,7 +433,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.22";
+const APP_VERSION="2026-10-28.23";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -990,13 +993,26 @@ async function pinMsg(m){
   catch(e){toast("고정 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 async function unpin(r){try{await R("pins/"+r).remove();toast("고정을 해제했습니다.");}catch(e){toast("해제 실패: "+(e.code||e.message));}}
+const pinOpen={};
 function renderPin(){
   const bar=$("pinBar");bar.textContent="";
   const p=view==="chat"&&room&&!(isM()&&mList)?pinOf(room):null;
   if(!p){bar.hidden=true;return;}
-  bar.hidden=false;bar.appendChild(el("span",null,"📌"));
-  const t=el("div","pt");t.appendChild(el("b",null,p.name));t.appendChild(el("span",null,p.text));t.onclick=()=>jumpTo(p.id);bar.appendChild(t);
+  bar.hidden=false;
   const pm=byId.get(p.id);
+  const full=pm?previewText(pm):p.text;   // 원문이 있으면 전체 내용, 없으면 고정할 때 저장한 앞부분
+  const open=!!pinOpen[room];bar.classList.toggle("open",open);
+  bar.appendChild(el("span",null,"📌"));
+  const t=el("div","pt");t.appendChild(el("b",null,"공지 · "+p.name));
+  const body=el("div","pb");body.appendChild(richText(full,null));t.appendChild(body);
+  t.title=open?"눌러서 접기":"눌러서 전체 보기";
+  t.onclick=()=>{pinOpen[room]=!pinOpen[room];renderPin();};
+  bar.appendChild(t);
+  const acts=el("div","pacts");
+  const long=full.length>60||full.indexOf("\n")>=0;
+  if(long){const k=el("button","pk",open?"▴ 접기":"▾ 펼치기");k.onclick=()=>{pinOpen[room]=!open;renderPin();};acts.appendChild(k);}
+  const g=el("button","pk","원문 ›");g.onclick=()=>jumpTo(p.id);acts.appendChild(g);
+  bar.appendChild(acts);
   if(isAdmin||p.by===myKey||(pm&&isMine(pm))){const x=el("button","cx","×");x.title="고정 해제";x.setAttribute("aria-label","고정 해제");x.onclick=()=>{if(confirm("상단 고정을 해제할까요?"))unpin(room);};bar.appendChild(x);}
 }
 function syncFavBtn(){const b=$("favBtn");if(!b)return;const on=!!favs[room];b.textContent=on?"★":"☆";b.style.color=on?"#E8A317":"";b.title=on?"즐겨찾기에서 빼기":"즐겨찾기에 추가";}
