@@ -325,7 +325,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.10";
+const APP_VERSION="2026-10-28.11";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -353,7 +353,7 @@ const ROOMS=[
 ];
 const OFFICES={"FS CENTRAL":["대전","광주"],"FS SOUTH":["부산","대구"]};
 const VAPID_KEY="BKwhWZCt1Zm93DpzAKRmqcHpjjroh2PNU93Eln25FZnLhWU1VE34PWxGlyEUiu2rznrsIf29BD5OdfK_FwmJycE";
-const NOTIFY_URL="";            // Apps Script 알림 발송기 웹앱 주소 (배포 후 입력)
+const NOTIFY_URL="https://script.google.com/macros/s/AKfycbz7izko86Cm1Gz_aLuwirQqjiZKsywJdh_YyjcXIYppHPcYRiyHjKnNBMco2dF3lsk/exec";            // Apps Script 알림 발송기 웹앱 주소 (배포 후 입력)
 const PER_ROOM=500;           // 방마다 최근 몇 건을 불러올지 (검색 범위)
 
 const $=id=>document.getElementById(id);
