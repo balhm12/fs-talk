@@ -83,6 +83,11 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* 아바타 */
 .av{flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;letter-spacing:-.5px}
 .av.sq{border-radius:12px;font-size:12px}
+.crop{position:relative;width:260px;height:260px;margin:14px auto 8px;overflow:hidden;border-radius:14px;background:#111;touch-action:none;cursor:grab;user-select:none}
+.crop img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;pointer-events:none}
+.cropring{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 400px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.9);pointer-events:none}
+.cropz{display:flex;align-items:center;gap:8px;width:260px;margin:0 auto 6px;color:var(--sub)}
+.cropzoom{flex:1}
 .av.ph{background-size:cover!important;background-position:center!important;background-color:var(--soft)!important}
 .av.s{width:32px;height:32px;font-size:11px}
 /* 대화 영역 */
@@ -592,7 +597,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.41";
+const APP_VERSION="2026-10-28.42";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1778,17 +1783,49 @@ function pickAvatar(){
   const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
   inp.onchange=async()=>{
     const f=inp.files&&inp.files[0];if(!f)return;
-    try{
-      const img=await loadImg(f);const sz=Math.min(img.naturalWidth,img.naturalHeight);
-      const c=document.createElement("canvas");c.width=c.height=160;const x=c.getContext("2d");
-      x.fillStyle="#fff";x.fillRect(0,0,160,160);
-      x.drawImage(img,(img.naturalWidth-sz)/2,(img.naturalHeight-sz)/2,sz,sz,0,0,160,160);
-      let q=0.85,d=c.toDataURL("image/jpeg",q);while(d.length>30000&&q>0.4){q-=0.1;d=c.toDataURL("image/jpeg",q);}
-      await R("avatars/"+myKey).set({d,ts:SV});
-      toast("얼굴 사진을 넣었습니다.");openProfile({team:me.team,name:me.name,office:me.office||""});
-    }catch(e){toast("사진 넣기 실패: "+(e.code||e.message)+(/PERMISSION/.test(String(e.code||e.message))?" — DB 규칙이 최신인지 확인하세요.":""));}
+    try{openCropper(await loadImg(f));}catch(e){toast("사진을 읽지 못했습니다.");}
   };
   inp.click();
+}
+/* 동그라미에 맞추기: 끌어서 위치, 슬라이더(또는 휠·두 손가락)로 크기 */
+function openCropper(img){
+  const V=260,W=img.naturalWidth,H=img.naturalHeight,base=V/Math.min(W,H);
+  let z=1,ox=(V-W*base)/2,oy=(V-H*base)/2;
+  const c=$("pCard");c.textContent="";
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"사진 맞추기"));c.appendChild(el("div","tm2","끌어서 위치를, 아래 막대로 크기를 맞추세요"));
+  const box=el("div","crop");const im=el("img");im.src=img.src;im.draggable=false;box.appendChild(im);box.appendChild(el("div","cropring"));c.appendChild(box);
+  const zr=el("input","cropzoom");zr.type="range";zr.min="1";zr.max="4";zr.step="0.01";zr.value="1";zr.setAttribute("aria-label","크기");
+  const zw=el("div","cropz");zw.appendChild(el("span",null,"－"));zw.appendChild(zr);zw.appendChild(el("span",null,"＋"));c.appendChild(zw);
+  function clamp(){const dw=W*base*z,dh=H*base*z;ox=Math.min(0,Math.max(V-dw,ox));oy=Math.min(0,Math.max(V-dh,oy));}
+  function draw(){clamp();im.style.width=(W*base*z)+"px";im.style.height=(H*base*z)+"px";im.style.transform="translate("+ox+"px,"+oy+"px)";}
+  function zoomTo(nz,cx,cy){nz=Math.min(4,Math.max(1,nz));cx=cx==null?V/2:cx;cy=cy==null?V/2:cy;ox=cx-(cx-ox)*nz/z;oy=cy-(cy-oy)*nz/z;z=nz;zr.value=String(z);draw();}
+  zr.oninput=()=>zoomTo(+zr.value);
+  box.addEventListener("wheel",e=>{e.preventDefault();const r=box.getBoundingClientRect();zoomTo(z*(e.deltaY<0?1.08:1/1.08),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  const pts=new Map();let pinch=0;
+  box.addEventListener("pointerdown",e=>{box.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pts.size===2){const[a,b]=[...pts.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);}});
+  box.addEventListener("pointermove",e=>{
+    const pv=pts.get(e.pointerId);if(!pv)return;
+    if(pts.size===2){pts.set(e.pointerId,{x:e.clientX,y:e.clientY});const[a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch){const r=box.getBoundingClientRect();zoomTo(z*d/pinch,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top);}pinch=d;return;}
+    ox+=e.clientX-pv.x;oy+=e.clientY-pv.y;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});draw();
+  });
+  const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=0;};
+  box.addEventListener("pointerup",up);box.addEventListener("pointercancel",up);
+  const row=el("div","aiacts");row.style.justifyContent="flex-end";
+  const again=el("button","btn","다른 사진");again.onclick=()=>pickAvatar();row.appendChild(again);
+  const ok=el("button","btn pri","이대로 저장");row.appendChild(ok);c.appendChild(row);
+  ok.onclick=async()=>{
+    ok.disabled=true;
+    try{
+      const k=base*z,cv=document.createElement("canvas");cv.width=cv.height=160;const g=cv.getContext("2d");
+      g.fillStyle="#fff";g.fillRect(0,0,160,160);g.imageSmoothingQuality="high";
+      g.drawImage(img,-ox/k,-oy/k,V/k,V/k,0,0,160,160);
+      let q=0.85,d=cv.toDataURL("image/jpeg",q);while(d.length>30000&&q>0.4){q-=0.1;d=cv.toDataURL("image/jpeg",q);}
+      await R("avatars/"+myKey).set({d,ts:SV});
+      toast("얼굴 사진을 넣었습니다.");openProfile({team:me.team,name:me.name,office:me.office||""});
+    }catch(e){ok.disabled=false;toast("사진 넣기 실패: "+(e.code||e.message)+(/PERMISSION/.test(String(e.code||e.message))?" — DB 규칙이 최신인지 확인하세요.":""));}
+  };
+  draw();$("pOv").hidden=false;
 }
 function editMyProfile(){
   const c=$("pCard");c.textContent="";
