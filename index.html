@@ -202,7 +202,13 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .row.mine .bubble .quote{background:rgba(255,255,255,.16);border-color:#fff}
 .row.mine .bubble .quote b,.row.mine .bubble .quote span{color:#fff}
 .bubble a.img{display:block;line-height:0}
-.bubble a.img img{max-width:min(260px,62vw);max-height:340px;width:auto;height:auto;border-radius:10px;display:block;background:var(--soft);object-fit:cover}
+.bubble a.img img{max-width:min(260px,62vw);max-height:340px;width:auto;height:auto;border-radius:10px;display:block;background:var(--soft);object-fit:cover;transition:opacity .25s}
+.bubble a.img{border-radius:10px}
+.bubble a.img.ld{background:linear-gradient(100deg,var(--soft) 30%,var(--soft2) 50%,var(--soft) 70%);background-size:300% 100%;animation:shim 1.3s linear infinite}
+.bubble a.img.ld img{opacity:0;min-width:120px;min-height:90px}
+@keyframes shim{0%{background-position:100% 0}100%{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.bubble a.img.ld{animation:none}}
+.upthumb{width:40px;height:40px;border-radius:8px;object-fit:cover;flex:none}
 .fcard{display:flex;align-items:center;gap:10px;padding:6px 8px;color:inherit;text-decoration:none;min-width:190px;max-width:300px}
 .fcard .fi{width:40px;height:40px;border-radius:10px;background:var(--sel);display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
 .fcard b{display:block;font-weight:500;word-break:break-all;line-height:1.35}
@@ -758,7 +764,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.52";
+const APP_VERSION="2026-10-28.53";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1468,6 +1474,9 @@ function jumpTo(id){
 
 /* ---------- 첨부 보기 ---------- */
 const driveView=id=>"https://drive.google.com/file/d/"+encodeURIComponent(id)+"/view";
+const THUMB_W=520;                                // 대화 속 사진: 화면 표시(최대 260px)의 2배면 충분
+const localPics=new Map();
+const deadPics=new Set();                         // 여러 번 시도해도 안 뜬 사진 → 다시 그릴 때는 바로 파일 카드                        // 이 기기에서 올린 사진 id → 휴대폰 속 사진(바로 표시용)
 const driveThumb=(id,w)=>"https://drive.google.com/thumbnail?id="+encodeURIComponent(id)+"&sz=w"+(w||800);
 function fmtSize(n){n=+n||0;return n>=1048576?(n/1048576).toFixed(1)+"MB":n>=1024?Math.round(n/1024)+"KB":n+"B";}
 function fileIcon(f){const n=(f.name||"").toLowerCase();return /\.pdf$/.test(n)?"📕":/\.(xlsx?|csv)$/.test(n)?"📊":/\.(pptx?)$/.test(n)?"📽":/\.(docx?|hwpx?|txt)$/.test(n)?"📄":/\.zip$/.test(n)?"🗜":isImgF(f)?"🖼":"📎";}
@@ -1480,9 +1489,18 @@ function fileView(f,m){
   if(!isImgF(f))return fileCard(f,m);
   const a=el("a","img");a.href=driveView(f.id);a.target="_blank";a.rel="noopener";
   a.onclick=ev=>{ev.stopPropagation();if(m){ev.preventDefault();openViewer(m);}};
-  const i=el("img");i.loading="lazy";i.alt=f.name||"사진";i.referrerPolicy="no-referrer";
+  const i=el("img");i.loading="lazy";i.alt=f.name||"사진";i.referrerPolicy="no-referrer";i.decoding="async";
   if(f.w&&f.h){const k=Math.min(1,260/f.w,340/f.h);i.width=Math.round(f.w*k);i.height=Math.round(f.h*k);}
-  i.src=driveThumb(f.id,800);i.onerror=()=>{a.replaceWith(fileCard(f,m));};
+  if(deadPics.has(f.id))return fileCard(f,m);
+  const loc=localPics.get(f.id);
+  if(loc){i.src=loc;a.appendChild(i);return a;}               // 내가 방금 올린 사진: 휴대폰에 있는 사진으로 바로 표시
+  a.classList.add("ld");let tries=0;
+  i.onload=()=>{a.classList.remove("ld");};
+  i.onerror=()=>{                                              // 드라이브가 미리보기를 아직 못 만들었을 수 있어 몇 번 더 시도
+    if(tries<3&&i.isConnected!==false){const d=[1500,3500,7000][tries++];setTimeout(()=>{i.src=driveThumb(f.id,THUMB_W)+"&r="+tries;},d);return;}
+    deadPics.add(f.id);if(a.isConnected)a.replaceWith(fileCard(f,m));
+  };
+  i.src=driveThumb(f.id,THUMB_W);
   a.appendChild(i);return a;
 }
 
@@ -1731,7 +1749,7 @@ async function shrink(file){
   return {blob,w,h,name:(file.name||"사진").replace(/\.[^.]+$/,"")+".jpg",mime:"image/jpeg"};
 }
 const toB64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=()=>rej(r.error);r.readAsDataURL(blob);});
-function setUploading(t){const b=$("upBar");b.textContent="";if(!t){b.hidden=true;return;}b.hidden=false;b.appendChild(icEl("clock","cbic",20));const d=el("div","ct");d.appendChild(el("b",null,"보내는 중…"));d.appendChild(el("span",null,t));b.appendChild(d);}
+function setUploading(t,pic){const b=$("upBar");b.textContent="";if(!t){b.hidden=true;return;}b.hidden=false;if(pic){const im=el("img","upthumb");im.src=pic;im.alt="";b.appendChild(im);}else b.appendChild(icEl("clock","cbic",20));const d=el("div","ct");d.appendChild(el("b",null,"보내는 중…"));d.appendChild(el("span",null,t));b.appendChild(d);}
 async function sendFiles(list){
   const files=[...(list||[])];if(!files.length)return;
   if(view!=="chat"||!room){toast("대화방을 먼저 여세요.");return;}
@@ -1742,7 +1760,8 @@ async function sendFiles(list){
     let up={blob:f,name:(f.name||"파일").slice(0,200),mime:f.type||"application/octet-stream"};
     if(/^image\//.test(f.type)&&!/gif|svg/.test(f.type)){try{up=await shrink(f);}catch(e){}}
     if(up.blob.size>MAX_UP){toast((f.name||"파일")+": 10MB 이하만 보낼 수 있어요.");continue;}
-    setUploading((files.length>1?"("+i+"/"+files.length+") ":"")+up.name+" · "+fmtSize(up.blob.size));
+    const pic=up.w?URL.createObjectURL(up.blob):null;
+    setUploading((files.length>1?"("+i+"/"+files.length+") ":"")+up.name+" · "+fmtSize(up.blob.size),pic);
     try{
       const idToken=await auth.currentUser.getIdToken();
       const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"upload",idToken,name:up.name,mime:up.mime,data:await toB64(up.blob)})});
@@ -1750,10 +1769,11 @@ async function sendFiles(list){
       if(!j)throw new Error("알림 발송기 응답 없음");
       if(!j.ok)throw new Error(j.ver?(j.err||"알 수 없음"):"Apps Script를 새 버전으로 배포해 주세요");
       const file={id:String(j.id),name:up.name,size:up.blob.size,mime:up.mime.slice(0,100)};if(up.w){file.w=up.w;file.h=up.h;}
+      if(pic)localPics.set(file.id,pic);
       const data={uid,name:me.name,text:"",ts:SV,file};
       if(replyTo&&i===1){data.re=reData(replyTo);replyTo=null;renderCbar();}
       const ref=await R("msgs/"+r).push(data);afterSend(r,ref.key);
-    }catch(e){toast("보내기 실패: "+e.message);}
+    }catch(e){toast("보내기 실패: "+e.message);if(pic)URL.revokeObjectURL(pic);}
   }
   setUploading(null);
 }
