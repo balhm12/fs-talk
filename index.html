@@ -401,6 +401,12 @@ a.lnk[href^="tel:"]{white-space:nowrap;word-break:normal}
 .allbell .bi{display:inline-flex}
 .svd{color:#E69E0B}
 @media (pointer:coarse){.bubble{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.bubble.press{filter:brightness(.93)}}
+/* 휴대폰: 꾹 눌러도 글자가 선택(파랗게)되지 않게 — 버튼·메뉴·목록·탭 등 화면 틀 전체. 입력창과 공지 본문 읽기 창은 그대로 선택 가능 */
+@media (pointer:coarse){
+  button,.sheet,.sheet *,.pcard h3,.li,.li *,.lgrp,.tabbar,.tabbar *,.rail,.rail *,.top,.top *,.lockov,.lockov *,.srow,.srow *,.hit,.hit *,.reacts,.ackbar,.silchips,.nalert,.nalert *,.pinbar,.pinbar *,.day,.unreadline,.who,.meta2,.mlinks,.mlinks *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
+  button{-webkit-tap-highlight-color:transparent}
+}
 /* 시작 화면 */
 .splash{background:var(--bg)}
 .splbox{text-align:center;color:var(--sub)}
@@ -846,7 +852,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.66";
+const APP_VERSION="2026-10-28.67";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
