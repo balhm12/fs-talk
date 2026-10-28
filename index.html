@@ -219,7 +219,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.1";
+const APP_VERSION="2026-10-28.2";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -498,11 +498,16 @@ let tmr;["q","fRoom","fPeriod","fWho"].forEach(id=>$(id).addEventListener(id==="
 $("qtop").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){$("q").value=$("qtop").value;$("qtop").value="";go("search");}});
 
 /* ---------- 관리자: 사용자 승인 ---------- */
-let users={},usersWatched=false;
+let users={},usersWatched=false,admins={};
 function watchUsers(){
   if(usersWatched)return;usersWatched=true;
+  R("admins").on("value",s=>{admins=s.val()||{};if(view==="admin")renderAdmin();},()=>{});
   R("users").on("value",s=>{users=s.val()||{};pendingCount=Object.values(users).filter(u=>u&&u.status==="pending").length;if(view==="admin")renderAdmin();renderNav();},
     e=>{usersWatched=false;toast("사용자 목록을 읽지 못했습니다: "+(e.code||""));});
+}
+async function setAdmin(id,on){
+  try{if(on)await R("admins/"+id).set(true);else await R("admins/"+id).remove();toast(on?"관리자로 지정했습니다.":"관리자 지정을 해제했습니다.");}
+  catch(e){toast("변경 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 async function setStatus(id,status){
   try{await R("users/"+id+"/status").set(status);toast(status==="approved"?"승인했습니다.":status==="rejected"?"거절했습니다.":"변경했습니다.");}
@@ -524,11 +529,14 @@ function renderAdmin(){
       if(st==="pending")r.appendChild(el("span","badge wait","대기"));
       if(nameCount[u.name]>1)r.appendChild(el("span","badge dup","같은 이름 기기 "+nameCount[u.name]+"대"));
       if(id===uid)r.appendChild(el("span","badge","나"));
+      if(admins[id]===true)r.appendChild(el("span","badge","관리자"));
       const dev=/iPhone|iPad/.test(u.ua||"")?"iPhone":/Android/.test(u.ua||"")?"Android":"PC";
       r.appendChild(el("span","meta",u.team+(u.office?" · "+u.office:"")+" · "+dev+(u.createdAt?" · "+ymd(new Date(u.createdAt)):"")));
       if(st!=="approved"){const b=el("button","btn pri","승인");b.onclick=()=>setStatus(id,"approved");r.appendChild(b);}
       if(st==="pending"){const b=el("button","btn bad","거절");b.onclick=()=>setStatus(id,"rejected");r.appendChild(b);}
-      if(st==="approved"&&id!==uid){const b=el("button","btn bad","사용 중지");b.onclick=()=>setStatus(id,"rejected");r.appendChild(b);}
+      if(st==="approved"&&id!==uid){
+        const a=el("button","btn",admins[id]===true?"관리자 해제":"관리자로 지정");a.onclick=()=>setAdmin(id,admins[id]!==true);r.appendChild(a);
+        const b=el("button","btn bad","사용 중지");b.onclick=()=>{if(admins[id]===true)setAdmin(id,false);setStatus(id,"rejected");};r.appendChild(b);}
       ul.appendChild(r);
     });
     body.appendChild(ul);

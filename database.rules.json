@@ -4,8 +4,11 @@
     ".write": false,
     "talk": {
       "admins": {
+        ".read": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
         "$uid": {
-          ".read": "auth != null && auth.uid === $uid"
+          ".read": "auth != null && (auth.uid === $uid || root.child('talk/admins/' + auth.uid).val() === true)",
+          ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true && $uid !== auth.uid",
+          ".validate": "newData.isBoolean()"
         }
       },
       "users": {
