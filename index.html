@@ -254,7 +254,8 @@ mark{background:var(--mark);color:#1C2430;border-radius:2px;padding:0 1px}
 .bubble .quote{display:flex;flex-direction:column;border-left:3px solid var(--blue);padding:3px 8px;margin:0 0 6px;background:var(--soft);border-radius:4px;font-size:12px;cursor:pointer;min-width:120px}
 .bubble.media .quote{margin:4px 4px 6px}
 .bubble .quote b{font-size:11px;color:var(--link)}
-.bubble .quote span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sub);max-width:420px}
+.bubble .quote span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sub);max-width:min(420px,58vw)}
+.bubble .quote{max-width:100%;overflow:hidden}
 .row.mine .bubble .quote{background:rgba(255,255,255,.16);border-color:#fff}
 .row.mine .bubble .quote b,.row.mine .bubble .quote span{color:#fff}
 .bubble a.img{display:block;line-height:0}
@@ -523,6 +524,12 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 .urow{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
 .urow .nm2{font-weight:500}
 .urow .meta{color:var(--sub);font-size:12px;flex:1;min-width:160px}
+/* 휴대폰 관리 화면: 이름·표시 → 정보 → 버튼 순으로 줄 맞춤 */
+@media (max-width:820px){
+  .urow{gap:6px 8px;padding:12px 14px}
+  .urow .meta{flex-basis:100%;order:5;font-size:13px;line-height:1.5}
+  .urow .btn{order:6;flex:1 1 auto;min-width:0;margin:4px 0 0}
+}
 .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--soft);color:var(--sub);font-weight:500}
 .badge.wait{background:#FFF1DE;color:#B26100}
 .badge.dup{background:#FDE7EA;color:var(--bad)}
@@ -787,7 +794,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
     <section class="view" id="searchView">
       <div class="sw">
         <div class="filters">
-          <input type="search" id="q" placeholder="예: XN-20 Pressure SV22 (띄어쓰기 = 모두 포함)">
+          <input type="search" id="q" placeholder="예: XN-20 Pressure SV22">
           <select id="fRoom"></select>
           <select id="fPeriod"><option value="">전체 기간</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="365">최근 1년</option></select>
           <select id="fWho"><option value="">모든 사람</option><option value="me">내가 쓴 글</option></select>
@@ -852,7 +859,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-29.70";
+const APP_VERSION="2026-10-29.71";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1374,7 +1381,8 @@ function showView(){
   $("aiBtn").hidden=view!=="chat"||!room;
   if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(icEl("chat","emptyic",44));e.appendChild(el("b",null,"대화방을 선택하세요"));e.appendChild(el("span",null,"왼쪽 목록에서 방을 고르거나 ＋ 새 방으로 대화를 시작하세요."));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}
-    if(isTouch()&&!(()=>{try{return localStorage.getItem("fstalk-tip-lp");}catch(e){return 1;}})()){try{localStorage.setItem("fstalk-tip-lp","1");}catch(e){}setTimeout(()=>toast("메시지를 길게 누르면 답장·반응·저장 메뉴가 열려요"),600);}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
+    if(isTouch()&&!(()=>{try{return localStorage.getItem("fstalk-tip-lp");}catch(e){return 1;}})()){setTimeout(()=>{if(view!=="chat"||!room||(isM()&&mList)||!document.querySelector("#msgs .bubble"))return;   // 대화방을 실제로 보고 있을 때만 한 번
+      try{localStorage.setItem("fstalk-tip-lp","1");}catch(e){}toast("메시지를 길게 누르면 답장·반응·저장 메뉴가 열려요");},900);}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
   else if(view==="settings"){$("title").textContent="설정";$("desc").textContent="내 정보 · 알림 · 화면 · 보안 · 앱 정보";renderSettings();}
   else if(view==="saved"){$("title").textContent="저장한 글";$("desc").textContent="중요한 글을 모아 둔 곳 · 나만 볼 수 있어요";renderSaved();}
@@ -1526,7 +1534,7 @@ function renderMsgs(scroll){
     const line=el("div","line");
     const b=el("div","bubble"+(m.file?" media"+(!m.text&&!m.re?" only":""):""));
     if(m.re){const ro=byId.get(m.re.id),qd=el("div","quote");   // 원글을 불러왔으면 원글의 이름·내용으로 (답장에 적힌 인용은 고쳐 쓸 수 있으므로)
-      qd.appendChild(el("b",null,"↪ "+(ro?ro.name:m.re.name)));qd.appendChild(el("span",null,String(ro?previewText(ro):(m.re.text||"")).replace(/\s+/g," ")));qd.onclick=ev=>{ev.stopPropagation();jumpTo(m.re.id);};b.appendChild(qd);}
+      qd.appendChild(el("b",null,"↪ "+(ro?ro.name:m.re.name)));qd.appendChild(el("span",null,String(ro?previewText(ro):(m.re.text||"")).replace(/\s+/g," ").slice(0,120)));qd.onclick=ev=>{ev.stopPropagation();jumpTo(m.re.id);};b.appendChild(qd);}
     if(m.file)b.appendChild(fileView(m.file,m));
     if(m.text){const tx=el("div","tx");tx.appendChild(richText(m.text,jumpId===m.id?jumpTerms:null));b.appendChild(tx);}
     bindMsgMenu(b,m);
@@ -2120,7 +2128,9 @@ function renderSearch(){
   const ts=terms($("q").value),fr=$("fRoom").value,fp=+$("fPeriod").value||0,fw=$("fWho").value;
   renderSil($("q").value);
   const res=$("res");res.textContent="";
-  if(!ts.length&&!fr&&!fw&&!fp){$("cnt").textContent="–";res.appendChild(el("div","more","검색어를 입력하거나 방·기간을 고르세요."));return;}
+  const sumEl=document.querySelector("#searchView .sum");
+  if(!ts.length&&!fr&&!fw&&!fp){$("cnt").textContent="–";if(sumEl)sumEl.hidden=true;const e=el("div","empty");e.appendChild(icEl("search","emptyic",40));e.appendChild(el("b",null,"무엇을 찾을까요?"));e.appendChild(el("span",null,"장비명·에러·병원·부품 등 대화에 나온 말이면 다 찾습니다. 에러·부품은 실마리 결과도 함께 보여 드려요."));res.appendChild(e);return;}
+  if(sumEl)sumEl.hidden=false;
   const since=fp?Date.now()-fp*864e5:0;
   const hits=msgs.filter(m=>{
     if(!shown(m))return false;
@@ -2341,7 +2351,7 @@ async function saveRoster(text){
   if(bad.length){toast("형식이 잘못된 줄: "+bad.slice(0,5).join(", ")+"번째");return;}
   // 다른 팀에 같은 이름이 있으면 글·멘션·읽음이 섞일 수 있음 (앱이 이름으로 사람을 구분하는 곳이 있어서)
   const seenN={},dup=[];Object.keys(out).forEach(t=>Object.keys(out[t]).forEach(nm=>{if(seenN[nm]&&!dup.includes(nm))dup.push(nm);seenN[nm]=1;}));
-  if(dup.length&&!confirm("같은 이름이 두 팀 이상에 있습니다: "+dup.join(", ")+"\n이 상태면 두 사람의 글·멘션이 섞여 보일 수 있습니다. 이름 뒤에 구분(예: 김민수B)을 붙이는 것을 권합니다.\n그래도 저장할까요?"))return;
+  if(dup.length&&!confirm("같은 이름이 두 팀 이상에 있습니다: "+dup.join(", ")+"\n이 상태면 두 사람의 글·멘션이 섞여 보일 수 있습니다. 이름 뒤에 숫자를 붙여 구분하는 것을 권합니다 (예: 김민수2).\n그래도 저장할까요?"))return;
   // 명단에서 빠진 사람의 승인된 기기는 「사용 중지」로 (명단에서만 지우면 접속이 그대로 남으므로)
   const gone=Object.keys(users).filter(id=>{const u=users[id];return u&&u.status==="approved"&&!(out[u.team]&&out[u.team][u.name]!==undefined);});
   const goneNames=[...new Set(gone.map(id=>users[id].name))];
