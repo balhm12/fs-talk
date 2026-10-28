@@ -343,7 +343,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.18";
+const APP_VERSION="2026-10-28.19";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -732,7 +732,7 @@ function renderMsgs(scroll){
     const prev=list[i-1],next=list[i+1];
     const cont=same(prev,m)&&ymd(new Date(prev.ts))===day,lastOfGroup=!same(m,next);
     const mine=isMine(m);
-    const row=el("div","row"+(mine?" mine":"")+(cont?" cont":"")+(selId===m.id?" sel":"")+(isAdmin&&!mine?" adm":""));row.id="m-"+m.id;
+    const row=el("div","row"+(mine?" mine":"")+(cont?" cont":"")+(selId===m.id?" sel":"")+(isAdmin&&!mine?"":""));row.id="m-"+m.id;
     if(!mine){const avs=el("div","avs");if(!cont){const a=personAv(m.name,"s");a.classList.add("clickable");a.onclick=()=>openProfileByName(m.name);avs.appendChild(a);}row.appendChild(avs);}
     const col=el("div","col");
     if(!cont&&(!mine||(room==="all"&&m.room!=="all"))){
@@ -743,10 +743,10 @@ function renderMsgs(scroll){
     }
     const line=el("div","line");
     const b=el("div","bubble");b.appendChild(richText(m.text,jumpId===m.id?jumpTerms:null));
-    if(mine||isAdmin)b.onclick=()=>{selId=selId===m.id?null:m.id;renderMsgs(false);};
+    if(mine)b.onclick=()=>{selId=selId===m.id?null:m.id;renderMsgs(false);};
     line.appendChild(b);
     const meta=el("div","meta2");
-    if(mine||isAdmin){const del=el("button","del","삭제");del.onclick=ev=>{ev.stopPropagation();removeMsg(m);};meta.appendChild(del);}
+    if(mine){const del=el("button","del","삭제");del.onclick=ev=>{ev.stopPropagation();removeMsg(m);};meta.appendChild(del);}
     const un=unreadPeople(m);if(un>0)meta.appendChild(el("span","unr",String(un)));
     if(lastOfGroup)meta.appendChild(el("span",null,hm(d)));
     line.appendChild(meta);
