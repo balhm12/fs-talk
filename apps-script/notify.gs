@@ -115,3 +115,72 @@ function setupCheck(){
   Logger.log('등록 사용자: '+Object.keys(users).length+'명 · 알림 켠 사용자: '+Object.keys(tokens).length+'명');
   Logger.log('✅ 서비스 계정 인증과 DB 읽기 성공');
 }
+
+/* =====================================================================
+ * 매일 자동 백업 (Google 드라이브 「FS Talk 백업」 폴더, 30일 보관)
+ *  - installBackupTrigger() 를 편집기에서 한 번 실행하면 매일 새벽 3시대에 backupDaily() 가 돌아감
+ *  - 알림 기기 정보(tokens)는 백업하지 않음
+ * ===================================================================== */
+const BACKUP_FOLDER = 'FS Talk 백업';
+const BACKUP_KEEP_DAYS = 30;
+
+function backupDaily(){
+  const talk = db_('talk') || {};
+  delete talk.tokens;
+  const folder = backupFolder_();
+  const day = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const name = 'fs-talk-backup-' + day + '.json';
+  const old = folder.getFilesByName(name);
+  while(old.hasNext()) old.next().setTrashed(true);          // 같은 날 다시 돌리면 덮어쓰기
+  folder.createFile(name, JSON.stringify(talk), 'application/json');
+  // 오래된 백업 정리
+  const limit = Date.now() - BACKUP_KEEP_DAYS*864e5;
+  const it = folder.getFiles();
+  while(it.hasNext()){ const f = it.next(); if(/^fs-talk-backup-/.test(f.getName()) && f.getDateCreated().getTime() < limit) f.setTrashed(true); }
+  let n = 0; Object.keys(talk.msgs||{}).forEach(function(r){ n += Object.keys(talk.msgs[r]||{}).length; });
+  Logger.log('✅ 백업 완료: ' + name + ' · 메시지 ' + n + '건 · 사용자 ' + Object.keys(talk.users||{}).length + '대');
+}
+
+function installBackupTrigger(){
+  ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction()==='backupDaily') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('backupDaily').timeBased().everyDays(1).atHour(3).inTimezone('Asia/Seoul').create();
+  backupDaily();
+  Logger.log('✅ 매일 새벽 3시대 자동 백업을 예약했습니다. (지금 1회 실행함)');
+}
+
+function backupFolder_(){
+  const it = DriveApp.getFoldersByName(BACKUP_FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(BACKUP_FOLDER);
+}
+
+/**
+ * 복구 — 지워진 것만 되살림 (지금 있는 메시지·사용자·명단은 절대 덮어쓰지 않음)
+ * 사용법: 아래 RESTORE_DATE 를 복구할 날짜로 바꾸고 restoreMissing 실행
+ */
+const RESTORE_DATE = '2026-10-28';
+function restoreMissing(){
+  const it = backupFolder_().getFilesByName('fs-talk-backup-' + RESTORE_DATE + '.json');
+  if(!it.hasNext()) throw new Error(RESTORE_DATE + ' 백업 파일이 없습니다.');
+  const bak = JSON.parse(it.next().getBlob().getDataAsString());
+  const now = db_('talk') || {};
+  let added = 0;
+  ['msgs','users','roster','admins','mute'].forEach(function(sec){
+    const b = bak[sec] || {}, c = now[sec] || {};
+    Object.keys(b).forEach(function(k1){
+      const bv = b[k1], cv = c[k1];
+      if(cv === undefined || cv === null){ dbPut_('talk/'+sec+'/'+encodeURIComponent(k1), bv); added++; return; }
+      if(bv && typeof bv === 'object' && cv && typeof cv === 'object'){
+        const miss = {};
+        Object.keys(bv).forEach(function(k2){ if(cv[k2] === undefined) miss[k2] = bv[k2]; });
+        if(Object.keys(miss).length){ dbPatch_('talk/'+sec+'/'+encodeURIComponent(k1), miss); added += Object.keys(miss).length; }
+      }
+    });
+  });
+  Logger.log('✅ 복구 완료: 없던 항목 ' + added + '개를 되살렸습니다. (기존 내용은 그대로)');
+}
+function dbPut_(path, val){
+  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?access_token='+accessToken_(),{method:'put',contentType:'application/json',payload:JSON.stringify(val)});
+}
+function dbPatch_(path, val){
+  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?access_token='+accessToken_(),{method:'patch',contentType:'application/json',payload:JSON.stringify(val)});
+}
