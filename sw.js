@@ -1,5 +1,18 @@
-/* FS Talk 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면). 메시지 데이터는 캐시하지 않음 */
-const CACHE = "fstalk-v1";
+/* FS Talk 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면) + 푸시 알림 수신. 메시지 데이터는 캐시하지 않음 */
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
+firebase.initializeApp({
+  apiKey: "AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
+  authDomain: "fs-talk-fa383.firebaseapp.com",
+  databaseURL: "https://fs-talk-fa383-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "fs-talk-fa383",
+  storageBucket: "fs-talk-fa383.firebasestorage.app",
+  messagingSenderId: "95175163518",
+  appId: "1:95175163518:web:7ce131f6318887057ea22f"
+});
+firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
+
+const CACHE = "fstalk-v2";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

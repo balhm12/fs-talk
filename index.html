@@ -267,6 +267,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <input type="search" class="lsearch" id="lq" placeholder="검색">
     </div>
     <div id="inst"></div>
+    <div id="pushCard"></div>
     <div class="litems" id="nav"></div>
     <div class="me" id="me"></div>
   </aside>
@@ -320,10 +321,11 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.9";
+const APP_VERSION="2026-10-28.10";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -350,6 +352,8 @@ const ROOMS=[
   {id:"fsom",name:"FSOM Team",icon:"O",desc:"FSOM 팀방",grp:"팀"}
 ];
 const OFFICES={"FS CENTRAL":["대전","광주"],"FS SOUTH":["부산","대구"]};
+const VAPID_KEY="BKwhWZCt1Zm93DpzAKRmqcHpjjroh2PNU93Eln25FZnLhWU1VE34PWxGlyEUiu2rznrsIf29BD5OdfK_FwmJycE";
+const NOTIFY_URL="";            // Apps Script 알림 발송기 웹앱 주소 (배포 후 입력)
 const PER_ROOM=500;           // 방마다 최근 몇 건을 불러올지 (검색 범위)
 
 const $=id=>document.getElementById(id);
@@ -457,6 +461,8 @@ let started=false,renderQ=false;
 function start(){
   if(started){renderNav();return;}
   started=true;
+  R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();},()=>{});
+  refreshPush();
   ROOMS.forEach(r=>{
     const q=R("msgs/"+r.id).orderByChild("ts").limitToLast(PER_ROOM);
     q.on("child_added",s=>{addMsg(r.id,s.key,s.val());});
@@ -562,7 +568,9 @@ function renderInfo(){
   $("app").classList.toggle("info-on",on);
   if(!on)return;
   const r=ROOMS.find(x=>x.id===room);const mem=roomMembers(room);
-  const h=el("div","ih");h.appendChild(roomAv(room));h.appendChild(el("b",null,r.name));h.appendChild(el("span",null,r.desc));box.appendChild(h);
+  const h=el("div","ih");h.appendChild(roomAv(room));h.appendChild(el("b",null,r.name));h.appendChild(el("span",null,r.desc));
+  if(pushOn()){const muted=!!myMute[room];const mb=el("button","btn",muted?"🔕 이 방 알림 꺼짐":"🔔 이 방 알림 켜짐");mb.style.marginTop="10px";mb.onclick=()=>setMute(room,!muted);h.appendChild(el("br"));h.appendChild(mb);}
+  box.appendChild(h);
   const l=el("div","il");l.appendChild(el("div","lgrp","참여자 "+mem.length+"명"));
   mem.sort((a,b)=>teamRank(a.team)-teamRank(b.team)||a.name.localeCompare(b.name,"ko")).forEach(p=>{
     const m=el("div","mem");m.appendChild(personAv(p.name,"s"));const t=el("div");t.appendChild(document.createTextNode(p.name));t.appendChild(el("br"));t.appendChild(el("small",null,teamLabel(p.team)+(p.office?" · "+p.office:"")));m.appendChild(t);l.appendChild(m);
@@ -684,7 +692,8 @@ $("composer").addEventListener("submit",async e=>{
   if(t.length>4000){toast("메시지가 너무 깁니다 (4,000자 이하).");return;}
   input.value="";input.style.height="auto";
   try{
-    await R("msgs/"+room).push({uid,name:me.name,text:t,ts:firebase.database.ServerValue.TIMESTAMP});
+    const ref=await R("msgs/"+room).push({uid,name:me.name,text:t,ts:firebase.database.ServerValue.TIMESTAMP});
+    notifyOthers(room,ref.key);
   }catch(err){input.value=t;toast("전송 실패: "+(err.code||err.message));}
 });
 function setPlaceholder(){input.placeholder=isM()?"메시지 입력":"메시지 입력 (Enter 전송, Shift+Enter 줄바꿈) · #XN-20 처럼 태그를 달면 검색이 쉬워요";}
@@ -823,6 +832,62 @@ if("serviceWorker" in navigator&&window.isSecureContext){
   window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});});
 }
 renderInstall();
+
+/* ---------- 푸시 알림 ---------- */
+let messaging=null,myMute={},pushToken=null;
+try{if(firebase.messaging&&firebase.messaging.isSupported())messaging=firebase.messaging();}catch(e){messaging=null;}
+const pushSupported=()=>!!messaging&&"Notification" in window&&"serviceWorker" in navigator&&window.isSecureContext;
+const pushOn=()=>pushSupported()&&Notification.permission==="granted"&&!!pushToken;
+function tokenKey(t){let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;return "t"+(h>>>0).toString(36)+t.length;}
+async function getSwReg(){return navigator.serviceWorker.getRegistration("./").then(r=>r||navigator.serviceWorker.register("./sw.js",{scope:"./"})).then(()=>navigator.serviceWorker.ready);}
+async function saveToken(){
+  const reg=await getSwReg();
+  const t=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
+  if(!t)throw new Error("토큰 없음");
+  pushToken=t;
+  await R("tokens/"+uid+"/"+tokenKey(t)).set({token:t,ts:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent.slice(0,180)});
+}
+async function enablePush(){
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted"){toast(perm==="denied"?"알림이 차단돼 있어요. 휴대폰 설정에서 FS Talk 알림을 허용해 주세요.":"알림 허용을 누르지 않았어요.");renderPushCard();return;}
+    await saveToken();toast("이 기기에서 알림을 받습니다.");
+  }catch(e){toast("알림 설정 실패: "+(e.code||e.message));}
+  renderPushCard();renderInfo();
+}
+async function refreshPush(){
+  if(!pushSupported()||Notification.permission!=="granted"){renderPushCard();return;}
+  try{await saveToken();}catch(e){}
+  renderPushCard();
+}
+async function setMute(r,on){
+  try{if(on)await R("mute/"+uid+"/"+r).set(true);else await R("mute/"+uid+"/"+r).remove();toast(on?roomName(r)+" 알림을 껐습니다.":roomName(r)+" 알림을 켰습니다.");}
+  catch(e){toast("변경 실패: "+(e.code||e.message));}
+}
+function renderPushCard(){
+  const box=$("pushCard");if(!box)return;box.textContent="";
+  if(isIOS&&!isStandalone())return;          // iPhone은 홈 화면 앱에서만 알림 가능
+  if(!pushSupported()||pushOn())return;
+  const c=el("div","inst");
+  c.appendChild(el("b",null,"🔔 새 메시지 알림 받기"));
+  if(Notification.permission==="denied"){c.appendChild(document.createTextNode("알림이 차단돼 있어요. 휴대폰(또는 브라우저) 설정 → 알림에서 FS Talk을 허용한 뒤 다시 열어 주세요."));}
+  else{c.appendChild(document.createTextNode("앱을 닫아 둬도 새 메시지가 오면 알려 드려요."));c.appendChild(el("br"));const b=el("button","btn pri","알림 켜기");b.onclick=enablePush;c.appendChild(b);}
+  box.appendChild(c);
+}
+async function notifyOthers(r,msgId){
+  if(!NOTIFY_URL)return;
+  try{
+    const idToken=await auth.currentUser.getIdToken();
+    await fetch(NOTIFY_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({idToken,room:r,msgId})});
+  }catch(e){}
+}
+if(messaging){
+  messaging.onMessage(p=>{
+    const r=p&&p.data&&p.data.room;
+    if(r&&view==="chat"&&room===r&&!(isM()&&mList)&&document.visibilityState==="visible")return;
+    const n=p&&p.notification;if(n)toast((n.title||"")+" — "+(n.body||"").slice(0,40));
+  });
+}
 
 /* ---------- 연결 상태 ---------- */
 let connT=null;

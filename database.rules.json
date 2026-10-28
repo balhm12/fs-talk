@@ -70,6 +70,24 @@
       "roster": {
         ".read": "auth != null",
         ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
+      },
+      "tokens": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          "$k": {
+            ".validate": "newData.hasChildren(['token', 'ts']) && newData.child('token').isString() && newData.child('token').val().length < 400"
+          }
+        }
+      },
+      "mute": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          "$room": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
       }
     }
   }
