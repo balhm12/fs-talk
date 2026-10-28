@@ -852,7 +852,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.67";
+const APP_VERSION="2026-10-28.68";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -863,7 +863,7 @@ const FIREBASE_CONFIG={
   appId:"1:95175163518:web:7ce131f6318887057ea22f"
 };
 const ROOMS=[
-  {id:"notice",name:"공지",icon:"📢",desc:"FSG 전체 공지",grp:"전체"},
+  {id:"notice",name:"전체공지",icon:"📢",desc:"FSG 전체 공지",grp:"전체"},
   {id:"all",name:"전체방",icon:"🌐",desc:"FS·CS 방 대화가 함께 보입니다 · 여기서 쓴 글은 전체방에만 올라가요",grp:"전체"},
   {id:"ts",name:"FS",icon:"🛠",desc:"Field Service · 현장 조치 공유",grp:"전체"},
   {id:"cs",name:"CS",icon:"☎",desc:"고객지원",grp:"전체"},
@@ -1195,7 +1195,7 @@ const hm=d=>{const h=d.getHours();return (h<12?"오전 ":"오후 ")+((h%12)||12)
 let pendingCount=0,listTab="rooms";
 /* 팀 색: 시스멕스 팔레트(파랑·하늘·녹색·주황·퍼플·마젠타)와 그 톤만 사용 */
 const TEAM_COLOR={"FSG":"#00457F","FS WEST":"#0094C6","FS EAST":"#D08A00","FS CENTRAL":"#7E49DC","FS SOUTH":"#2E9E35","FSS Team":"#C232CB","FSOM Team":"#3A78C2"};
-const ROOM_LOOK={all:["전체","#00457F","globe"],notice:["공지","#E7413E","megaphone"],ts:["FS","#005BAC","wrench"],cs:["CS","#0094C6","headset"],west:["W","#0094C6"],east:["E","#D08A00"],central:["C","#7E49DC"],daejeon:["대전","#9A70E3"],gwangju:["광주","#9A70E3"],south:["S","#2E9E35"],busan:["부산","#4DB353"],daegu:["대구","#4DB353"],fss:["FSS","#C232CB"],fsom:["OM","#3A78C2"]};
+const ROOM_LOOK={all:["전체","#00457F","globe"],notice:["전체공지","#E7413E","megaphone"],ts:["FS","#005BAC","wrench"],cs:["CS","#0094C6","headset"],west:["W","#0094C6"],east:["E","#D08A00"],central:["C","#7E49DC"],daejeon:["대전","#9A70E3"],gwangju:["광주","#9A70E3"],south:["S","#2E9E35"],busan:["부산","#4DB353"],daegu:["대구","#4DB353"],fss:["FSS","#C232CB"],fsom:["OM","#3A78C2"]};
 const ROOM_SCOPE={west:["FS WEST"],east:["FS EAST"],central:["FS CENTRAL"],daejeon:["FS CENTRAL","대전"],gwangju:["FS CENTRAL","광주"],south:["FS SOUTH"],busan:["FS SOUTH","부산"],daegu:["FS SOUTH","대구"],fss:["FSS Team"],fsom:["FSOM Team"]};
 function personTeam(name){const p=rosterList().find(x=>x.name===name);return p||null;}
 function avatar(label,color,cls){const a=el("div","av"+(cls?" "+cls:""),label);a.style.background=color;return a;}
@@ -1806,7 +1806,7 @@ function showNoticePrompt(){
   const d=new Date(m.ts);c.appendChild(el("div","npmeta",m.name+" · "+(d.getMonth()+1)+"/"+d.getDate()+" "+hm(d)));
   const tx=el("div","nptext");if(m.file)tx.appendChild(el("div","more",isImgF(m.file)?"📷 사진":"📎 "+(m.file.name||"파일")));if(m.text)tx.appendChild(richText(String(m.text).slice(0,1200)));c.appendChild(tx);
   const ok=el("button","btn pri","확인했어요"+(list.length>1?" · 다음 공지":""));ok.onclick=()=>{ackNotice(m,true).then(()=>{if(pendingNotices().filter(x=>x.id!==m.id).length)setTimeout(showNoticePrompt,150);else{closeProfile();toast("공지를 모두 확인했습니다.");}});};c.appendChild(ok);
-  const vw=el("button","btn","공지방에서 보기");vw.onclick=()=>{closeProfile();jumpTo(m.id);};c.appendChild(vw);
+  const vw=el("button","btn","전체공지 방에서 보기");vw.onclick=()=>{closeProfile();jumpTo(m.id);};c.appendChild(vw);
   const later=el("button","nplater","나중에 볼게요");later.onclick=()=>{try{localStorage.setItem("fstalk-nsnooze",String(Date.now()+2*3600e3));}catch(e){}closeProfile();};c.appendChild(later);
   $("pOv").hidden=false;
 }
