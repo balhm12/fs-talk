@@ -525,7 +525,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-28.35";
+const APP_VERSION="2026-10-28.36";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1424,7 +1424,10 @@ async function leaveDm(id){
     await R("dms/"+myKey+"/"+id+"/left").set(SV);
     if(favs[id])R("prefs/"+myKey+"/fav/"+id).remove().catch(()=>{});
     toast("1:1 대화방에서 나갔습니다.");infoOpen=false;listTab="rooms";go("");
-  }catch(e){toast("나가기 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
+  }catch(e){
+    const denied=/PERMISSION|permission/.test(String(e.code||e.message));
+    alert(denied?"나가기가 저장되지 않았습니다.\n\nFirebase 콘솔에서 최신 규칙(database.rules.json)을 게시해야 1:1 나가기가 됩니다. 게시한 뒤 다시 눌러 주세요.":"나가기 실패: "+(e.code||e.message));
+  }
 }
 async function openDm(p){
   if(!me||!myKey)return;
