@@ -227,6 +227,7 @@ html[data-theme=dark] .bcard.miss{background:#2E2617}
 .hmini input{flex:1;min-width:0;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:var(--input);font:inherit;font-size:15px;color:var(--strong)}
 .hmini .btn{width:auto;margin:0;padding:0 14px}
 .hchips{display:flex;flex-wrap:wrap;gap:6px}
+.hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
 .hcard .btn.pri{width:auto;align-self:flex-start;margin:0;padding:10px 18px}
@@ -1007,7 +1008,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-29.82";
+const APP_VERSION="2026-10-29.83";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1326,7 +1327,7 @@ function start(){
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();renderNav();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
-  setTimeout(()=>{silRecall().then(k=>{if(k){silKey=k;silLoad().catch(()=>{});}}).catch(()=>{});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
+  setTimeout(()=>{silRecall().then(k=>{if(k){silKey=k;silLoad().catch(()=>{});}else{silErr="locked";silStatus();}}).catch(e=>{silErr=e.message||"연결 실패";silStatus();});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
   try{const k="fstalk-seen-day",d=ymd(new Date());if(localStorage.getItem(k)!==d){R("seen/"+uid).set(SV).then(()=>{try{localStorage.setItem(k,d);}catch(e){}}).catch(()=>{});}}catch(e){}   // 관리 화면의 「마지막 사용」 (하루 한 번)
   R("acks").on("value",s=>{acks=s.val()||{};schedule();if(!acksLoaded){acksLoaded=true;setTimeout(maybeNoticePrompt,2500);}},()=>{});
   R("lockreset/"+myKey).on("value",s=>{const v=+s.val()||0;const c=lockCfg();
@@ -1638,7 +1639,7 @@ function renderHome(){
   sf.onsubmit=e=>{e.preventDefault();const v=sq.value.trim();if(!v){sq.focus();return;}$("q").value=v;go("search");};
   sl.appendChild(sf);
   const chips=el("div","hchips");["XN","XN-L","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 에러 목록 (실마리)";c.onclick=()=>openUrl(LINKS.silmari+"#/d/"+encodeURIComponent(dv));chips.appendChild(c);});
-  sl.appendChild(chips);colA.appendChild(sl);
+  sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);colA.appendChild(sl);silStatus();
   // 기술정보·동영상 교육 (준비 중)
   const te=hcard("기술정보","doc","soon");te.appendChild(el("p","hp","기술 회보(TB)·매뉴얼 개정·부품 변경 안내를 이곳에 모을 예정입니다."));te.appendChild(el("p","hsoon","준비 중"));colA.appendChild(te);
   const ed=hcard("동영상 교육","video","soon");ed.appendChild(el("p","hp","장비별 교육 영상을 이어 보기·새 영상 순으로 보여 드릴 예정입니다."));ed.appendChild(el("p","hsoon","준비 중"));colA.appendChild(ed);
@@ -2673,12 +2674,22 @@ function silLoad(){                                    // 검색용 목록(에�
       const codeSet=new Set((r.c||[]).map(c=>String(c).toLowerCase()));
       (String(r.k2||"")+" "+String(r.k3||"")).toLowerCase().split(/[^a-z0-9\-]+/).forEach(x=>{x=x.replace(/^-+|-+$/g,"");if(!SIL_PART.test(x)||codeSet.has(x))return;if(!silParts.has(x))silParts.set(x,[]);const l=silParts.get(x);if(l[l.length-1]!==r)l.push(r);});
       const w=silWords(t);for(let i=0;i<w.length-1;i++){const bg=w[i]+" "+w[i+1];if(bg.length<9)continue;if(!silBi.has(bg))silBi.set(bg,[]);const l=silBi.get(bg);if(l[l.length-1]!==r)l.push(r);}});
-    schedule();if(view==="search")renderSil($("q").value);
+    schedule();silStatus();if(view==="search")renderSil($("q").value);
     return silIdx;
   })();
-  silP.catch(e=>{silP=null;silErr=e.locked?"locked":e.message;if(view==="search")renderSil($("q").value);});
+  silP.catch(e=>{silP=null;silErr=e.locked?"locked":e.message;silStatus();if(view==="search")renderSil($("q").value);});
   return silP;
 }
+function silStatus(){                                  // 포털 홈: 이 기기(브라우저)에 실마리가 연결됐는지 보여 줌 — PC는 따로 한 번 풀어야 함
+  const st=$("hsilst");if(!st)return;st.textContent="";
+  if(silIdx){st.className="hsilst ok";st.appendChild(el("span",null,"이 기기에 연결됨 · 대화 속 에러·부품번호에 실마리 버튼이 붙습니다"));return;}
+  if(silErr==="locked"||(!silKey&&!silP)){st.className="hsilst off";st.appendChild(el("span",null,"이 기기는 아직 실마리 연결 전입니다"));const ub=el("button","btn pri","연결하기");ub.onclick=openSilUnlock;st.appendChild(ub);return;}
+  if(silErr){st.className="hsilst off";st.appendChild(el("span",null,"실마리를 불러오지 못했습니다"));const rb=el("button","btn","다시 시도");rb.onclick=()=>{silErr="";silLoad().catch(()=>{});silStatus();};st.appendChild(rb);return;}
+  st.className="hsilst";st.appendChild(el("span",null,"실마리 연결 중…"));
+}
+function silRetry(){if(silIdx||silP)return;silRecall().then(k=>{if(k){silKey=k;silErr="";silLoad().catch(()=>{});}}).catch(()=>{});}
+window.addEventListener("storage",e=>{if(e.key===SIL_KEY&&!silIdx)silRetry();});   // 다른 탭의 실마리 앱에서 잠금을 풀면 바로 연결
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!silIdx&&!silP)silRetry();});
 function silScore(r,q){                                 // 실마리 앱과 같은 순서: 코드 > 에러 이름 > 기타 키워드
   for(const c0 of r.c||[]){const c=String(c0).toLowerCase();if(c===q)return 1000;if(c.indexOf(q)===0)return 900;}
   const k1=r.k1||"";if(k1.indexOf(q)===0)return 800;if((" "+k1).indexOf(" "+q)>=0)return 700;if(k1.indexOf(q)>=0)return 600;
