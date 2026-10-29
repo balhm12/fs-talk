@@ -176,6 +176,18 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 .aifoot{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.5}
 .myedit{display:flex;align-items:center;gap:10px;margin:0 10px 8px;padding:10px 12px;border:1px solid var(--selline);border-radius:12px;background:var(--sel2);font-size:13px;color:var(--blue);width:calc(100% - 20px);text-align:left}
 .myedit:hover{border-color:var(--blue)}
+/* 사진 일괄 등록 */
+.bulkopt{display:flex;align-items:center;gap:6px;font-size:13px;margin:4px 0 10px}
+.bulkgrid{display:grid;align-items:start;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;max-height:56vh;overflow:auto;margin-bottom:10px}
+.bcard{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--panel)}
+.bcard.miss{border-color:#E69E0B;background:#FFF8EA}
+html[data-theme=dark] .bcard.miss{background:#2E2617}
+.bcard.bad{opacity:.6}
+.bimg{width:84px;height:84px;border-radius:50%;object-fit:cover;background:var(--soft)}
+.bsel{width:100%;font-size:13px;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--strong)}
+.bcard small{font-size:11px;color:var(--sub);text-align:center;word-break:break-all}
+.btools{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+.bchk{display:flex;align-items:center;gap:3px;font-size:12px}
 /* FS 포털 홈 */
 .rail a.rlink.long{font-size:9.5px;letter-spacing:-.04em;white-space:nowrap}
 .home{flex:1;min-height:0;overflow:auto;padding:22px 26px 30px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box}
@@ -993,7 +1005,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-29.80";
+const APP_VERSION="2026-10-29.81";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1513,6 +1525,77 @@ function roomBtn(r,indent){
   b.onclick=()=>go("room-"+r.id);
   return b;
 }
+/* ---------- 관리: 프로필 사진 일괄 등록 ----------
+   파일 이름에 든 명단 이름으로 짝짓기 → 얼굴 위치를 짐작해 정사각형으로 자르기(세로 사진은 위쪽) → 160px JPEG(30KB 이하)로 avatars/{팀_이름} */
+function pickBulkPhotos(){
+  let inp=$("bulkIn");if(!inp){inp=el("input");inp.id="bulkIn";inp.type="file";inp.accept="image/*";inp.multiple=true;inp.className="vh";document.body.appendChild(inp);
+    inp.addEventListener("change",()=>{const fs=[...inp.files];inp.value="";if(fs.length)openBulkPhotos(fs);});}
+  inp.click();
+}
+function bulkMatch(fname,people){
+  const stem=String(fname).replace(/\.[^.]+$/,"").normalize("NFC").replace(/[\s_\-().\[\]0-9]+/g,"");
+  const hit=people.filter(p=>stem.includes(p.name)).sort((a,b)=>b.name.length-a.name.length);
+  if(!hit.length)return null;
+  const best=hit.filter(p=>p.name.length===hit[0].name.length);
+  if(best.length===1)return best[0];
+  const t=best.find(p=>stem.includes(p.team.replace(/\s+/g,"")));return t||null;   // 같은 이름: 파일 이름에 팀이 있으면 그 팀
+}
+async function bulkRender(it){
+  const img=it.img,W=img.naturalWidth,H=img.naturalHeight,side=Math.min(W,H)/it.zoom;
+  const cx=W/2,cy=H>W?Math.min(H-side/2,Math.max(side/2,H*0.38+it.dy*side)):H/2+it.dy*side;   // 세로 사진은 얼굴이 위쪽에 있다고 보고 38% 높이
+  const sx=Math.max(0,Math.min(W-side,cx-side/2)),sy=Math.max(0,Math.min(H-side,cy-side/2));
+  const cv=document.createElement("canvas");cv.width=cv.height=160;const g=cv.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,160,160);g.imageSmoothingQuality="high";
+  g.drawImage(img,sx,sy,side,side,0,0,160,160);
+  let q=0.85,d=cv.toDataURL("image/jpeg",q);while(d.length>30000&&q>0.4){q-=0.1;d=cv.toDataURL("image/jpeg",q);}
+  it.d=d;return d;
+}
+async function openBulkPhotos(files){
+  const people=rosterList();
+  const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"프로필 사진 일괄 등록"));
+  const info=el("div","pkhint","사진을 읽는 중…");c.appendChild(info);$("pOv").hidden=false;
+  const items=[];
+  for(const f of files.slice(0,200)){
+    try{const img=await loadImg(f);items.push({f,img,p:bulkMatch(f.name,people),zoom:1,dy:0,on:true});}catch(e){items.push({f,bad:true});}
+  }
+  const used={};items.forEach(it=>{if(it.p){const k=personKey(it.p.team,it.p.name);if(used[k]){it.dup=true;}used[k]=1;}});
+  const opt=el("label","bulkopt");const ow=el("input");ow.type="checkbox";opt.appendChild(ow);opt.appendChild(document.createTextNode(" 이미 사진이 있는 사람도 바꾸기"));
+  const grid=el("div","bulkgrid");
+  const ok=el("button","btn pri","");
+  const sum=()=>{const n=items.filter(it=>it.on&&it.p&&!it.bad&&(ow.checked||!avatars[personKey(it.p.team,it.p.name)])).length;ok.textContent=n+"명 사진 넣기";ok.disabled=!n;
+    const miss=items.filter(it=>!it.bad&&!it.p).length,have=items.filter(it=>it.p&&avatars[personKey(it.p.team,it.p.name)]).length;
+    info.textContent="사진 "+items.length+"장 · 짝지음 "+items.filter(it=>it.p).length+"명"+(miss?" · 이름을 못 찾음 "+miss+"장(직접 고르세요)":"")+(have&&!ow.checked?" · 이미 사진이 있는 "+have+"명은 건너뜀":"");};
+  ow.onchange=()=>{draw();};
+  const draw=async()=>{grid.textContent="";
+    const cnt={};items.forEach(it=>{if(it.p){const k=personKey(it.p.team,it.p.name);cnt[k]=(cnt[k]||0)+1;}});items.forEach(it=>{it.dup=!!(it.p&&cnt[personKey(it.p.team,it.p.name)]>1);});
+    for(const it of items){
+      const card=el("div","bcard"+(it.bad?" bad":"")+(!it.p?" miss":""));
+      if(it.bad){card.appendChild(el("div","bname","읽지 못한 파일"));card.appendChild(el("small",null,it.f.name));grid.appendChild(card);continue;}
+      const im=el("img","bimg");im.alt="";im.src=await bulkRender(it);card.appendChild(im);
+      const sel=el("select","bsel");sel.appendChild(new Option("— 사람 고르기 —",""));
+      people.slice().sort(byTeamLead).forEach((p,i)=>{const o=new Option(p.name+" · "+teamLabel(p.team),String(i));if(it.p&&p.name===it.p.name&&p.team===it.p.team)o.selected=true;sel.appendChild(o);});
+      const sorted=people.slice().sort(byTeamLead);sel.onchange=()=>{it.p=sel.value===""?null:sorted[+sel.value];draw();};card.appendChild(sel);
+      const has=it.p&&avatars[personKey(it.p.team,it.p.name)];
+      const st=el("small",null,it.f.name+(it.dup?" · ⚠ 같은 사람 사진이 여러 장 (첫 장만 넣음)":"")+(has?" · 이미 사진 있음"+(ow.checked?" → 바꿈":" → 건너뜀"):""));card.appendChild(st);
+      const tools=el("div","btools");
+      [["위로",()=>{it.dy-=0.08;}],["아래로",()=>{it.dy+=0.08;}],["크게",()=>{it.zoom=Math.min(3,it.zoom*1.15);}],["작게",()=>{it.zoom=Math.max(1,it.zoom/1.15);}]].forEach(([t,fn])=>{const b=el("button","btn sm",t);b.type="button";b.onclick=async()=>{fn();im.src=await bulkRender(it);};tools.appendChild(b);});
+      const chk=el("label","bchk");const cb=el("input");cb.type="checkbox";cb.checked=it.on;cb.onchange=()=>{it.on=cb.checked;sum();};chk.appendChild(cb);chk.appendChild(document.createTextNode(" 넣기"));tools.appendChild(chk);
+      card.appendChild(tools);grid.appendChild(card);
+    }
+    sum();};
+  c.appendChild(opt);c.appendChild(grid);c.appendChild(ok);
+  ok.onclick=async()=>{
+    const todo=items.filter(it=>it.on&&it.p&&!it.bad&&(ow.checked||!avatars[personKey(it.p.team,it.p.name)]));
+    const seenK={};const list=todo.filter(it=>{const k=personKey(it.p.team,it.p.name);if(seenK[k])return false;seenK[k]=1;return true;});
+    ok.disabled=true;let n=0,fail=0;
+    for(const it of list){ok.textContent="넣는 중… "+(n+fail+1)+"/"+list.length;
+      try{await R("avatars/"+personKey(it.p.team,it.p.name)).set({d:it.d||await bulkRender(it),ts:SV});n++;}catch(e){fail++;if(fail===1)toast("실패: "+(e.code||e.message)+(/PERMISSION/.test(String(e.code||e.message))?" — DB 규칙이 최신인지 확인하세요.":""));}}
+    closeProfile();toast(n+"명 사진을 넣었습니다."+(fail?" 실패 "+fail+"명":""));
+  };
+  await draw();
+}
+
 /* ---------- FS 포털 홈 (첫 화면) ----------
    지금 있는 기능·링크를 한 화면에: 통합 검색(대화+실마리) · 공지 · 일정표 · 실마리 · 전국시스템 · 최근 대화 · 바로가기
    아직 자료가 없는 칸(기술정보·동영상 교육)은 「준비 중」으로 자리만 */
@@ -2820,6 +2903,9 @@ function renderAdmin(){
     ul.appendChild(r);
   });
   body.appendChild(ul);
+  body.appendChild(el("div","sec","프로필 사진 일괄 등록"));
+  body.appendChild(el("div","nthint","회사 공유 폴더(프로필사진)의 사진을 한꺼번에 고르면, 파일 이름(예: 홍길동.jpg)으로 명단의 사람과 짝을 지어 얼굴을 동그랗게 넣습니다. 사진은 이 PC에서 줄여서 바로 올라가고 다른 곳에 저장되지 않습니다."));
+  const pb=el("button","btn","📷 사진 고르기");pb.onclick=()=>pickBulkPhotos();body.appendChild(pb);
   renderRosterEditor(body);
   body.appendChild(el("div","sec","등록 요청 알림"));
   body.appendChild(el("div","nthint","새 직원이 등록을 요청하면 관리자(같은 사람의 휴대폰·PC 모두)에게 알림이 갑니다. 안 오면 아래 버튼으로 확인하세요."));
