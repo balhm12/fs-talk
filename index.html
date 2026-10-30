@@ -1122,6 +1122,14 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 @keyframes swr{from{transform:translateX(-36px);opacity:.4}to{transform:none;opacity:1}}
 .view.swl{animation:swl .22s ease-out}.view.swr{animation:swr .22s ease-out}
 @media (prefers-reduced-motion:reduce){.view.swl,.view.swr{animation:none}}
+
+/* 팀·사무소 생산성 비교 표 */
+.kptw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
+.kpt2{min-width:560px}.kpt2 td,.kpt2 th{white-space:nowrap}
+.kpt2 tr.sub td{color:var(--sub);font-size:.93em;background:var(--soft)}.kpt2 tr.sub td.tn{padding-left:14px}
+.kpt2 tr.mine td.tn{color:#005BAC;font-weight:700}
+.kpt2 td.best{font-weight:800;color:#005BAC}.kpt2 td.good{color:#3FBA46}.kpt2 td.low{color:#E7413E}
+.kpt2 td small{font-size:.78em;font-weight:600}.kpt2 td small.up{color:#3FBA46}.kpt2 td small.down{color:#E7413E}
 </style>
 
 </head>
@@ -1328,7 +1336,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.113";
+const APP_VERSION="2026-10-30.114";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1658,7 +1666,7 @@ function start(){
   R("prefs/"+myKey+"/silfav").on("value",s=>{silFav=s.val()||{};const sr=document.querySelector(".hsilres");if(sr&&!($("hsq")||{}).value)renderSilHome(sr);if(view==="search")renderSil($("q").value);},()=>{});
   R("kpisvc").on("value",s=>{kpiSvc=s.val();renderKpi();},()=>{});
   R("kpime/"+myKey).on("value",s=>{kpiMe=s.val();renderKpi();},()=>{});
-  setTimeout(()=>{if(isAdmin||myLead())R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
+  setTimeout(()=>{if(isAdmin||myLead()||myRole()==="group")R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
   setTimeout(()=>{if(isAdmin||myLead())R("vocfu").on("value",s=>{vocFu=s.val()||{};renderVoc();},()=>{});},1500);
   setTimeout(()=>{let last=0;try{last=+localStorage.getItem("fstalk-kpi-pub")||0;}catch(e){}   // 관리자 PC: 하루 한 번 KPI 자동 갱신
     if(isAdmin&&!isM()&&kpiHasCode()&&Date.now()-last>20*3600e3&&(!kpiSvc||Date.now()-(kpiSvc.at||0)>20*3600e3))kpiPublish(false);},12000);
@@ -2190,11 +2198,20 @@ function kpiCompute(){
           const names=Object.keys(P.person||{}),sc=n=>(P.person[n].score||{})[PR]||0;
           const rank=names.slice().sort((a,b)=>sc(b)-sc(a));
           const people={};names.forEach(n=>{const pe=P.person[n],cs=(pe.case||{})[PR]||{},tn=names.filter(x=>P.person[x].team===pe.team).sort((a,b)=>sc(b)-sc(a));
-            people[n]={team:pe.team,score:sc(n),gi:(pe.grade_index||{})[PR]??null,total:(pe.total_case||{})[PR]||0,rep:cs["고장수리"]||0,pm:cs["PM"]||0,ins:cs["설치이전"]||0,cal:cs["Cal평가"]||0,etc:cs["기타"]||0,mttr:mt(pe),
+            people[n]={team:pe.team,grp:par[pe.team]||pe.team,score:sc(n),gi:(pe.grade_index||{})[PR]??null,total:(pe.total_case||{})[PR]||0,rep:cs["고장수리"]||0,pm:cs["PM"]||0,ins:cs["설치이전"]||0,cal:cs["Cal평가"]||0,etc:cs["기타"]||0,mttr:mt(pe),
               rank:rank.indexOf(n)+1,n:names.length,trank:tn.indexOf(n)+1,tn:tn.length};});
           const pick=x=>({total:x.total,rep:x.rep,pm:x.pm,idx:x.idx,ftfr:x.ftfr,rev:x.rev,mttr:x.mttr});
+          const PV="직전 년도",top=P.team_top||[],par=P.team_parent||{};
+          const tmt=o=>{const m=(o.mttr||{})[PR]||{};let s=0,k=0;groups.forEach(g=>{if(m[g]){s+=m[g].avg*m[g].n;k+=m[g].n;}});return k?Math.round(s/k*10)/10:null;};
+          const tRow=k=>{const o=P.team[k];if(!o)return null;const rv=((P.revisit||{})[k]||{}).team_total||{};
+            return {k,s:(P.team_short||{})[k]||k.replace(/^FS\s*/,""),p:par[k]||null,n:(o.members||[]).length,nc:o.n_core??null,
+              sc:(o.score_avg_core||{})[PR]??null,scP:(o.score_avg_core||{})[PV]??null,cs:(o.case_avg_core||{})[PR]??null,csP:(o.case_avg_core||{})[PV]??null,
+              gi:(o.index_avg||{})[PR]??null,rev:rv["이번년도재방문율"]??null,ftfr:rv["이번년도FTFR"]??null,mttr:tmt(o)};};
+          const teams=[];top.forEach(k=>{const r=tRow(k);if(r)teams.push(r);((P.team[k]||{}).units||[]).forEach(u=>{const x=tRow(u);if(x)teams.push(x);});});
+          const tops=teams.filter(r=>!r.p&&r.nc),W=f=>{let a=0,b=0;tops.forEach(r=>{if(r[f]!=null){a+=r[f]*r.nc;b+=r.nc;}});return b?Math.round(a/b*10)/10:null;};
+          const fsg={nc:tops.reduce((a,r)=>a+r.nc,0),sc:W("sc"),scP:W("scP"),cs:W("cs"),csP:W("csP")};
           return JSON.stringify({label:p.label,plabel:pp.label,prov:isProvisional(p.months.filter(m=>D.months.includes(m)).length?p.months.filter(m=>D.months.includes(m)):[D.months[D.months.length-1]]),
-            cur:pick(c),prev:pick(v),tg:{ftfr:TARGET_FTFR,rev:TARGET_REV,mttr:TARGET_MTTR},plabelP:(P.labels||{})[PR]||PR,people,src:(typeof SRC!=="undefined"&&SRC.at)||null});})()`);
+            cur:pick(c),prev:pick(v),tg:{ftfr:TARGET_FTFR,rev:TARGET_REV,mttr:TARGET_MTTR},plabelP:(P.labels||{})[PR]||PR,people,teams,fsg,src:(typeof SRC!=="undefined"&&SRC.at)||null});})()`);
           return fin(null,JSON.parse(out));}
       }catch(e){if(n>8&&!/undefined|null/.test(String(e.message)))return fin(e);}
       if(n>180)fin(new Error("시간 초과 — KPI 대시보드가 열리지 않았습니다"));},500);
@@ -2206,7 +2223,7 @@ const kpiPkOf=n=>{const p=rosterList().find(x=>x.name===n);return p?personKey(p.
 async function kpiPublish(manual){
   const btn=document.getElementById("kpiPubBtn");if(btn){btn.disabled=true;btn.textContent="계산 중… (30초 정도)";}
   try{const K=await kpiCompute();const at=Date.now();
-    const up={};up["kpisvc"]={at,label:String(K.label),plabel:String(K.plabel),prov:!!K.prov,cur:K.cur,prev:K.prev,tg:K.tg,by:me.name};
+    const up={};up["kpisvc"]={at,label:String(K.label),plabel:String(K.plabel),prov:!!K.prov,cur:K.cur,prev:K.prev,tg:K.tg,by:me.name,teams:K.teams||null,fsg:K.fsg||null,plabelP:String(K.plabelP||"")};
     let n=0;Object.entries(K.people).forEach(([nm,v])=>{const pk=kpiPkOf(nm);if(!pk)return;n++;up["kpime/"+pk]=Object.assign({at,label:String(K.plabelP),name:nm},v);});
     await R("").update(up);try{localStorage.setItem("fstalk-kpi-pub",String(at));}catch(e){}
     if(manual)toast("KPI를 올렸습니다 — FSG 요약 + 개인 "+n+"명");}
@@ -2225,18 +2242,40 @@ function renderKpi(){
     t("FTFR",f1(C.ftfr),"%","목표 "+T.ftfr+"% 이상",C.ftfr==null?null:C.ftfr>=T.ftfr,P.ftfr,1);
     t("재방문율",f1(C.rev),"%","목표 "+T.rev+"% 이하",C.rev==null?null:C.rev<=T.rev,P.rev,-1);
     t("MTTR",f1(C.mttr),"분","목표 "+T.mttr+"분 이하",C.mttr==null?null:C.mttr<=T.mttr,P.mttr,-1);
-    t("고장 수리",String(C.rep??"–"),"건",null,null,null,-1);t("PM",String(C.pm??"–"),"건",null,null,null,1);t("예방정비 지수",f1(C.idx),"%",null,null,P.idx,1);
+    const F=S.fsg||{};
+    t("1인당 KPI 점수",f1(F.sc),"점",F.sc==null?"KPI를 다시 올리면 보입니다":"팀장·신입 제외 · "+(F.nc||0)+"명",null,F.scP,1);
+    t("1인당 처리 건수",f1(F.cs),"건",F.cs==null?null:"부서원 KPI 기준",null,F.csP,1);
+    t("예방정비 지수",f1(C.idx),"%","PM ÷ (고장+PM)",null,P.idx,1);
     box.appendChild(g);}
   else box.appendChild(el("div","schmsg","아직 올라온 KPI가 없습니다. 관리자가 KPI 대시보드 기준으로 올리면 보입니다."));
   // 팀장: 우리 팀 / 그룹장: 팀별 비교 (개인 KPI를 모아서 — 같은 기준)
   const role=myRole(),all=kpiAll?Object.values(kpiAll).filter(r=>r&&r.name):[];
-  if(role==="lead"&&all.length){const A=kpiAgg(all.filter(r=>String(r.team||"").toUpperCase()===myTeamU()));
+  const inTeam=(r,tu)=>String(r.grp||r.team||"").toUpperCase().startsWith(tu);
+  if(role==="lead"&&all.length){const A=kpiAgg(all.filter(r=>inTeam(r,myTeamU())));
     if(A){box.appendChild(el("h3","hsub",me.team+" 팀 KPI · "+A.n+"명"));const g=el("div","kpig");const t=(lab,v,sub)=>{const c=el("div","kpit");c.appendChild(el("small",null,lab));c.appendChild(el("b",null,v));if(sub)c.appendChild(el("span","kgoal",sub));g.appendChild(c);};
       t("1인당 KPI 점수",f1(A.score));t("처리 건수",String(A.total),"고장 "+A.rep+" · PM "+A.pm+" · 설치 "+A.ins);t("평균 MTTR",A.mttr==null?"–":f1(A.mttr)+"분","팀원 평균");box.appendChild(g);}}
-  if((role==="group"||isAdmin)&&all.length){const teams=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH"];box.appendChild(el("h3","hsub","팀별 비교"));
-    const tb=el("table","kpt");const hr=el("tr");["팀","인원","1인당 점수","건수","고장","PM","MTTR"].forEach(h=>hr.appendChild(el("th",null,h)));tb.appendChild(hr);
-    teams.forEach(tn=>{const A=kpiAgg(all.filter(r=>String(r.team||"").toUpperCase()===tn));if(!A)return;const tr=el("tr");[tn.replace("FS ",""),A.n,f1(A.score),A.total,A.rep,A.pm,A.mttr==null?"–":f1(A.mttr)].forEach(v=>tr.appendChild(el("td",null,String(v))));tb.appendChild(tr);});
-    box.appendChild(tb);}
+  if(role==="group"||isAdmin||role==="lead"){const TS=(S&&Array.isArray(S.teams))?S.teams:null;
+    if(TS&&TS.length){box.appendChild(el("h3","hsub","팀·사무소 1인당 생산성 비교"));
+      const wrap=el("div","kptw");const tb=el("table","kpt kpt2");const hr=el("tr");
+      [["팀",""],["인원","비교 인원"],["1인당 점수","KPI 종합 점수 ÷ 비교 인원"],["보정 지수","직급 보정 지수 — 같은 직급 FSG 중앙값 = 100"],["1인당 건수",""],["재방문율",""],["FTFR",""],["MTTR",""]].forEach(h=>{const th=el("th",null,h[0]);if(h[1])th.title=h[1];hr.appendChild(th);});tb.appendChild(hr);
+      const best=f=>{const v=TS.filter(r=>!r.p&&r[f]!=null).map(r=>r[f]);return v.length?Math.max(...v):null;};const bS=best("sc"),bG=best("gi");
+      const myU=myTeamU();
+      TS.forEach(r=>{const tr=el("tr",r.p?"sub":"");if(String(r.p||r.k).toUpperCase()===myU)tr.classList.add("mine");
+        const nm=r.p?"└ "+String(r.s).split(" ").pop():r.s;const td=(v,cls)=>{const c=el("td",cls||null,v);tr.appendChild(c);return c;};
+        td(nm,"tn");td(r.n+(r.nc!=null&&r.nc!==r.n?" ("+r.nc+")":""));
+        const sc=td(f1(r.sc));if(!r.p&&r.sc!=null&&r.sc===bS)sc.classList.add("best");
+        if(r.scP!=null&&r.sc!=null&&Math.abs(r.sc-r.scP)>=0.05){const d=r.sc-r.scP;sc.appendChild(el("small",d>0?"up":"down",(d>0?" ▲":" ▼")+Math.abs(d).toFixed(1)));}
+        const gi=td(r.gi==null?"–":f1(r.gi));if(r.gi!=null)gi.classList.add(r.gi>=100?"good":"low");if(!r.p&&r.gi!=null&&r.gi===bG)gi.classList.add("best");
+        td(f1(r.cs));
+        const rv=td(r.rev==null?"–":f1(r.rev)+"%");if(r.rev!=null&&S.tg)rv.classList.add(r.rev<=S.tg.rev?"good":"low");
+        const ft=td(r.ftfr==null?"–":f1(r.ftfr)+"%");if(r.ftfr!=null&&S.tg)ft.classList.add(r.ftfr>=S.tg.ftfr?"good":"low");
+        td(r.mttr==null?"–":f1(r.mttr)+"분");tb.appendChild(tr);});
+      wrap.appendChild(tb);box.appendChild(wrap);
+      box.appendChild(el("div","hsoon",String(S.plabelP||"")+" · 팀장·신입은 1인당 값에서 제외(괄호 = 비교 인원) · 사무소는 팀 안 참고 · ▲▼ = 비교 기간 대비 · KPI 대시보드 부서원 KPI와 같은 기준"));}
+    else if(role!=="lead"&&all.length){const teams=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH"];box.appendChild(el("h3","hsub","팀별 비교"));
+      const tb=el("table","kpt");const hr=el("tr");["팀","인원","1인당 점수","1인당 건수","MTTR"].forEach(h=>hr.appendChild(el("th",null,h)));tb.appendChild(hr);
+      teams.forEach(tn=>{const A=kpiAgg(all.filter(r=>inTeam(r,tn)));if(!A)return;const tr=el("tr");[tn.replace("FS ",""),A.n,f1(A.score),f1(A.total/A.n),A.mttr==null?"–":f1(A.mttr)].forEach(v=>tr.appendChild(el("td",null,String(v))));tb.appendChild(tr);});
+      box.appendChild(tb);if(isAdmin)box.appendChild(el("div","hsoon","「KPI 다시 올리기」를 한 번 누르면 사무소별·직급 보정 지수·재방문율까지 보입니다."));}}
   // 개인 KPI
   const M=kpiMe;
   if(M){const h=el("h3","hsub","내 KPI · "+String(M.label||"이번 년도"));box.appendChild(h);
@@ -2257,7 +2296,7 @@ function openKpiPeople(){
   R("kpime").once("value").then(s=>{const v=s.val()||{};L.textContent="";const myT=me.team;
     const rows=Object.values(v).filter(r=>r&&r.name&&(isAdmin||me.team==="FSG"||rosterList().some(p=>p.name===r.name&&p.team===myT))).sort((a,b)=>(b.score||0)-(a.score||0));
     if(!rows.length){L.appendChild(el("p","hp","올라온 KPI가 없습니다."));return;}
-    const t=el("table","kpt");const hr=el("tr");["이름","팀","KPI 점수","직급 보정","건수","고장","PM","MTTR"].forEach(h=>hr.appendChild(el("th",null,h)));t.appendChild(hr);
+    const t=el("table","kpt");const hr=el("tr");["이름","팀·사무소","KPI 점수","직급 보정","건수","고장","PM","MTTR"].forEach(h=>hr.appendChild(el("th",null,h)));t.appendChild(hr);
     rows.forEach(r=>{const tr=el("tr");[r.name,String(r.team||"").replace("FS ",""),(+r.score||0).toFixed(1),r.gi==null?"–":(+r.gi).toFixed(1),r.total||0,r.rep||0,r.pm||0,r.mttr==null?"–":(+r.mttr).toFixed(1)].forEach(v=>tr.appendChild(el("td",null,String(v))));t.appendChild(tr);});
     L.appendChild(t);L.appendChild(el("div","hsoon",String(rows[0].label||"")+" · KPI 대시보드 기준"));}).catch(e=>{L.textContent="";L.appendChild(el("p","hp","볼 수 없습니다 ("+(e.code||e.message)+")"));});
 }
