@@ -12,7 +12,7 @@ firebase.initializeApp({
 });
 firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
 
-const CACHE = "fstalk-v4";   // v4: 이름 FS 포털 — 새 manifest를 받도록
+const CACHE = "fstalk-v5";   // v5: 디자인 v3(웹폰트)
 const META = "fstalk-meta";   // 앱 아이콘 숫자(안 읽은 수) 보관 — 캐시 정리 때 지우지 않음
 
 // 앱이 꺼져 있을 때 알림이 오면 앱 아이콘 숫자 +1 (앱을 열면 정확한 수로 다시 맞춤)
