@@ -1,3 +1,5 @@
+// ⚠ 이 파일은 GitHub(balhm12/fs-talk) apps-script/notify.gs 가 원본입니다. main 에 올라가면 GitHub Actions가 자동으로 붙여 넣고 새 버전으로 배포합니다.
+//   편집기에서 직접 고치면 다음 자동 배포 때 덮어써집니다 — 고칠 내용은 저장소에서 고치세요.
 /**
  * FS Talk 알림 발송기 (Google Apps Script 웹앱)
  * 앱이 메시지를 저장한 뒤 이 웹앱을 호출 → 보낸 사람 확인 → 방 참여자의 기기로 FCM 알림 발송
