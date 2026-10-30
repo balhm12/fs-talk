@@ -1189,6 +1189,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 .stag.p{background:#FEF9C3;color:#854D0E}html[data-theme=dark] .stag.p{background:#3A3410;color:#F5D76E}
 .tnmsg .bubble{box-shadow:inset 3px 0 0 #E69E0B}.tnmsg .bubble::before{content:"팀 공지";display:block;font-size:11px;font-weight:800;color:#B26100;margin-bottom:2px}
 .silchip.sug{border-style:dashed;border-color:#E69E0B;color:#9A6400;background:#FFF8EA}html[data-theme=dark] .silchip.sug{background:#2E2614;color:#F2C46B}
+.silchip.sug.done{border-style:solid;border-color:#3FBA46;color:#2E8B35;background:#EAF7EB}
 </style>
 
 </head>
@@ -1397,7 +1398,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.136";
+const APP_VERSION="2026-10-31.137";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2736,6 +2737,7 @@ function openWorkForm(pre){
   const d2=fld("끝나는 날 (하루면 비워 두기)",el("input"));d2.type="date";d2.value=pre.d2||"";
   const part=fld("시간",el("select"));[["all","종일"],["am","오전"],["pm","오후"]].forEach(([k,l])=>{const o=el("option",null,l);o.value=k;part.appendChild(o);});
   const det=fld("내용 (선택 — 예: XN 교육)",el("input"));det.maxLength=40;det.value=pre.det||"";
+  if(pre.part&&[...part.options].some(o=>o.value===pre.part))part.value=pre.part;
   const sync=()=>{const t=WK_TYPES.find(w=>w[0]===ty.value);part.parentNode.hidden=t[2]!=="pick";det.parentNode.hidden=!(ty.value==="교육"||ty.value==="회의");};ty.onchange=sync;sync();
   const ok=el("button","btn pri","근무일정표에 저장");c.appendChild(ok);
   ok.onclick=async()=>{const t=WK_TYPES.find(w=>w[0]===ty.value),grp=t[2]==="pick"?part.value:t[2];
@@ -2751,7 +2753,7 @@ function openWorkForm(pre){
         const next=Object.assign({night:"",weekend:"",am1:"",am2:"",pm1:"",pm2:""},cur);const meta=Object.assign({},cur.meta||{});
         slots.forEach(k=>{if(next[k]!==val){next[k]=val;meta[k]={by:me.name,at:st};}});next.meta=meta;next.by=me.name;next.at=st;
         await schPut(path,next);n++;}
-      toast("근무일정표에 "+n+"일 저장했습니다.");closeProfile();schLoad(true);}
+      toast("근무일정표에 "+n+"일 저장했습니다.");closeProfile();schLoad(true);if(pre.onDone)pre.onDone();}
     catch(e){toast((n?n+"일 저장 후 ":"")+"실패: "+e.message);ok.disabled=false;ok.textContent="근무일정표에 저장";}};
   $("pOv").hidden=false;
 }
@@ -2776,32 +2778,61 @@ function openInstallForm(pre){
     const ev={id,category:cat.value,start,end,title,device:dv.value.trim()||null,team:tm.value||null,assignee:as.value.trim()||null,creator:me.name,createdAt:now,updatedAt:now};
     if(!confirm((cat.options[cat.selectedIndex].text)+" · "+title+"\n"+start+(end!==start?" ~ "+end:"")+(ev.device?"\n"+ev.device:"")+"\n\n설치일정표에 등록할까요?"))return;
     ok.disabled=true;ok.textContent="등록 중…";
-    try{await schPut("schedule-overrides/custom/"+id,ev);toast("설치일정표에 등록했습니다.");closeProfile();schLoad(true);}
+    try{await schPut("schedule-overrides/custom/"+id,ev);toast("설치일정표에 등록했습니다.");closeProfile();schLoad(true);if(pre.onDone)pre.onDone();}
     catch(e){toast("실패: "+e.message);ok.disabled=false;ok.textContent="설치일정표에 등록";}};
   $("pOv").hidden=false;
 }
 /* 대화에서: 「/휴가 11/3」「/교육 11/5 XN」「/설치 11/10~11/12 삼성서울병원 XR-9100」 → 등록 화면을 채워서 엶 */
-function schParseDates(t){const y=new Date().getFullYear(),pad=n=>String(n).padStart(2,"0");
-  const tm=/(오늘|내일|모레)/.exec(t);if(tm){const d=schAdd(ymd(new Date()),{오늘:0,내일:1,모레:2}[tm[1]]);return {d1:d,rest:t.replace(tm[0],"")};}
+function schParseDates(t){t=String(t||"");const now=new Date(),pad2=n=>String(n).padStart(2,"0");
+  const tm=/(오늘|내일|모레)/.exec(t);if(tm){const d=schAdd(ymd(now),{오늘:0,내일:1,모레:2}[tm[1]]);return {d1:d,rest:t.replace(tm[0],"")};}
   const kd=/(\d{1,2})\s*월\s*(\d{1,2})\s*일/.exec(t);if(kd)t=t.replace(kd[0],kd[1]+"/"+kd[2]);   // 「11월 3일」도
-  const m=/(\d{1,2})[\/.](\d{1,2})(?:\s*[~\-]\s*(?:(\d{1,2})[\/.])?(\d{1,2}))?/.exec(t);if(!m)return {rest:t};
-  const d1=y+"-"+pad(m[1])+"-"+pad(m[2]);let d2="";if(m[4])d2=y+"-"+pad(m[3]||m[1])+"-"+pad(m[4]);return {d1,d2,rest:t.replace(m[0],"")};}
-/* 대화 속 일정 얘기 → 「일정 등록」 칩: 날짜 + 휴가·교육·회의·내근·DP(내 글만) / 설치·이전·평가(누구 글이든) → 미리 채운 등록 창 */
+  // 날짜 = 월/일 또는 월.일 — 소수(2.5배)·분수(1/2)·버전(v2.1)·시각과 헷갈리지 않게 앞뒤가 숫자·점이 아니고 실제 있는 날짜만
+  const re=/(^|[^\d.\/v])(\d{1,2})[\/.](\d{1,2})(?:\s*[~\-]\s*(?:(\d{1,2})[\/.])?(\d{1,2}))?(?![\d.]|\s*(?:배|%|시간|개|대|건|명|원|kg|ml|mm|cm|정도|만큼|씩|분량|가량|쯤\s*남))/i;
+  const m=re.exec(t);if(!m)return {rest:t};
+  const ok=(mo,da)=>mo>=1&&mo<=12&&da>=1&&da<=31&&new Date(2024,mo-1,da).getMonth()===mo-1;
+  const mo=+m[2],da=+m[3];if(!ok(mo,da))return {rest:t};
+  const yr=mo<now.getMonth()+1-2?now.getFullYear()+1:now.getFullYear();   // 12월에 「1/5」 = 다음 해
+  const d1=yr+"-"+pad2(mo)+"-"+pad2(da);let d2="";
+  if(m[5]){const mo2=+(m[4]||m[2]),da2=+m[5];if(ok(mo2,da2)){d2=(mo2<mo?yr+1:yr)+"-"+pad2(mo2)+"-"+pad2(da2);if(d2<d1)d2="";}}
+  return {d1,d2,rest:t.replace(m[0],m[1])};}
+/* 대화 속 일정 얘기 → 「일정 등록」 칩 판단(순수 함수 — 시험 가능)
+   opt={mine:내 글인지, today:"YYYY-MM-DD", me:내 이름, names:명단 이름들}
+   근무(휴가·교육·회의·내근·DP)는 내 글 + 다른 사람 이름이 없을 때만, 설치·이전설치·평가·데모는 병원 이름이나 장비가 있을 때만.
+   질문·취소·부정·지난 날짜는 제안하지 않음 */
+function schSuggestParse(text,opt){
+  const t=String(text||"").replace(/\s+/g," ").trim().slice(0,300);if(!t||t.startsWith("/"))return null;
+  if(/[?？]|취소|못\s?(가|해|할)|안\s?(가|해|할|됨|돼)|않|미정|가능할까|될까|되나요|어때|어떨|했었|했습니다|했어요|완료|끝났|다녀왔/.test(t))return null;
+  const p=schParseDates(t);if(!p.d1)return null;
+  const today=opt.today;if(p.d1<today||p.d1>schAdd(today,180))return null;
+  const rest=String(p.rest||"");
+  const inst=/(이전\s?설치|장비\s?이전|이설|설치|데모|평가)/.exec(rest);
+  if(inst){let k=inst[1].replace(/\s+/g,"");k=/이전|이설/.test(k)?"이전":k;
+    if(k==="평가"&&/(인사|성과|고과|역량|다면|업무)\s?평가/.test(rest))return null;
+    const ws=rest.replace(inst[0]," ").replace(/[,.!~·()]/g," ").split(/\s+/).filter(Boolean);
+    const title=ws.find(x=>/(병원|의료원|의원|센터|연구소|재단|대학|검진|랩|LAB|Lab)/.test(x))||"";
+    const device=ws.find(x=>/^(XN|XR|XS|XE|XT|XQ|XP|UF|UC|UN|UD|CN|CS|CA|SP|HISCL|HLC|BT|DI|CF|SA|RU|TS|G11)[-\dA-Z]*$/i.test(x))||"";
+    if(!title&&!device)return null;   // 병원·장비 없이 「설치」만 있으면 다른 뜻일 수 있음
+    return {kind:"inst",k,d1:p.d1,d2:p.d2,title,device};}
+  if(!opt.mine)return null;
+  const wk=/(오전\s?(?:휴가|반차)|오후\s?(?:휴가|반차)|반차|휴가|연차|교육|회의|내근|DP)/.exec(rest);if(!wk)return null;
+  if((opt.names||[]).some(n=>n&&n!==opt.me&&rest.includes(n)))return null;   // 다른 사람 일정 이야기
+  let k=wk[1].replace(/\s+/g,"");k=k==="반차"?"오전휴가":k.replace("반차","휴가").replace("연차","휴가");
+  const det=/(교육|회의)/.test(k)?rest.replace(wk[0]," ").replace(/(저|제가|저는|있습니다|있어요|있음|예정|입니다|갑니다|가요|참석|합니다|해요|에|은|는|이|가)(?=\s|$)/g," ").replace(/[,.!~]/g," ").split(/\s+/).filter(x=>x.length>1).slice(0,2).join(" "):"";
+  const hh=/(\d{1,2}):\d{2}/.exec(rest),part=/오전/.test(rest)&&!/오전\s?(휴가|반차)/.test(rest)?"am":/오후/.test(rest)&&!/오후\s?(휴가|반차)/.test(rest)?"pm":hh?(+hh[1]<12?"am":"pm"):"";   // 회의·교육·내근 시간대
+  return {kind:"work",k,d1:p.d1,d2:p.d2,det,part};
+}
 function schSuggest(m){
-  if(!m||!m.text||m.text.trim().startsWith("/")||Date.now()-(m.ts||0)>2*864e5)return null;
-  const t=String(m.text).slice(0,300),p=schParseDates(t);if(!p.d1)return null;
-  const today=ymd(new Date());if(p.d1<today)return null;
-  let kind=null,k=null;
-  const wk=/(오전\s*(?:휴가|반차)|오후\s*(?:휴가|반차)|휴가|연차|교육|회의|내근|DP)/.exec(t),ik=/(설치|이전|평가|데모)/.exec(t);
-  if(ik){kind="inst";k=ik[1];}else if(wk&&isMine(m)){kind="work";k=wk[1].replace(/\s+/g,"").replace("반차","휴가").replace("연차","휴가");}
-  if(!kind)return null;
-  const w=el("div","silchips");const b=el("button","silchip sch sug");b.appendChild(icEl("calendar","",13));
+  if(!m||!m.text||Date.now()-(m.ts||0)>2*864e5)return null;
+  const S=schSuggestParse(m.text,{mine:isMine(m),today:ymd(new Date()),me:me&&me.name,names:rosterList().map(p=>p.name)});if(!S)return null;
+  const done=(()=>{try{return JSON.parse(localStorage.getItem("fstalk-sugdone")||"{}");}catch(e){return {};}})();
+  const w=el("div","silchips");const b=el("button","silchip sch sug"+(done[m.id]?" done":""));b.appendChild(icEl("calendar","",13));
   const md=d=>(+d.slice(5,7))+"/"+(+d.slice(8,10));
-  b.appendChild(el("span",null,"일정 등록 · "+md(p.d1)+(p.d2?"~"+md(p.d2):"")+" "+k+" ›"));b.title="눌러서 바로 등록(미리 채워진 등록 창)";
-  b.onclick=ev=>{ev.stopPropagation();const rest=String(p.rest||"").replace(k,"").replace(/[,.!?]/g," ");
-    if(kind==="work")openWorkForm({k,d1:p.d1,d2:p.d2,det:/(교육|회의)/.test(k)?rest.trim().split(/\s+/).filter(x=>x.length>1).slice(0,2).join(" "):""});
-    else{const ws=rest.split(/\s+/).filter(Boolean);const title=ws.find(x=>/(병원|의료원|의원|센터|연구소|재단|대학)/.test(x))||"";const device=ws.find(x=>/^[A-Za-z]{1,5}-?\d/.test(x))||"";
-      openInstallForm({cat:{설치:"install",이전:"relocation",평가:"evaluation",데모:"demo"}[k],d1:p.d1,d2:p.d2,title,device});}};
+  b.appendChild(el("span",null,(done[m.id]?"등록함 ✓ · ":"일정 등록 · ")+md(S.d1)+(S.d2?"~"+md(S.d2):"")+" "+S.k+(S.kind==="inst"&&S.title?" · "+S.title.slice(0,12):"")+(done[m.id]?"":" ›")));
+  b.title=done[m.id]?"이 기기에서 이미 등록했어요(다시 누르면 또 등록 창)":"눌러서 바로 등록(미리 채워진 등록 창 — 확인 후 저장)";
+  const onDone=()=>{try{const d=JSON.parse(localStorage.getItem("fstalk-sugdone")||"{}");d[m.id]=Date.now();Object.keys(d).forEach(k=>{if(Date.now()-d[k]>7*864e5)delete d[k];});localStorage.setItem("fstalk-sugdone",JSON.stringify(d));}catch(e){}schedule();};
+  b.onclick=ev=>{ev.stopPropagation();
+    if(S.kind==="work")openWorkForm({k:S.k,d1:S.d1,d2:S.d2,det:S.det,part:S.part,onDone});
+    else openInstallForm({cat:{설치:"install",이전:"relocation",평가:"evaluation",데모:"demo"}[S.k],d1:S.d1,d2:S.d2,title:S.title,device:S.device,onDone});};
   w.appendChild(b);return w;
 }
 function slashSchedule(text){
