@@ -1358,7 +1358,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.119";
+const APP_VERSION="2026-10-30.120";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2226,7 +2226,7 @@ function kpiCompute(){
           const names=Object.keys(P.person||{}),sc=n=>(P.person[n].score||{})[PR]||0;
           const rank=names.slice().sort((a,b)=>sc(b)-sc(a));
           const people={};names.forEach(n=>{const pe=P.person[n],cs=(pe.case||{})[PR]||{},tn=names.filter(x=>P.person[x].team===pe.team).sort((a,b)=>sc(b)-sc(a));
-            people[n]={team:pe.team,grp:par[pe.team]||pe.team,score:sc(n),gi:(pe.grade_index||{})[PR]??null,total:(pe.total_case||{})[PR]||0,rep:cs["고장수리"]||0,pm:cs["PM"]||0,ins:cs["설치이전"]||0,cal:cs["Cal평가"]||0,etc:cs["기타"]||0,mttr:mt(pe),
+            people[n]={team:pe.team,grp:(P.team_parent||{})[pe.team]||pe.team,score:sc(n),gi:(pe.grade_index||{})[PR]??null,total:(pe.total_case||{})[PR]||0,rep:cs["고장수리"]||0,pm:cs["PM"]||0,ins:cs["설치이전"]||0,cal:cs["Cal평가"]||0,etc:cs["기타"]||0,mttr:mt(pe),
               rank:rank.indexOf(n)+1,n:names.length,trank:tn.indexOf(n)+1,tn:tn.length};});
           const pick=x=>({total:x.total,rep:x.rep,pm:x.pm,idx:x.idx,ftfr:x.ftfr,rev:x.rev,mttr:x.mttr});
           const PV="직전 년도",top=P.team_top||[],par=P.team_parent||{};
