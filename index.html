@@ -1116,6 +1116,12 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 .scanrow{display:flex;gap:8px;margin:6px 0}.scanrow .btn{flex:1}
 .scanman{display:flex;gap:8px;margin-top:6px}.scanman input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;background:var(--panel);color:var(--strong)}
 .scanman .btn{width:auto;margin:0;padding:0 16px}
+
+/* 좌우 밀기 탭 이동 */
+@keyframes swl{from{transform:translateX(36px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes swr{from{transform:translateX(-36px);opacity:.4}to{transform:none;opacity:1}}
+.view.swl{animation:swl .22s ease-out}.view.swr{animation:swr .22s ease-out}
+@media (prefers-reduced-motion:reduce){.view.swl,.view.swr{animation:none}}
 </style>
 
 </head>
@@ -1322,7 +1328,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.112";
+const APP_VERSION="2026-10-30.113";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2836,6 +2842,24 @@ async function openScan(){
     try{const r=await d.detect(vd);if(r&&r.length&&scanStream){scanDone(r[0].rawValue);return;}}catch(e){}busy=false;};
   scanRaf=requestAnimationFrame(tick);
 }
+/* ===== 휴대폰: 좌우로 밀어 아래 탭 이동 (홈 ↔ 대화 ↔ 조직도 ↔ 검색 ↔ 저장 ↔ 관리) =====
+   대화방 안·팝업·입력칸·가로로 스크롤되는 줄(칩·표)·화면 가장자리(아이폰 뒤로 가기 제스처)에서는 동작하지 않는다. */
+(function(){const TABS=[["home","tHome"],["","tChat"],["org","tOrg"],["search","tSearch"],["saved","tSaved"],["admin","tAdmin"]];
+  let sx=0,sy=0,st=0,ok=false;
+  const cur=()=>{const h=curHash();return TABS.findIndex(t=>t[0]===h);};
+  const xscroll=n=>{for(;n&&n!==document.body;n=n.parentElement){if(n.matches&&n.matches("input,textarea,select,video,iframe,[contenteditable],.tabbar"))return true;
+    if(n.scrollWidth>n.clientWidth+4){const o=getComputedStyle(n).overflowX;if(o==="auto"||o==="scroll")return true;}}return false;};
+  document.addEventListener("touchstart",e=>{ok=false;if(!isM()||e.touches.length!==1)return;const t=e.touches[0];
+    if(t.clientX<28||t.clientX>innerWidth-28)return;if(!$("pOv").hidden||!$("actOv").hidden)return;if(cur()<0||xscroll(e.target))return;
+    sx=t.clientX;sy=t.clientY;st=Date.now();ok=true;},{passive:true});
+  document.addEventListener("touchend",e=>{if(!ok)return;ok=false;const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Date.now()-st>700||Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*2)return;
+    const vis=TABS.filter(x=>{const b=$(x[1]);return b&&!b.hidden;});const i=vis.findIndex(x=>x[0]===curHash());if(i<0)return;
+    const n=vis[i+(dx<0?1:-1)];if(!n)return;
+    if(n[0]===""){listTab="rooms";$("lq").value="";}
+    go(n[0]);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}
+    document.querySelectorAll(".view").forEach(v=>{if(v.offsetParent!==null){v.classList.remove("swl","swr");void v.offsetWidth;v.classList.add(dx<0?"swl":"swr");setTimeout(()=>v.classList.remove("swl","swr"),260);}});
+  },{passive:true});})();
 /* ===== 휴대폰: 홈을 아래로 당겨서 새로고침 (일정·만족도·KPI·게시판 다시 받기) ===== */
 (function(){let y0=null,dy=0,ind=null;const H=()=>document.querySelector("#homeView .home");
   document.addEventListener("touchstart",e=>{const h=H();if(view!=="home"||!h||h.scrollTop>0||!e.touches[0]||!h.contains(e.target))return;y0=e.touches[0].clientY;dy=0;},{passive:true});
