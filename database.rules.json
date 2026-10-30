@@ -263,6 +263,50 @@
           },
           "digest": {
             ".validate": "newData.isBoolean()"
+          },
+          "links": {
+            ".validate": "newData.isString() && newData.val().length <= 400"
+          },
+          "noti": {
+            "all": {
+              ".validate": "newData.isNumber()"
+            },
+            "ids": {
+              "$id": {
+                ".validate": "newData.isBoolean()"
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "silfav": {
+            "$k": {
+              ".validate": "newData.hasChildren(['d','t'])",
+              "d": {
+                ".validate": "newData.isString() && newData.val().length <= 40"
+              },
+              "p": {
+                ".validate": "newData.isNumber()"
+              },
+              "i": {
+                ".validate": "newData.isNumber()"
+              },
+              "t": {
+                ".validate": "newData.isString() && newData.val().length <= 120"
+              },
+              "ts": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "bfav": {
+            "$id": {
+              ".validate": "newData.isBoolean()"
+            }
           }
         }
       },
@@ -396,6 +440,36 @@
               ".validate": false
             }
           }
+        }
+      },
+      "vocfu": {
+        ".read": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
+        "$k": {
+          ".write": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
+          ".validate": "newData.hasChildren(['s','by','ts'])",
+          "s": {
+            ".validate": "newData.val() === 'doing' || newData.val() === 'done'"
+          },
+          "by": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "ts": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "kpisvc": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
+      },
+      "kpime": {
+        ".read": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
+        "$p": {
+          ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())",
+          ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
         }
       }
     }
