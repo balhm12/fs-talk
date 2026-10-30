@@ -1,0 +1,28 @@
+# database.rules.json 이 바뀌어 main 에 올라오면 fs-talk-fa383 에 규칙을 자동 게시한다.
+# 필요한 비밀값(Settings > Secrets and variables > Actions): FIREBASE_SERVICE_ACCOUNT (서비스 계정 키 JSON 전체)
+name: Deploy DB rules
+on:
+  push:
+    branches: [main]
+    paths: [database.rules.json]
+  workflow_dispatch:
+concurrency: deploy-rules
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    if: github.repository == 'balhm12/fs-talk'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: 규칙 JSON 확인
+        run: node -e "JSON.parse(require('fs').readFileSync('database.rules.json','utf8'));console.log('rules JSON ok')"
+      - name: 규칙 게시 (fs-talk-fa383)
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "::error::FIREBASE_SERVICE_ACCOUNT 비밀값이 없습니다"; exit 1; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx -y firebase-tools@13 deploy --only database --project fs-talk-fa383 --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

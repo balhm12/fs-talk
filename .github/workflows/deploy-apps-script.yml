@@ -1,0 +1,40 @@
+# apps-script/notify.gs 가 바뀌어 main 에 올라오면 「FS TALK 알림」 Apps Script 에 코드를 올리고
+# 기존 웹앱 배포(같은 URL)를 새 버전으로 바꾼다.
+# 필요한 비밀값: CLASPRC_JSON (PC에서 clasp login 후 .clasprc.json 내용), SCRIPT_ID, DEPLOYMENT_ID
+name: Deploy Apps Script
+on:
+  push:
+    branches: [main]
+    paths: [apps-script/notify.gs]
+  workflow_dispatch:
+concurrency: deploy-apps-script
+jobs:
+  gas:
+    runs-on: ubuntu-latest
+    if: github.repository == 'balhm12/fs-talk'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: 문법 확인
+        run: node -e "new Function(require('fs').readFileSync('apps-script/notify.gs','utf8'));console.log('syntax ok')"
+      - name: 올리기 · 새 버전 배포
+        env:
+          CLASPRC: ${{ secrets.CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
+        run: |
+          for v in CLASPRC SCRIPT_ID DEPLOYMENT_ID; do if [ -z "${!v}" ]; then echo "::error::$v 비밀값이 없습니다"; exit 1; fi; done
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+          npm i -g @google/clasp@2.4.2 >/dev/null
+          mkdir -p gas && cd gas
+          printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
+          clasp pull                       # 지금 프로젝트의 appsscript.json(설정)을 그대로 쓰기 위해 먼저 받음
+          ls
+          # 코드 파일은 notify.gs 하나만 — 편집기의 Code.gs 를 교체
+          find . -maxdepth 1 \( -name '*.js' -o -name '*.gs' \) -delete
+          cp ../apps-script/notify.gs Code.js
+          clasp push -f
+          VER=$(grep -o "NOTIFY_VER = '[^']*'" Code.js | cut -d"'" -f2)
+          clasp deploy -i "$DEPLOYMENT_ID" -d "${VER:-auto} · ${GITHUB_SHA::7}"
+          rm -f ~/.clasprc.json
