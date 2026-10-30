@@ -1062,7 +1062,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.89";
+const APP_VERSION="2026-10-30.90";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1381,6 +1381,7 @@ function start(){
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();renderNav();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
+  R("prefs/"+myKey+"/digest").on("value",s=>{myDigest=s.val()!==false;if(view==="settings")renderSettings();},()=>{});
   setTimeout(()=>{silRecall().then(k=>{silChecked=true;if(k){silKey=k;silLoad().catch(()=>{});}else{silErr="locked";silStatus();}}).catch(e=>{silChecked=true;silErr=e.message||"연결 실패";silStatus();});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
   try{const k="fstalk-seen-day",d=ymd(new Date());if(localStorage.getItem(k)!==d){R("seen/"+uid).set(SV).then(()=>{try{localStorage.setItem(k,d);}catch(e){}}).catch(()=>{});}}catch(e){}   // 관리 화면의 「마지막 사용」 (하루 한 번)
   R("board").on("value",s=>{board=s.val()||{};renderBoardCards();if(view==="search")renderExt($("q").value);},()=>{});
@@ -1666,7 +1667,7 @@ let homeBuilt="";
 const SCH={db:"https://sysmex-system-schedule-default-rtdb.firebaseio.com",key:"AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8",tk:"fstalk-sch-auth",bk:"fstalk-sch-base"};
 const SCH_TEAMS=[["west","WEST"],["east","EAST"],["central","CENTRAL"],["south","SOUTH"],["fss","FSS"],["fsom","FSOM"]];
 const SCH_CAT={install:["설치","#005BAC"],relocation:["이전","#00B8EE"],evaluation:["평가","#3FBA46"],demo:["데모","#E69E0B"],education:["교육","#7E49DC"]};
-let schData=null,schAt=0,schP=null,schErr="",schStale=false,schBaseWarn=false;
+let myDigest=true,schData=null,schAt=0,schP=null,schErr="",schStale=false,schBaseWarn=false;
 try{const c=JSON.parse(localStorage.getItem("fstalk-sch-cache")||"null");if(c&&c.d&&c.d.today===ymd(new Date())){schData=c.d;schAt=c.at;schStale=true;}}catch(e){}   // 지난번 받은 오늘 일정 — 바로 보여 주고 뒤에서 새로 받음
 const schTeamKey=t=>({"FS WEST":"west","FS EAST":"east","FS CENTRAL":"central","FS SOUTH":"south","FSS TEAM":"fss","FSOM TEAM":"fsom"})[String(t||"").toUpperCase()]||"";
 let schScope="all";try{schScope=localStorage.getItem("fstalk-sch-scope")||"all";}catch(e){}
@@ -3662,6 +3663,9 @@ function renderSettings(){
   else{
     const sw=el("button","switch"+(myMute._all?"":" on"));sw.setAttribute("role","switch");sw.setAttribute("aria-checked",myMute._all?"false":"true");sw.onclick=async e=>{e.stopPropagation();await setMute("_all",!myMute._all);renderSettings();};
     setRow(c,myMute._all?"bellOff":"bell","이 기기 알림",myMute._all?"모든 대화방 알림이 꺼져 있어요":"방별로 끄려면 대화방 ☰ 정보에서",null,sw);
+    const dw=el("button","switch"+(myDigest?" on":""));dw.setAttribute("role","switch");dw.setAttribute("aria-checked",myDigest?"true":"false");
+    dw.onclick=async e=>{e.stopPropagation();try{await R("prefs/"+myKey+"/digest").set(!myDigest);}catch(er){toast("저장 실패: "+(er.code||er.message));}};
+    setRow(c,"calendar","아침 근무 알림",myDigest?"오늘 석간·석/야·당직, 내일 당직이 있으면 아침 7시대에 알려 드려요":"꺼짐",null,dw);
   }
   // 화면
   c=setSec(wrap,"화면");
@@ -3673,7 +3677,7 @@ function renderSettings(){
   setRow(c,"lock","화면 잠금",lc?"켜짐 · PIN"+(lc.cred?" · 생체 인증":"")+" · "+LOCK_DELAY_LABEL[lc.delay||0]:"꺼짐 · 이 기기에서 PIN(지문·얼굴)으로 잠그기",()=>openLockSettings());
   // 바로가기
   c=setSec(wrap,"바로가기");
-  [["box","설치일정","https://balhm12.github.io/Sysmex-schedule/index.html"],["calendar","근무일정","https://balhm12.github.io/Sysmex-schedule/work-schedule.html"],["compass","실마리 · Sysmex TS Guide","https://balhm12.github.io/sysmex-ts/"],["sysgrid","전국시스템","https://sysmex-system-configuration.web.app/"]].forEach(([i,t,u])=>setRow(c,i,t,"새 창으로 열기",()=>window.open(u,"_blank","noopener")));
+  [["box","설치일정","https://balhm12.github.io/Sysmex-schedule/index.html"],["calendar","근무일정","https://balhm12.github.io/Sysmex-schedule/work-schedule.html"],["compass","실마리 · Sysmex TS Guide","https://balhm12.github.io/sysmex-ts/"],["sysgrid","전국시스템","https://sysmex-system-configuration.web.app/"],["star","고객 만족도",LINKS.voc]].forEach(([i,t,u])=>setRow(c,i,t,"새 창으로 열기",()=>window.open(u,"_blank","noopener")));
   // 앱 정보
   c=setSec(wrap,"앱 정보");
   setRow(c,"info","버전",null,null,APP_VERSION);

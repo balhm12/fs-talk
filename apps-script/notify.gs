@@ -97,7 +97,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v16';
+const NOTIFY_VER = 'v17';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -530,4 +530,77 @@ function dbPut_(path, val){
 }
 function dbPatch_(path, val){
   UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'patch',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
+}
+
+/* ===== v17: 아침 근무 알림 — 설치·근무일정표(sysmex-system-schedule)를 「읽기만」 해서
+   오늘 내 근무(석간·석/야·당직·교육)나 내일 당직·야간이 있는 사람에게만 아침에 한 번 푸시.
+   일정표 DB는 익명 인증으로 읽는다(그 저장소에 공개된 웹 API 키). 일정표에는 아무것도 쓰지 않는다.
+   설치: installDigestTrigger() 한 번 실행 → 매일 아침 7시대. 끄기: removeDigestTrigger().
+   사람별로 끄기: 앱 설정의 「아침 근무 알림」(talk/prefs/{팀_이름}/digest = false). */
+const SCH_DB = 'https://sysmex-system-schedule-default-rtdb.firebaseio.com';
+const SCH_KEY = 'AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8';
+const SCH_TEAMS = ['west','east','central','south','fss','fsom'];
+function schToken_(){
+  const c = CacheService.getScriptCache(), t = c.get('schTok');
+  if(t) return t;
+  const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+SCH_KEY,{method:'post',contentType:'application/json',payload:JSON.stringify({returnSecureToken:true}),muteHttpExceptions:true});
+  if(r.getResponseCode()!==200) throw new Error('일정표 인증 실패 '+r.getResponseCode());
+  const id = JSON.parse(r.getContentText()).idToken; c.put('schTok', id, 3000); return id;
+}
+function schGet_(path){
+  const r = UrlFetchApp.fetch(SCH_DB+'/'+path+'.json?auth='+encodeURIComponent(schToken_()),{muteHttpExceptions:true});
+  if(r.getResponseCode()!==200) throw new Error('일정표 '+path+' '+r.getResponseCode());
+  return JSON.parse(r.getContentText());
+}
+function schKey_(v){ return String(v||'').split(':')[0].trim(); }
+/** 그날 사람별 근무 → {이름:[문구…]} */
+function schDay_(day){
+  const out = {};
+  const add = function(nm, s){ (out[nm] = out[nm] || []).push(s); };
+  SCH_TEAMS.forEach(function(t){
+    let w = {}; try{ w = schGet_('work-schedule/'+t+'/'+day) || {}; }catch(e){ console.error(e); }
+    Object.keys(w).forEach(function(nm){
+      const e = w[nm]; if(!e || typeof e !== 'object') return;
+      const n = schKey_(e.night); if(n && n!=='OFF' && n!=='잔업') add(nm, n);
+      const wk = schKey_(e.weekend); if(wk) add(nm, wk==='전화' ? '전화대기' : wk);
+      const sl = ['am1','am2','pm1','pm2'].map(function(k){ return schKey_(e[k]); });
+      if(sl.indexOf('휴가')>=0) add(nm,'휴가'); else if(sl.indexOf('오전휴가')>=0) add(nm,'오전휴가'); else if(sl.indexOf('오후휴가')>=0) add(nm,'오후휴가');
+      else if(sl.indexOf('교육')>=0) add(nm,'교육');
+    });
+  });
+  return out;
+}
+function morningDigest(){
+  const tz = 'Asia/Seoul', now = new Date();
+  const today = Utilities.formatDate(now, tz, 'yyyy-MM-dd'), tom = Utilities.formatDate(new Date(now.getTime()+864e5), tz, 'yyyy-MM-dd');
+  const D0 = schDay_(today), D1 = schDay_(tom);
+  const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {}, prefs = db_('talk/prefs') || {};
+  const tmd = new Date(now.getTime()+864e5), tl = Utilities.formatDate(tmd, tz, 'M/d') + '(' + '월화수목금토일'.charAt(+Utilities.formatDate(tmd, tz, 'u') - 1) + ')';
+  const LEAVE = ['휴가','오전휴가','오후휴가'];
+  let people = 0, sent = 0; const done = {};
+  Object.keys(users).forEach(function(id){
+    const u = users[id]; if(!u || u.status !== 'approved') return;
+    const pk = u.team + '_' + u.name;
+    const a = (D0[u.name] || []).filter(function(x){ return LEAVE.indexOf(x) < 0; });                 // 쉬는 날엔 알림 안 보냄
+    const b = (D1[u.name] || []).filter(function(x){ return LEAVE.indexOf(x) < 0 && x !== '교육'; });   // 내일은 당직·야간만 미리
+    if(!a.length && !b.length) return;
+    if(prefs[pk] && prefs[pk].digest === false) return;
+    if(mute[id] && mute[id]._all) return;
+    const t = tokens[id] || {}, targets = [];
+    Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token}); });
+    if(!targets.length) return;
+    if(!done[pk]){ done[pk] = true; people++; }
+    const parts = []; if(a.length) parts.push('오늘 ' + a.join('·')); if(b.length) parts.push('내일 ' + tl + ' ' + b.join('·'));
+    sent += send_(targets, '📅 ' + (a.length ? '오늘 근무 · ' + a.join('·') : '내일 ' + b.join('·')), parts.join(' / ') + ' — 근무일정표 기준', APP_URL + '#home', 'digest-' + today, {room:''});
+  });
+  Logger.log('✅ 아침 근무 알림: ' + people + '명 · ' + sent + '대 발송 (' + today + ')');
+  return {people:people, sent:sent};
+}
+function installDigestTrigger(){
+  removeDigestTrigger();
+  ScriptApp.newTrigger('morningDigest').timeBased().everyDays(1).atHour(7).inTimezone('Asia/Seoul').create();
+  Logger.log('✅ 매일 아침 7시대 「아침 근무 알림」을 예약했습니다. 바로 확인하려면 morningDigest 를 한 번 실행하세요.');
+}
+function removeDigestTrigger(){
+  ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction()==='morningDigest') ScriptApp.deleteTrigger(t); });
 }

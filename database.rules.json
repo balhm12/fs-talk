@@ -260,6 +260,9 @@
                 ".validate": false
               }
             }
+          },
+          "digest": {
+            ".validate": "newData.isBoolean()"
           }
         }
       },
