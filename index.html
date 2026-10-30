@@ -1150,6 +1150,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 /* 하단 탭: 홈·조직도·대화·기술·메뉴 — 검색은 홈 검색창·기술 화면, 저장·관리·설정은 메뉴 */
 #tSearch,#tSaved,#tAdmin{display:none!important}
 .hmenu{display:none!important}   /* 휴대폰 홈의 ☰ 버튼은 하단 「메뉴」 탭과 중복 */
+.offl{display:inline-block;margin:0 0 8px;padding:3px 10px;border-radius:999px;background:#FFF4E0;color:#9A6400;font-size:12px;font-weight:600}html[data-theme=dark] .offl{background:#3A2C10;color:#F2C46B}
 </style>
 
 </head>
@@ -1358,7 +1359,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.120";
+const APP_VERSION="2026-10-31.121";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1687,8 +1688,10 @@ function start(){
   R("prefs/"+myKey+"/noti").on("value",s=>{const v=s.val()||{};notiState={all:+v.all||0,ids:v.ids||{}};updateNotiBadge();},()=>{});
   R("prefs/"+myKey+"/bfav").on("value",s=>{bfav=s.val()||{};renderBoardCards();if(view==="tech")renderTechPage();},()=>{});
   R("prefs/"+myKey+"/silfav").on("value",s=>{silFav=s.val()||{};const sr=document.querySelector(".hsilres");if(sr&&!($("hsq")||{}).value)renderSilHome(sr);if(view==="search")renderSil($("q").value);},()=>{});
-  R("kpisvc").on("value",s=>{kpiSvc=s.val();renderKpi();},()=>{});
-  R("kpime/"+myKey).on("value",s=>{kpiMe=s.val();renderKpi();},()=>{});
+  try{const c=JSON.parse(localStorage.getItem("fstalk-kpi-cache")||"null");if(c&&c.k===myKey){if(!kpiSvc)kpiSvc=c.svc;if(!kpiMe)kpiMe=c.me;}}catch(e){}   // 연결 전·전파 약할 때 마지막 받은 KPI
+  const kpiSave=()=>{try{localStorage.setItem("fstalk-kpi-cache",JSON.stringify({k:myKey,svc:kpiSvc,me:kpiMe}));}catch(e){}};
+  R("kpisvc").on("value",s=>{kpiSvc=s.val();kpiSave();renderKpi();},()=>{});
+  R("kpime/"+myKey).on("value",s=>{kpiMe=s.val();kpiSave();renderKpi();},()=>{});
   setTimeout(()=>{if(isAdmin||myLead()||myRole()==="group")R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
   setTimeout(()=>{if(isAdmin||myLead())R("vocfu").on("value",s=>{vocFu=s.val()||{};renderVoc();},()=>{});},1500);
   setTimeout(()=>{let last=0;try{last=+localStorage.getItem("fstalk-kpi-pub")||0;}catch(e){}   // 관리자 PC: 하루 한 번 KPI 자동 갱신
@@ -2107,10 +2110,12 @@ function renderSch(){
 }
 setInterval(()=>{if(view==="home"&&!document.hidden&&(schData||schErr)){schErr=schData?schErr:"";schLoad();}if(view==="home"&&!document.hidden&&vocData)vocLoad();},5*60000);
 /* 고객 만족도 (이번 달) — 만족도 대시보드와 같은 데이터(voc-dashboard/data)를 읽기만 */
-let vocData=null,vocAt=0,vocP=null,vocErr="";
+let vocData=null,vocAt=0,vocP=null,vocErr="",vocStale=false;
+try{const c=JSON.parse(localStorage.getItem("fstalk-voc-cache")||"null");if(c&&c.d&&Array.isArray(c.d.recs)){vocData=c.d;vocAt=c.at;vocStale=true;}}catch(e){}   // 전파가 약해도 마지막 받은 만족도를 보임
 function vocLoad(force){
-  if(vocP)return vocP;if(!force&&vocData&&Date.now()-vocAt<30*60000)return Promise.resolve(vocData);
-  vocP=schGet("voc-dashboard/data").then(d=>{if(!d||!Array.isArray(d.recs))throw new Error("데이터 없음");vocData=d;vocAt=Date.now();vocErr="";return d;});
+  if(vocP)return vocP;if(!force&&vocData&&!vocStale&&Date.now()-vocAt<30*60000)return Promise.resolve(vocData);
+  vocP=schGet("voc-dashboard/data").then(d=>{if(!d||!Array.isArray(d.recs))throw new Error("데이터 없음");vocData=d;vocAt=Date.now();vocErr="";vocStale=false;
+    try{localStorage.setItem("fstalk-voc-cache",JSON.stringify({at:vocAt,d}));}catch(e){}return d;});
   vocP.then(()=>{vocP=null;renderVoc();renderStats();if(view==="team")renderTeamPage();},e=>{vocP=null;vocErr=e.message||"연결 실패";renderVoc();});return vocP;
 }
 /* ===== 실마리: 최근 검색(이 기기) · 즐겨찾기(내 계정, 모든 기기) ===== */
@@ -2161,6 +2166,8 @@ let vocFu={};
 function renderVoc(){
   const box=document.getElementById("hvoc");if(!box)return;box.textContent="";
   if(!vocData){if(vocErr){const m=el("div","schmsg","만족도를 불러오지 못했습니다");const rb=el("button","btn","다시 시도");rb.onclick=()=>{vocErr="";vocLoad(true);renderVoc();};m.appendChild(rb);box.appendChild(m);}else{box.appendChild(skel(3,"tiles"));vocLoad();}return;}
+  if(vocStale&&!vocP&&!vocErr)vocLoad();
+  if(vocStale&&vocErr)box.appendChild(el("div","offl","연결 안 됨 · "+fmtTime(vocAt)+" 받은 만족도"));
   const S=vocSummary();if(!S){box.appendChild(el("div","schmsg","아직 집계가 없습니다"));return;}
   const f=v=>v==null?"–":v.toFixed(2);
   box.appendChild(el("div","vocm",S.mlabel+" · 응답 "+S.n+"건"+(S.rate!=null?" · 응답률 "+S.rate+"%":"")+" · 5점 만점"));
