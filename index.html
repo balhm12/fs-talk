@@ -1490,6 +1490,7 @@ function start(){
   R("prefs/"+myKey+"/silfav").on("value",s=>{silFav=s.val()||{};const sr=document.querySelector(".hsilres");if(sr&&!($("hsq")||{}).value)renderSilHome(sr);if(view==="search")renderSil($("q").value);},()=>{});
   R("kpisvc").on("value",s=>{kpiSvc=s.val();renderKpi();},()=>{});
   R("kpime/"+myKey).on("value",s=>{kpiMe=s.val();renderKpi();},()=>{});
+  setTimeout(()=>{if(isAdmin||myLead())R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
   setTimeout(()=>{if(isAdmin||myLead())R("vocfu").on("value",s=>{vocFu=s.val()||{};renderVoc();},()=>{});},1500);
   setTimeout(()=>{let last=0;try{last=+localStorage.getItem("fstalk-kpi-pub")||0;}catch(e){}   // 관리자 PC: 하루 한 번 KPI 자동 갱신
     if(isAdmin&&!isM()&&kpiHasCode()&&Date.now()-last>20*3600e3&&(!kpiSvc||Date.now()-(kpiSvc.at||0)>20*3600e3))kpiPublish(false);},12000);
@@ -1784,7 +1785,8 @@ const SCH_CAT={install:["설치","#005BAC"],relocation:["이전","#00B8EE"],eval
 let myDigest=true,schData=null,schAt=0,schP=null,schErr="",schStale=false,schBaseWarn=false;
 try{const c=JSON.parse(localStorage.getItem("fstalk-sch-cache")||"null");if(c&&c.d&&c.d.today===ymd(new Date())){schData=c.d;schAt=c.at;schStale=true;}}catch(e){}   // 지난번 받은 오늘 일정 — 바로 보여 주고 뒤에서 새로 받음
 const schTeamKey=t=>({"FS WEST":"west","FS EAST":"east","FS CENTRAL":"central","FS SOUTH":"south","FSS TEAM":"fss","FSOM TEAM":"fsom"})[String(t||"").toUpperCase()]||"";
-let schScope="all";try{schScope=localStorage.getItem("fstalk-sch-scope")||"all";}catch(e){}
+let schScope="";try{schScope=localStorage.getItem("fstalk-sch-scope")||"";}catch(e){}
+const schScopeNow=()=>schScope||(myRole()==="group"?"all":"team");   // 고른 적 없으면: 그룹장 전체, 팀장·직원 우리 팀
 let schTokP=null;
 function schToken(){if(!schTokP)schTokP=schToken0().finally(()=>{schTokP=null;});return schTokP;}   // 동시에 여러 번 불려도 익명 계정은 하나만
 async function schToken0(){
@@ -1856,12 +1858,12 @@ function renderSch(){
     return;}
   if(schStale&&!schP&&!schErr)schLoad();
   const myTk=me?schTeamKey(me.team):"",tlOf=k=>(SCH_TEAMS.find(t=>t[0]===k)||[])[1];
-  const scoped=schScope==="team"&&myTk;
+  const scoped=schScopeNow()==="team"&&myTk;
   const inTeam=x=>!scoped||x.tl===tlOf(myTk);
   const evIn=e=>!scoped||String(e.team||"").toLowerCase().replace(/\s+/g,"")==="fs"+myTk||(myTk==="fss"&&/fss/i.test(e.team||""));
   const fo=o=>({night:o.night.filter(inTeam),leave:o.leave.filter(inTeam),duty:o.duty.filter(inTeam),edu:o.edu.filter(inTeam)});
   const D=Object.assign({},schData,{ev:schData.ev.filter(evIn),w:fo(schData.w),w2:fo(schData.w2)}),mine=x=>me&&x.nm===me.name;
-  if(myTk){const sw=el("div","schscope");[["all","전체"],["team","우리 팀 ("+tlOf(myTk)+")"]].forEach(([k,l])=>{const b=el("button","hchip"+(schScope===k||(!scoped&&k==="all")?" on":""),l);b.onclick=()=>{schScope=k;try{localStorage.setItem("fstalk-sch-scope",k);}catch(e){}renderSch();};sw.appendChild(b);});box.appendChild(sw);}
+  if(myTk){const sw=el("div","schscope");[["all","전체"],["team","우리 팀 ("+tlOf(myTk)+")"]].forEach(([k,l])=>{const b=el("button","hchip"+((scoped?"team":"all")===k?" on":""),l);b.onclick=()=>{schScope=k;try{localStorage.setItem("fstalk-sch-scope",k);}catch(e){}renderSch();renderStats();};sw.appendChild(b);});box.appendChild(sw);}
   // 내 일정 한 줄
   const my=[];(D.week||[]).forEach(({d,o},i)=>{const w=i===0?"오늘":i===1?"내일":(+d.slice(5,7))+"/"+(+d.slice(8,10))+"("+"일월화수목금토"[new Date(d+"T00:00:00").getDay()]+")";
     ["night","duty","leave","edu"].forEach(k=>o[k].filter(mine).forEach(x=>my.push({w,k:x.k,t:i===0})));});
@@ -1992,7 +1994,9 @@ function openVocLow(){
    계산은 KPI 대시보드(fsg-kpi.html) 그대로: 접근 코드가 저장된 관리자 기기에서 그 페이지를 화면 뒤에서 열고
    그 페이지의 함수(curPeriod·stats·renderProd)가 낸 결과를 읽어 talk/kpisvc(FSG 요약)·talk/kpime/{사람}(개인)에 올림.
    직원은 자기 것만, 팀장·관리자는 전원 볼 수 있음(DB 규칙). */
-let kpiSvc=null,kpiMe=null,kpiP=null,kpiErr="";
+let kpiSvc=null,kpiMe=null,kpiAll=null,kpiP=null,kpiErr="";
+function kpiAgg(rows){if(!rows.length)return null;const sum=k=>rows.reduce((a,r)=>a+(+r[k]||0),0);const mt=rows.filter(r=>r.mttr!=null);
+  return {n:rows.length,score:sum("score")/rows.length,total:sum("total"),rep:sum("rep"),pm:sum("pm"),ins:sum("ins"),mttr:mt.length?mt.reduce((a,r)=>a+(+r.mttr),0)/mt.length:null};}
 const kpiHasCode=()=>{try{return !!localStorage.getItem("fsg-kpi-code");}catch(e){return false;}};
 function kpiCompute(){
   if(kpiP)return kpiP;
@@ -2048,17 +2052,26 @@ function renderKpi(){
     t("고장 수리",String(C.rep??"–"),"건",null,null,null,-1);t("PM",String(C.pm??"–"),"건",null,null,null,1);t("예방정비 지수",f1(C.idx),"%",null,null,P.idx,1);
     box.appendChild(g);}
   else box.appendChild(el("div","schmsg","아직 올라온 KPI가 없습니다. 관리자가 KPI 대시보드 기준으로 올리면 보입니다."));
+  // 팀장: 우리 팀 / 그룹장: 팀별 비교 (개인 KPI를 모아서 — 같은 기준)
+  const role=myRole(),all=kpiAll?Object.values(kpiAll).filter(r=>r&&r.name):[];
+  if(role==="lead"&&all.length){const A=kpiAgg(all.filter(r=>String(r.team||"").toUpperCase()===myTeamU()));
+    if(A){box.appendChild(el("h3","hsub",me.team+" 팀 KPI · "+A.n+"명"));const g=el("div","kpig");const t=(lab,v,sub)=>{const c=el("div","kpit");c.appendChild(el("small",null,lab));c.appendChild(el("b",null,v));if(sub)c.appendChild(el("span","kgoal",sub));g.appendChild(c);};
+      t("1인당 KPI 점수",f1(A.score));t("처리 건수",String(A.total),"고장 "+A.rep+" · PM "+A.pm+" · 설치 "+A.ins);t("평균 MTTR",A.mttr==null?"–":f1(A.mttr)+"분","팀원 평균");box.appendChild(g);}}
+  if((role==="group"||isAdmin)&&all.length){const teams=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH"];box.appendChild(el("h3","hsub","팀별 비교"));
+    const tb=el("table","kpt");const hr=el("tr");["팀","인원","1인당 점수","건수","고장","PM","MTTR"].forEach(h=>hr.appendChild(el("th",null,h)));tb.appendChild(hr);
+    teams.forEach(tn=>{const A=kpiAgg(all.filter(r=>String(r.team||"").toUpperCase()===tn));if(!A)return;const tr=el("tr");[tn.replace("FS ",""),A.n,f1(A.score),A.total,A.rep,A.pm,A.mttr==null?"–":f1(A.mttr)].forEach(v=>tr.appendChild(el("td",null,String(v))));tb.appendChild(tr);});
+    box.appendChild(tb);}
   // 개인 KPI
   const M=kpiMe;
   if(M){const h=el("h3","hsub","내 KPI · "+String(M.label||"이번 년도"));box.appendChild(h);
     const g=el("div","kpig me");const t=(lab,v,sub)=>{const c=el("div","kpit");c.appendChild(el("small",null,lab));c.appendChild(el("b",null,v));if(sub)c.appendChild(el("span","kgoal",sub));g.appendChild(c);};
     t("KPI 종합 점수",f1(M.score),M.gi!=null?"직급 보정 "+f1(M.gi):null);t("처리 건수",String(M.total||0),"고장 "+(M.rep||0)+" · PM "+(M.pm||0)+" · 설치 "+(M.ins||0));
     t("MTTR(고장수리)",M.mttr==null?"–":f1(M.mttr)+"분",null);t("순위",M.trank?M.trank+" / "+M.tn:"–","팀 안 · FSG "+(M.rank||"–")+" / "+(M.n||"–"));box.appendChild(g);}
-  else if(me)box.appendChild(el("div","hsoon","내 KPI는 관리자가 KPI를 올리면 이곳에 보입니다 (나만 볼 수 있음)."));
+  else if(me&&myRole()!=="group")box.appendChild(el("div","hsoon","내 KPI는 관리자가 KPI를 올리면 이곳에 보입니다 (나만 볼 수 있음)."));
   const ft=el("div","schft");if(S&&S.at)ft.appendChild(el("span",null,"KPI 대시보드 기준 · "+fmtTime(S.at)+" 올림"));
   if(isAdmin&&kpiHasCode()){const pb=el("button","hmore","KPI 다시 올리기");pb.id="kpiPubBtn";pb.onclick=()=>kpiPublish(true);ft.appendChild(pb);}
   if(kpiErr&&isAdmin)ft.appendChild(el("span","schwarn",kpiErr));
-  if(isAdmin||myLead()){const ab=el("button","hmore","팀원 KPI");ab.onclick=openKpiPeople;ft.appendChild(ab);}
+  if(isAdmin||myLead()){const ab=el("button","hmore",myRole()==="lead"?"팀원 KPI":"개인별 KPI");ab.onclick=openKpiPeople;ft.appendChild(ab);}
   box.appendChild(ft);
 }
 function openKpiPeople(){
@@ -2127,7 +2140,7 @@ function openSchWeek(){
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"7일 근무 (야간·당직·휴가)"));
   const myTk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===myTk)||[])[1];
-  let only=false;try{only=localStorage.getItem("fstalk-sch-scope")==="team"&&!!myTk;}catch(e){}
+  let only=schScopeNow()==="team"&&!!myTk;
   const draw=()=>{list.textContent="";
     schData.week.forEach(({d,o},i)=>{const dd=new Date(d+"T00:00:00");const off=dd.getDay()===0||dd.getDay()===6;
       const day=el("div","swday"+(off?" off":"")+(i===0?" today":""));day.appendChild(el("div","swd",(i===0?"오늘 ":i===1?"내일 ":"")+(dd.getMonth()+1)+"/"+dd.getDate()+" ("+"일월화수목금토"[dd.getDay()]+")"));
@@ -2327,25 +2340,47 @@ function updateHome(){
   renderStats();updateNotiBadge();
 }
 function homeUnread(){const st=navStats||buildNavStats();let n=0;Object.keys(st.unr).forEach(k=>{if(k!=="all")n+=st.unr[k];});return n;}
+function schScoped(){                                     // 역할 기준으로 거른 일정 (직원·팀장 = 우리 팀, 그룹장 = 전체)
+  if(!schData)return null;const tk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===tk)||[])[1];
+  const team=schScopeNow()==="team"&&!!tk;const inT=x=>!team||x.tl===tl;
+  const evIn=e=>!team||String(e.team||"").toLowerCase().replace(/\s+/g,"")==="fs"+tk||(tk==="fss"&&/fss/i.test(e.team||""));
+  const f=o=>({night:o.night.filter(inT),leave:o.leave.filter(inT),duty:o.duty.filter(inT),edu:o.edu.filter(inT)});
+  return {team,label:team?(tl||me.team):"FSG 전체",ev:schData.ev.filter(evIn),w:f(schData.w)};
+}
 function renderStats(){
   const box=document.getElementById("hstats");if(!box)return;box.textContent="";
   const tile=(ic,lab,val,sub,cls,fn,badge)=>{const t=el("button","hstat"+(cls?" "+cls:""));const i=el("span","hsti");i.appendChild(icEl(ic,"",20));t.appendChild(i);
     const v=el("div","hstv");v.appendChild(el("b",null,val));if(badge)v.appendChild(badge);t.appendChild(v);t.appendChild(el("span","hstl",lab));if(sub)t.appendChild(el("small",null,sub));if(fn)t.onclick=fn;box.appendChild(t);};
   const toCard=id=>()=>{const c=document.getElementById(id);if(c)c.scrollIntoView({behavior:"smooth",block:"start"});};
-  // 1 오늘 일정
-  if(schData){const today=schData.today,on=schData.ev.filter(e=>e.start<=today&&String(e.end||e.start)>=today);
-    tile("box","오늘 설치·이전·평가",String(on.length),"7일 안 "+schData.ev.length+"건",null,toCard("hc-sched"));}
-  else tile("box","오늘 설치·이전·평가","–",schErr?"일정표 연결 안 됨":"불러오는 중",null,toCard("hc-sched"));
-  // 2 오늘 근무
-  if(schData){const w=schData.w;tile("users","오늘 휴가",w.leave.length+"명","야간·석간 "+w.night.length+"명"+(w.duty.length?" · 당직 "+w.duty.length+"명":""),null,()=>openSchWeek());}
-  else tile("users","오늘 휴가","–","근무일정표 기준",null,null);
-  // 3 커뮤니케이션
-  const pn=pendingNotices().length,un=homeUnread();
-  tile("megaphone","확인할 공지",String(pn),"안 읽은 대화 "+un+"건",pn?"warn":null,()=>{if(pn)go("room-notice");else{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");}});
-  // 4 만족도
+  const role=myRole(),S=schScoped(),today=schData?schData.today:"";
+  const wait=schErr?"일정표 연결 안 됨":"불러오는 중";
+  // 1 — 직원: 내 오늘 / 팀장·그룹장: 휴가·야간
+  if(role==="staff"){
+    if(schData){const my=[];["night","duty","leave","edu"].forEach(k=>schData.w[k].filter(x=>x.nm===me.name).forEach(x=>my.push(x.k)));
+      let wk=0;(schData.week||[]).forEach(({o})=>["night","duty","leave","edu"].forEach(k=>wk+=o[k].filter(x=>x.nm===me.name).length));
+      tile("user","내 오늘 근무",my.length?my.join("·"):"주간",my.length?"이번 주 내 일정 "+wk+"건":"근무일정표에 표시 없음 · 이번 주 "+wk+"건",my.some(x=>/당직|석/.test(x))?"warn":null,()=>openSchWeek());}
+    else tile("user","내 오늘 근무","–",wait,null,null);
+  }else{
+    if(S)tile("users",S.label+" 오늘 휴가",S.w.leave.length+"명","야간·석간 "+S.w.night.length+"명"+(S.w.duty.length?" · 당직 "+S.w.duty.length+"명":"")+(S.w.edu.length?" · 교육 "+S.w.edu.length+"명":""),null,()=>openSchWeek());
+    else tile("users","오늘 휴가","–",wait,null,null);
+  }
+  // 2 — 설치·이전·평가
+  if(S){const on=S.ev.filter(e=>e.start<=today&&String(e.end||e.start)>=today);tile("box",(S.team?S.label+" ":"")+"오늘 설치·이전·평가",String(on.length),"7일 안 "+S.ev.length+"건",null,toCard("hc-sched"));}
+  else tile("box","오늘 설치·이전·평가","–",wait,null,toCard("hc-sched"));
+  // 3 — 직원: 공지·언급 / 팀장·그룹장: 3점 이하 미조치
   const vs=vocSummary();
-  if(vs){let bd=null;if(vs.prev!=null&&vs.avg!=null){const dd=vs.avg-vs.prev;bd=el("span","hdelta "+(Math.abs(dd)<0.005?"":dd>0?"up":"down"),(dd>0?"▲ ":dd<0?"▼ ":"")+Math.abs(dd).toFixed(2));bd.title="지난달 대비";}
-    tile("star",vs.mlabel+" 고객 만족도",vs.avg==null?"–":vs.avg.toFixed(2),"응답 "+vs.n+"건"+(vs.rate!=null?" · 응답률 "+vs.rate+"%":""),null,toCard("hvoc"),bd);}
+  if(role==="staff"){const pn=pendingNotices().length,un=homeUnread();
+    tile("megaphone","확인할 공지",String(pn),"안 읽은 대화 "+un+"건",pn?"warn":null,()=>{if(pn)go("room-notice");else{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");}});}
+  else{if(vs){const tm=myTeamU(),L=vs.R.filter(vocLow).filter(r=>role==="group"||String(r.team||"").toUpperCase()===tm),open=L.filter(r=>(vocFu[vocKey(r)]||{}).s!=="done");
+      tile("star","3점 이하 미조치",String(open.length),vs.mlabel+" 3점 이하 "+L.length+"건"+(role==="group"?" · FSG":" · 우리 팀"),open.length?"warn":null,openVocLow);}
+    else tile("star","3점 이하 미조치","–",vocErr?"만족도 연결 안 됨":"불러오는 중",null,null);}
+  // 4 — 만족도: 직원 = 나(없으면 팀), 팀장 = 팀, 그룹장 = FSG
+  if(vs){const tm=myTeamU();let R=vs.R,lab="FSG";
+    if(role==="lead"){R=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm);lab=me.team;}
+    else if(role==="staff"){const M=vs.R.filter(r=>r.fsr===me.name);if(M.length){R=M;lab="내";}else{const T=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm);if(T.length){R=T;lab=me.team;}}}
+    const avg=vs.avgOf(R);const pR=vocData.recs.filter(r=>r&&r.month===vs.ms[vs.ms.length-2]&&(lab==="FSG"||(lab==="내"?r.fsr===me.name:String(r.team||"").toUpperCase()===tm)));const prev=pR.length?vs.avgOf(pR):null;
+    let bd=null;if(prev!=null&&avg!=null){const dd=avg-prev;bd=el("span","hdelta "+(Math.abs(dd)<0.005?"":dd>0?"up":"down"),(dd>0?"▲ ":dd<0?"▼ ":"")+Math.abs(dd).toFixed(2));bd.title="지난달 대비";}
+    tile("star",vs.mlabel+" "+lab+" 만족도",avg==null?"–":avg.toFixed(2),"응답 "+R.length+"건"+(lab==="FSG"&&vs.rate!=null?" · 응답률 "+vs.rate+"%":""),null,toCard("hvoc"),bd);}
   else tile("star","고객 만족도","–",vocErr?"만족도 연결 안 됨":"불러오는 중",null,()=>openUrl(LINKS.voc));
 }
 function renderSilHome(box){                               // 실마리 카드: 최근 검색·즐겨찾기
@@ -2384,6 +2419,9 @@ function openLinkEditor(){                                 // 바로가기 고�
   const ok=el("button","btn pri","저장");ok.onclick=async()=>{if(!cur.length){toast("하나 이상 골라 주세요.");return;}try{await R("prefs/"+myKey+"/links").set(cur.join(","));toast("바로가기를 저장했습니다.");closeProfile();}catch(e){toast("저장 실패: "+(e.code||e.message));}};row.appendChild(ok);c.appendChild(row);
   $("pOv").hidden=false;
 }
+/* 보는 기준: 직원 = 나 + 우리 팀, 팀장 = 우리 팀, 그룹장(FSG) = 전체 */
+const myRole=()=>!me?"staff":me.team==="FSG"?"group":myLead()?"lead":"staff";
+const myTeamU=()=>me?String(me.team||"").toUpperCase():"";
 const myLead=()=>{if(!me)return false;if(me.team==="FSG")return true;const p=rosterList().find(x=>x.name===me.name&&x.team===me.team);return !!(p&&p.lead);};
 function noticeCards(nav){
       // 전체공지 방에 고정한 글은 대화 목록 맨 위에도 고정 (×로 접으면 다른 글이 고정될 때까지 숨김)
