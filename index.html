@@ -1177,6 +1177,7 @@ html[data-theme=dark] .hstl,html[data-theme=dark] .obpi{color:#6CB4F5}   /* 다�
 html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{color:#6FD675}html[data-theme=dark] .kpt2 td.low,html[data-theme=dark] .kpt2 td small.down{color:#FF7A7A}
 .usp{display:inline-flex;align-items:flex-end;gap:2px;height:24px}.usp i{display:block;width:6px;background:#00B8EE;border-radius:2px}
 .usg td{text-align:right}.usg td.tn{text-align:left}
+@media (max-width:820px){.kpig.me{grid-template-columns:repeat(2,minmax(0,1fr))}}   /* 휴대폰: 내 KPI 4칸이 좁아 글자가 쪼개짐 → 2×2 */
 </style>
 
 </head>
@@ -1385,7 +1386,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.127";
+const APP_VERSION="2026-10-31.128";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
