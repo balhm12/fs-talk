@@ -1187,6 +1187,8 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 .lerow .lname{flex:1;min-width:0;text-align:left}.lerow.off .lname{color:var(--sub);text-decoration:line-through}
 @media (pointer:coarse){.lebtn{width:40px;height:40px}}
 .stag.p{background:#FEF9C3;color:#854D0E}html[data-theme=dark] .stag.p{background:#3A3410;color:#F5D76E}
+.tnmsg .bubble{box-shadow:inset 3px 0 0 #E69E0B}.tnmsg .bubble::before{content:"팀 공지";display:block;font-size:11px;font-weight:800;color:#B26100;margin-bottom:2px}
+.silchip.sug{border-style:dashed;border-color:#E69E0B;color:#9A6400;background:#FFF8EA}html[data-theme=dark] .silchip.sug{background:#2E2614;color:#F2C46B}
 </style>
 
 </head>
@@ -1395,7 +1397,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.133";
+const APP_VERSION="2026-10-31.136";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1768,7 +1770,7 @@ function parseMsg(v){
   if(!v||typeof v.text!=="string")return null;
   return {text:v.text,ts:+v.ts||Date.now(),author:String(v.uid||""),name:String(v.name||""),
     re:v.re&&typeof v.re==="object"&&v.re.id?v.re:null,edited:+v.edited||0,
-    file:v.file&&typeof v.file==="object"&&v.file.id?v.file:null};
+    file:v.file&&typeof v.file==="object"&&v.file.id?v.file:null,tn:v.tn===true};
 }
 function addMsg(roomId,key,v){
   const p=parseMsg(v);if(!p||byId.has(key))return;
@@ -2781,8 +2783,27 @@ function openInstallForm(pre){
 /* 대화에서: 「/휴가 11/3」「/교육 11/5 XN」「/설치 11/10~11/12 삼성서울병원 XR-9100」 → 등록 화면을 채워서 엶 */
 function schParseDates(t){const y=new Date().getFullYear(),pad=n=>String(n).padStart(2,"0");
   const tm=/(오늘|내일|모레)/.exec(t);if(tm){const d=schAdd(ymd(new Date()),{오늘:0,내일:1,모레:2}[tm[1]]);return {d1:d,rest:t.replace(tm[0],"")};}
+  const kd=/(\d{1,2})\s*월\s*(\d{1,2})\s*일/.exec(t);if(kd)t=t.replace(kd[0],kd[1]+"/"+kd[2]);   // 「11월 3일」도
   const m=/(\d{1,2})[\/.](\d{1,2})(?:\s*[~\-]\s*(?:(\d{1,2})[\/.])?(\d{1,2}))?/.exec(t);if(!m)return {rest:t};
   const d1=y+"-"+pad(m[1])+"-"+pad(m[2]);let d2="";if(m[4])d2=y+"-"+pad(m[3]||m[1])+"-"+pad(m[4]);return {d1,d2,rest:t.replace(m[0],"")};}
+/* 대화 속 일정 얘기 → 「일정 등록」 칩: 날짜 + 휴가·교육·회의·내근·DP(내 글만) / 설치·이전·평가(누구 글이든) → 미리 채운 등록 창 */
+function schSuggest(m){
+  if(!m||!m.text||m.text.trim().startsWith("/")||Date.now()-(m.ts||0)>2*864e5)return null;
+  const t=String(m.text).slice(0,300),p=schParseDates(t);if(!p.d1)return null;
+  const today=ymd(new Date());if(p.d1<today)return null;
+  let kind=null,k=null;
+  const wk=/(오전\s*(?:휴가|반차)|오후\s*(?:휴가|반차)|휴가|연차|교육|회의|내근|DP)/.exec(t),ik=/(설치|이전|평가|데모)/.exec(t);
+  if(ik){kind="inst";k=ik[1];}else if(wk&&isMine(m)){kind="work";k=wk[1].replace(/\s+/g,"").replace("반차","휴가").replace("연차","휴가");}
+  if(!kind)return null;
+  const w=el("div","silchips");const b=el("button","silchip sch sug");b.appendChild(icEl("calendar","",13));
+  const md=d=>(+d.slice(5,7))+"/"+(+d.slice(8,10));
+  b.appendChild(el("span",null,"일정 등록 · "+md(p.d1)+(p.d2?"~"+md(p.d2):"")+" "+k+" ›"));b.title="눌러서 바로 등록(미리 채워진 등록 창)";
+  b.onclick=ev=>{ev.stopPropagation();const rest=String(p.rest||"").replace(k,"").replace(/[,.!?]/g," ");
+    if(kind==="work")openWorkForm({k,d1:p.d1,d2:p.d2,det:/(교육|회의)/.test(k)?rest.trim().split(/\s+/).filter(x=>x.length>1).slice(0,2).join(" "):""});
+    else{const ws=rest.split(/\s+/).filter(Boolean);const title=ws.find(x=>/(병원|의료원|의원|센터|연구소|재단|대학)/.test(x))||"";const device=ws.find(x=>/^[A-Za-z]{1,5}-?\d/.test(x))||"";
+      openInstallForm({cat:{설치:"install",이전:"relocation",평가:"evaluation",데모:"demo"}[k],d1:p.d1,d2:p.d2,title,device});}};
+  w.appendChild(b);return w;
+}
 function slashSchedule(text){
   const m=/^\/(휴가|오전휴가|오후휴가|교육|회의|내근|DP|설치|이전|평가)\b\s*(.*)$/.exec(String(text||"").trim());if(!m)return false;
   const p=schParseDates(m[2]),rest=String(p.rest||"").trim();
@@ -3048,7 +3069,7 @@ function openGuide(mode){track("guide");
 function guideAuto(){   // 앱을 열고 다른 팝업(공지 확인 등)이 닫힌 뒤 한 번
   const g=guideSeen();if(g===GUIDE_NEW.k||g==="x")return;
   let n=0;const t=setInterval(()=>{n++;if(n>40){clearInterval(t);return;}
-    if(!started||!me||me.status!=="approved"||!$("pOv").hidden||!$("lockOv").hidden)return;clearInterval(t);
+    if(!started||!me||me.status!=="approved"||!$("pOv").hidden||!$("lockOv").hidden||(!noticePrompted&&pendingNotices().length))return;clearInterval(t);   // 공지 확인이 먼저
     let old=false;try{old=Object.keys(localStorage).some(k=>/^fstalk-(fold|tip-lp|silhist|theme|orgview|fs|inst-hide|npin-hide|kpi-pub|lock)$/.test(k));}catch(e){}   // 이미 쓰던 기기면 둘러보기 대신 새 기능만
     openGuide(g||old?"new":"tour");},3000);
 }
@@ -3529,9 +3550,10 @@ function renderMsgs(scroll){
     col.appendChild(line);
     const rx=reactsOf(m);
     if(rx.length){const rw=el("div","reacts");const mineR=myReact(m);rx.forEach(([c,n])=>{const k=el("button","rc"+(mineR===c?" on":""),REACT_EMO[c]+" "+n);k.title=reactWho(m,c);k.onclick=()=>setReact(m,c);rw.appendChild(k);});col.appendChild(rw);}
+    if(m.tn)col.classList.add("tnmsg");
     if(isNoticeMsg(m)&&!pending.has(m.id)&&m.ts>Date.now()-ACK_DAYS*864e5)col.appendChild(ackBar(m,mine));
     if(silIdx){const sc=silChips(m);if(sc)col.appendChild(sc);}
-    if(schData){const cc=schChips(m);if(cc)col.appendChild(cc);}
+    if(schData){const cc=schChips(m);if(cc)col.appendChild(cc);else{const sg=schSuggest(m);if(sg)col.appendChild(sg);}}
     row.appendChild(col);
     box.appendChild(row);
   });
@@ -3723,13 +3745,16 @@ let saved={};
 /* ---------- 공지 확인 (꼭 읽어야 하는 공지: 확인 버튼 · 미확인 안내 · 다시 알림) ---------- */
 let acks={},acksLoaded=false,noticePrompted=false;   // acks/{글id}/{팀_이름}=확인 시각
 const ACK_DAYS=30;                                  // 최근 30일 공지만 확인을 요청
-const isNoticeMsg=m=>!!m&&m.room==="notice";
+/* 공지 = 전체공지 방 글 + 팀방의 「팀 공지」(/공지 로 보낸 글, tn) — 팀 공지는 그 팀·사무소 사람에게만 확인 요청 */
+const inRoomScope=(r,p)=>{const sc=ROOM_SCOPE[r];return !!(sc&&p&&sc[0]===p.team&&(!sc[1]||sc[1]===p.office));};
+const isNoticeMsg=m=>!!m&&(m.room==="notice"||(!!m.tn&&!!me&&inRoomScope(m.room,me)));
+const canTeamNotice=r=>!!ROOM_SCOPE[r]&&!!me&&(isAdmin||myRole()==="group"||(myLead()&&ROOM_SCOPE[r][0]===me.team));
 const ackedByMe=m=>!!(acks[m.id]&&acks[m.id][myKey]);
 function pendingNotices(){const lim=Date.now()-ACK_DAYS*864e5;return msgs.filter(m=>isNoticeMsg(m)&&!isMine(m)&&m.ts>lim&&!ackedByMe(m)&&!pending.has(m.id));}
 function authorKey(m){const a=rosterList().find(p=>p.name===m.name);return a?personKey(a.team,a.name):"";}
 function ackPeople(m){   // 대상: 앱에 들어온 적 있는 사람(작성자 제외)
   const ak=authorKey(m),a=acks[m.id]||{};
-  const all=Object.keys(joined).filter(k=>k!==ak&&personByKey(k));
+  const all=Object.keys(joined).filter(k=>k!==ak&&personByKey(k)&&(m.room==="notice"||inRoomScope(m.room,personByKey(k))));
   return {all,done:all.filter(k=>a[k]),todo:all.filter(k=>!a[k])};
 }
 const keyName=k=>{const p=personByKey(k);return p?p.name:k.slice(k.lastIndexOf("_")+1);};
@@ -3778,21 +3803,21 @@ function openAckList(m){
 }
 /* 앱을 열었을 때 확인 안 한 공지가 있으면 한 건씩 보여 줌 («나중에»는 2시간 동안 안 띄움) */
 function maybeNoticePrompt(){
-  if(noticePrompted||!me||isLocked()||!$("pOv").hidden)return;
+  if(noticePrompted||!me)return;if(isLocked()||!$("pOv").hidden){maybeNoticePrompt.n=(maybeNoticePrompt.n||0)+1;if(maybeNoticePrompt.n<40)setTimeout(maybeNoticePrompt,3000);return;}   // 다른 창이 열려 있으면 닫힌 뒤 다시
   let sn=0;try{sn=+localStorage.getItem("fstalk-nsnooze")||0;}catch(e){}
   if(Date.now()<sn)return;
-  const list=pendingNotices();if(!list.length)return;
+  const list=pendingNotices();if(!list.length){maybeNoticePrompt.e=(maybeNoticePrompt.e||0)+1;if(maybeNoticePrompt.e<6)setTimeout(maybeNoticePrompt,4000);return;}   // 방 글을 아직 다 못 받았을 수 있음
   noticePrompted=true;showNoticePrompt();
 }
 function showNoticePrompt(){
   const list=pendingNotices();if(!list.length){closeProfile();return;}
   const m=list[0];
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
-  const hd=el("div","nphead");hd.appendChild(icEl("megaphone","",22));hd.appendChild(el("b",null,"확인이 필요한 공지"+(list.length>1?" "+list.length+"건":"")));c.appendChild(hd);
+  const hd=el("div","nphead");hd.appendChild(icEl("megaphone","",22));hd.appendChild(el("b",null,(m.room==="notice"?"확인이 필요한 공지":(getRoom(m.room)||{name:"팀"}).name+" 팀 공지")+(list.length>1?" · 전체 "+list.length+"건":"")));c.appendChild(hd);
   const d=new Date(m.ts);c.appendChild(el("div","npmeta",m.name+" · "+(d.getMonth()+1)+"/"+d.getDate()+" "+hm(d)));
   const tx=el("div","nptext");if(m.file)tx.appendChild(el("div","more",isImgF(m.file)?"📷 사진":"📎 "+(m.file.name||"파일")));if(m.text)tx.appendChild(richText(String(m.text).slice(0,1200)));c.appendChild(tx);
   const ok=el("button","btn pri","확인했어요"+(list.length>1?" · 다음 공지":""));ok.onclick=()=>{ackNotice(m,true).then(()=>{if(pendingNotices().filter(x=>x.id!==m.id).length)setTimeout(showNoticePrompt,150);else{closeProfile();toast("공지를 모두 확인했습니다.");}});};c.appendChild(ok);
-  const vw=el("button","btn","전체공지 방에서 보기");vw.onclick=()=>{closeProfile();jumpTo(m.id);};c.appendChild(vw);
+  const vw=el("button","btn",m.room==="notice"?"전체공지 방에서 보기":"팀방에서 보기");vw.onclick=()=>{closeProfile();jumpTo(m.id);};c.appendChild(vw);
   const later=el("button","nplater","나중에 볼게요");later.onclick=()=>{try{localStorage.setItem("fstalk-nsnooze",String(Date.now()+2*3600e3));}catch(e){}closeProfile();};c.appendChild(later);
   $("pOv").hidden=false;
 }
@@ -4084,6 +4109,9 @@ $("composer").addEventListener("submit",async e=>{
     return;
   }
   const r=room,data={uid,name:me.name,text:t,ts:SV},rt=replyTo;
+  {const mt=/^\/(팀)?공지\s+([\s\S]+)/.exec(t);if(mt){   // 팀방에서 「/공지 내용」 = 팀 공지(팀원이 앱을 열면 확인 팝업)
+    if(!canTeamNotice(r)){toast(ROOM_SCOPE[r]?"팀 공지는 그 팀 팀장·그룹장·관리자만 올릴 수 있어요.":"팀 공지는 팀방에서 올려요. FSG 전체 공지는 전체공지 방에 쓰세요.");return;}
+    data.text=mt[2].trim();data.tn=true;}}
   if(rt)data.re=reData(rt);
   input.value="";input.style.height="auto";replyTo=null;renderCbar();$("mbox").hidden=true;mcands=[];syncSend();
   const ref=R("msgs/"+r).push();pending.add(ref.key);

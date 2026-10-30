@@ -108,6 +108,9 @@
             },
             "$other": {
               ".validate": false
+            },
+            "tn": {
+              ".validate": "newData.isBoolean() && newData.val() === true && ($room.matches(/^(west|east|central|daejeon|gwangju|south|busan|daegu|fss|fsom)$/))"
             }
           }
         }
@@ -384,7 +387,7 @@
         ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
         "$msg": {
           "$p": {
-            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) && root.child('talk/msgs/notice/' + $msg).exists()",
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) && (root.child('talk/msgs/notice/' + $msg).exists() || root.child('talk/msgs/west/' + $msg).exists() || root.child('talk/msgs/east/' + $msg).exists() || root.child('talk/msgs/central/' + $msg).exists() || root.child('talk/msgs/daejeon/' + $msg).exists() || root.child('talk/msgs/gwangju/' + $msg).exists() || root.child('talk/msgs/south/' + $msg).exists() || root.child('talk/msgs/busan/' + $msg).exists() || root.child('talk/msgs/daegu/' + $msg).exists() || root.child('talk/msgs/fss/' + $msg).exists() || root.child('talk/msgs/fsom/' + $msg).exists())",
             ".validate": "newData.isNumber()"
           }
         }
