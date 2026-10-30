@@ -1151,6 +1151,14 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 #tSearch,#tSaved,#tAdmin{display:none!important}
 .hmenu{display:none!important}   /* 휴대폰 홈의 ☰ 버튼은 하단 「메뉴」 탭과 중복 */
 .offl{display:inline-block;margin:0 0 8px;padding:3px 10px;border-radius:999px;background:#FFF4E0;color:#9A6400;font-size:12px;font-weight:600}html[data-theme=dark] .offl{background:#3A2C10;color:#F2C46B}
+
+/* 사용 안내 */
+.gdl{display:flex;flex-direction:column;gap:10px;margin:8px 0 12px;text-align:left}.gdins{text-align:left}
+.gdi{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--soft)}
+.gdi .gdic{color:#005BAC;flex:none;margin-top:2px}.gdi b{display:block;font-size:14.5px;color:var(--strong)}.gdi small{display:block;color:var(--sub);font-size:13px;line-height:1.5;margin-top:2px}
+.gdins{padding:10px 12px;border-radius:12px;background:#EAF2FB;margin-bottom:12px}.gdins b{display:block;color:#005BAC;font-size:14px}.gdins small{color:var(--sub);font-size:13px}
+html[data-theme=dark] .gdins{background:#16273A}
+.gdrow{display:flex;gap:8px}.gdrow .btn{flex:1;margin:0}
 </style>
 
 </head>
@@ -1359,7 +1367,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.122";
+const APP_VERSION="2026-10-31.123";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1669,7 +1677,7 @@ $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("
 let started=false,renderQ=false;
 function start(){
   if(started){renderNav();return;}
-  started=true;
+  started=true;setTimeout(guideAuto,4000);
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();renderNav();},()=>{});
   myKey=personKey(me.team,me.name);
   R("joined/"+myKey).set(true).catch(()=>{});
@@ -2821,7 +2829,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"전체 메뉴"));
   const L=[["home","홈",()=>go("home")],["chat","대화",()=>{listTab="rooms";go("");}],["users","조직도",()=>go("org")],["search","통합 검색",()=>go("search")],["bookmark","저장한 글",()=>go("saved")],["bell","알림 센터",()=>setTimeout(openNotiCenter,50)]]
-    .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")]]);
+    .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")],["info","사용 안내 · 새 기능",()=>setTimeout(()=>openGuide("tour"),0)]]);
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
@@ -2921,6 +2929,41 @@ async function openScan(){
   const tick=async t=>{if(!scanStream)return;scanRaf=requestAnimationFrame(tick);if(busy||t-last<250||vd.readyState<2)return;busy=true;last=t;
     try{const r=await d.detect(vd);if(r&&r.length&&scanStream){scanDone(r[0].rawValue);return;}}catch(e){}busy=false;};
   scanRaf=requestAnimationFrame(tick);
+}
+/* ===== 처음 쓰는 사람 안내(1분 둘러보기) + 새 기능 안내(묶음마다 한 번) =====
+   처음 = 이 기기에서 안내를 본 적 없음 → 둘러보기 / 이미 쓰던 사람 = 새 묶음(GUIDE_NEW.k)이 바뀌었을 때만 새 기능 안내. 메뉴 「사용 안내」로 언제든 다시 봄 */
+const GUIDE_NEW={k:"2026-10-31",t:"새로 바뀐 것",items:[
+  ["home","아래 탭이 홈 · 조직도 · 대화 · 기술 · 메뉴로 바뀌었어요","검색·저장·설정은 「메뉴」에 있어요. 화면을 옆으로 밀어도 탭이 넘어가요."],
+  ["sun","아침 일정 브리핑","매일 아침 7시대에 오늘 내 일정·우리 팀 설치·휴가를 한 줄로 알려 드려요(설정에서 끌 수 있어요)."],
+  ["scan","부품 라벨 바코드 스캔","검색창 옆 네모 버튼으로 P/N·S/N을 찍으면 기술정보·실마리로 바로 찾아요."],
+  ["users","조직도에서 바로 전화·1:1","사람 이름 옆 버튼으로 프로필을 열지 않고 바로 연락해요."],
+  ["compass","전파가 약해도","한 번 열어 본 실마리와 오늘 일정·만족도는 연결이 끊겨도 보여요."]]};
+const GUIDE_TOUR=[
+  ["home","홈","오늘 내 일정·근무, 우리 팀 설치, 확인할 공지가 한눈에 보여요. 아래로 당기면 새로 불러와요."],
+  ["users","조직도","팀·사무소별 사람과 오늘 근무(휴가·야간·교육). 이름 옆 버튼으로 바로 전화·1:1 대화."],
+  ["chat","대화","맨 위가 「우리 팀」 방이에요. 「/휴가 11/3」처럼 쓰면 근무일정에 바로 등록돼요."],
+  ["doc","기술","에러코드·부품번호·장비 이름으로 실마리·기술회보·매뉴얼·교육 영상을 한 번에 찾아요. 바코드로 찍어도 돼요."],
+  ["menu","메뉴","검색·저장한 글·알림 센터·설정, 설치·근무일정표 등 업무 도구가 모여 있어요."]];
+function guideSeen(){try{return localStorage.getItem("fstalk-guide")||"";}catch(e){return "x";}}
+function openGuide(mode){
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");c.appendChild(x);
+  const done=()=>{try{localStorage.setItem("fstalk-guide",GUIDE_NEW.k);}catch(e){}closeProfile();};x.onclick=done;
+  const tour=mode==="tour";
+  c.appendChild(el("h3",null,tour?"FS 포털 1분 둘러보기":GUIDE_NEW.t));
+  const L=el("div","gdl");(tour?GUIDE_TOUR:GUIDE_NEW.items).forEach(([ic2,t,d])=>{const r=el("div","gdi");r.appendChild(icEl(ic2,"gdic",22));const m=el("div");m.appendChild(el("b",null,t));m.appendChild(el("small",null,d));r.appendChild(m);L.appendChild(r);});c.appendChild(L);
+  if(tour&&!isStandalone()&&(isIOS||isAndroid)){const ins=el("div","gdins");ins.appendChild(el("b",null,"홈 화면에 설치하면 앱처럼 쓰고 알림도 받아요"));
+    ins.appendChild(el("small",null,isIOS?"사파리 아래쪽 공유(□↑) → 「홈 화면에 추가」 → 추가":"크롬 오른쪽 위 ⋮ → 「앱 설치」 또는 「홈 화면에 추가」"));c.appendChild(ins);}
+  const row=el("div","gdrow");if(tour){const nb=el("button","btn","새 기능 보기");nb.onclick=()=>openGuide("new");row.appendChild(nb);}
+  const ok=el("button","btn pri","시작하기");if(!tour)ok.textContent="확인";ok.onclick=done;row.appendChild(ok);c.appendChild(row);
+  $("pOv").hidden=false;
+}
+function guideAuto(){   // 앱을 열고 다른 팝업(공지 확인 등)이 닫힌 뒤 한 번
+  const g=guideSeen();if(g===GUIDE_NEW.k||g==="x")return;
+  let n=0;const t=setInterval(()=>{n++;if(n>40){clearInterval(t);return;}
+    if(!started||!me||me.status!=="approved"||!$("pOv").hidden||!$("lockOv").hidden)return;clearInterval(t);
+    let old=false;try{old=Object.keys(localStorage).some(k=>/^fstalk-(fold|tip-lp|silhist|theme|orgview|fs|inst-hide|npin-hide|kpi-pub|lock)$/.test(k));}catch(e){}   // 이미 쓰던 기기면 둘러보기 대신 새 기능만
+    openGuide(g||old?"new":"tour");},3000);
 }
 /* ===== 휴대폰: 좌우로 밀어 아래 탭 이동 (홈 ↔ 대화 ↔ 조직도 ↔ 검색 ↔ 저장 ↔ 관리) — 손가락을 따라 화면이 움직임 =====
    지금 탭은 주소(#)가 아니라 실제 보이는 화면(view·mList)으로 판단한다(첫 화면은 주소가 비어 있어 순서가 어긋났음).
