@@ -267,6 +267,9 @@ html[data-theme=dark] .hbd{background:#16273A;color:#8CC4F5}
 .swday.off{background:var(--soft2)}.swday.today{border-color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
 .swd{font-size:13px;font-weight:800;color:var(--strong)}.swday.off .swd{color:#E7413E}
 .bnote{display:flex;align-items:center;gap:8px;margin:4px 0 10px;font-size:14px;color:var(--text)}.bnote input{width:18px;height:18px}
+.hsilres{display:flex;flex-direction:column;gap:4px}.hsilres:empty{display:none}
+.hbcnt{font-size:11.5px;font-weight:800;color:#fff;background:#E7413E;border-radius:9px;padding:1px 7px}
+.bvid{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin:8px 0 12px}.bvid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
@@ -1049,7 +1052,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.85";
+const APP_VERSION="2026-10-30.86";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1789,25 +1792,46 @@ const BOARD={tech:{title:"기술정보",ic:"doc",hint:"기술 회보(TB)·매뉴
 const BOARD_DEV=["XN","XN-L","XR","UF","UC","SP-50","CN","HISCL","공통"];
 let board={};
 const boardList=k=>Object.entries(board[k]||{}).map(([id,v])=>Object.assign({id,k},v)).filter(x=>x&&x.t&&x.u).sort((a,b)=>(b.ts||0)-(a.ts||0));
-const boardNew=x=>Date.now()-(x.ts||0)<7*864e5;
+const boardSeenKey=k=>"fstalk-board-seen-"+k;
+const boardSeen=k=>{try{return +localStorage.getItem(boardSeenKey(k))||0;}catch(e){return 0;}};
+const boardNew=x=>Date.now()-(x.ts||0)<14*864e5&&(x.ts||0)>boardSeen(x.k);   // 14일 안에 올라왔고 아직 안 본 글
+const boardMark=k=>{try{localStorage.setItem(boardSeenKey(k),String(Date.now()));}catch(e){}};
 function boardRow(x,admin){
   const r=el("div","hbrow");const b=el("button","hbi");b.title=x.u;
   if(x.d)b.appendChild(el("span","hbd",x.d));
   const t=el("span","hbt");t.appendChild(el("b",null,x.t));const sub=[x.n,(d=>(d.getMonth()+1)+"/"+d.getDate())(new Date(x.ts||0))+(x.by?" "+x.by:"")].filter(Boolean).join(" · ");t.appendChild(el("small",null,sub));b.appendChild(t);
   if(boardNew(x))b.appendChild(el("span","hbn","새"));
-  b.onclick=()=>openUrl(x.u);r.appendChild(b);
+  b.onclick=()=>boardOpenItem(x);r.appendChild(b);
   if(admin&&isAdmin){const d=el("button","hbx","×");d.title="삭제";d.setAttribute("aria-label","삭제");d.onclick=()=>{if(confirm("「"+x.t+"」을(를) 삭제할까요?"))R("board/"+x.k+"/"+x.id).remove().then(()=>{toast("삭제했습니다.");if(!$("pOv").hidden)openBoard(x.k);}).catch(e=>toast("실패: "+e.message));};r.appendChild(d);}
   return r;
 }
+/* 유튜브·구글 드라이브 영상은 앱 안에서 바로 재생, 나머지는 새 창 */
+function boardEmbed(u){
+  let m=/^https:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/.exec(u);
+  if(m)return "https://www.youtube-nocookie.com/embed/"+m[1]+"?rel=0";
+  m=/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{10,})/.exec(u);if(m)return "https://drive.google.com/file/d/"+m[1]+"/preview";
+  return "";
+}
+function boardOpenItem(x){
+  const em=x.k==="video"?boardEmbed(x.u):"";
+  if(!em){openUrl(x.u);return;}
+  const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const cl=el("button","x","×");cl.setAttribute("aria-label","닫기");cl.onclick=closeProfile;c.appendChild(cl);
+  c.appendChild(el("h3",null,(x.d?x.d+" · ":"")+x.t));if(x.n)c.appendChild(el("div","pkhint",x.n));
+  const fr=el("div","bvid");const f=document.createElement("iframe");f.src=em;f.allow="autoplay; encrypted-media; picture-in-picture; fullscreen";f.allowFullscreen=true;f.referrerPolicy="strict-origin-when-cross-origin";f.title=x.t;fr.appendChild(f);c.appendChild(fr);
+  const ob=el("button","btn","새 창에서 열기");ob.onclick=()=>openUrl(x.u);c.appendChild(ob);
+  $("pOv").hidden=false;
+}
 function renderBoardCards(){
   ["tech","video"].forEach(k=>{const c=document.getElementById("hb-"+k);if(!c)return;const l=c.querySelector(".hblist");l.textContent="";
+    const nN=boardList(k).filter(boardNew).length;let bd=c._head.querySelector(".hbcnt");if(nN){if(!bd){bd=el("span","hbcnt");c._head.insertBefore(bd,c._head.querySelector(".hmore"));}bd.textContent="새 "+nN;}else if(bd)bd.remove();
     const L=boardList(k);if(!L.length)l.appendChild(el("p","hp",BOARD[k].hint+"를 이곳에 모읍니다. "+(isAdmin?"아래 「등록」으로 첫 글을 올려 주세요.":"곧 올라옵니다.")));
     L.slice(0,4).forEach(x=>l.appendChild(boardRow(x)));
     if(L.length>4)l.appendChild(el("p","hsoon","외 "+(L.length-4)+"건 — 전체 보기"));
     let ab=c.querySelector(".hbadd");if(isAdmin&&!ab){ab=el("button","btn hbadd","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}else if(!isAdmin&&ab)ab.remove();});
 }
 function openBoard(k,dev){
-  const B=BOARD[k];const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const B=BOARD[k];setTimeout(()=>{boardMark(k);renderBoardCards();},1500);const c=$("pCard");c.textContent="";c.classList.add("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,B.title));
   const L=boardList(k);const devs=[...new Set(L.map(v=>v.d).filter(Boolean))];
@@ -1885,7 +1909,10 @@ function renderHome(){
   const sq=el("input");sq.id="hsq";sq.type="search";sq.placeholder="에러 이름·코드·부품번호";sf.appendChild(sq);
   const sgo=el("button","btn","찾기");sgo.type="submit";sf.appendChild(sgo);
   sf.onsubmit=e=>{e.preventDefault();const v=sq.value.trim();if(!v){sq.focus();return;}$("q").value=v;go("search");};
-  sl.appendChild(sf);
+  sl.appendChild(sf);const sres=el("div","hsilres");sl.appendChild(sres);
+  let sqT=0;sq.oninput=()=>{clearTimeout(sqT);sqT=setTimeout(()=>{const v=sq.value.trim();sres.textContent="";if(v.length<2||!silIdx)return;   // 홈에서 바로 결과 3개
+    const rows=silSearch(v,3);if(!rows.length){sres.appendChild(el("div","hsoon","맞는 에러가 없습니다 — 「찾기」로 대화까지 검색"));return;}
+    rows.forEach(r=>sres.appendChild(silRowEl(r)));},250);};
   const chips=el("div","hchips");["XN","XN-L","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 에러 목록 (실마리)";c.onclick=()=>openUrl(LINKS.silmari+"#/d/"+encodeURIComponent(dv));chips.appendChild(c);});
   sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);colA.appendChild(sl);silStatus();
   // 기술정보·동영상 교육 (준비 중)
@@ -3210,7 +3237,7 @@ renderInstall();
 
 /* ---------- 프로필 (연락처·메일) ---------- */
 let profiles={};
-function closeProfile(){if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").classList.remove("wide");if(view==="settings")renderSettings();}
+function closeProfile(){if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide");if(view==="settings")renderSettings();}
 $("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
