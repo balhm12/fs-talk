@@ -1190,6 +1190,10 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 .tnmsg .bubble{box-shadow:inset 3px 0 0 #E69E0B}.tnmsg .bubble::before{content:"팀 공지";display:block;font-size:11px;font-weight:800;color:#B26100;margin-bottom:2px}
 .silchip.sug{border-style:dashed;border-color:#E69E0B;color:#9A6400;background:#FFF8EA}html[data-theme=dark] .silchip.sug{background:#2E2614;color:#F2C46B}
 .silchip.sug.done{border-style:solid;border-color:#3FBA46;color:#2E8B35;background:#EAF7EB}
+/* 기기 연결 코드 칸: 버튼이 폭을 다 차지해 입력칸이 18px로 줄어들던 것 */
+.lnkrow{align-items:stretch}.lnkrow input{flex:1 1 auto!important;min-width:150px!important;font-size:22px!important;height:48px;box-sizing:border-box}
+.lnkrow .btn,.lnkrow #lnkBtn{flex:0 0 auto!important;width:auto!important;min-width:84px;padding:0 18px!important}
+.lnkbox.hl{border:2px solid #005BAC;background:#EAF2FB}html[data-theme=dark] .lnkbox.hl{background:#16273A}
 </style>
 
 </head>
@@ -1398,7 +1402,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.137";
+const APP_VERSION="2026-10-31.138";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1692,6 +1696,10 @@ function syncOffice(){
 $("rTeam").addEventListener("change",syncOffice);
 $("lnkBtn").onclick=linkWithCode;
 $("lnkCode").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();linkWithCode();}});
+/* 홈 화면에 추가한 앱(아이폰)은 사파리와 저장 공간이 따로라 처음 열면 새 기기로 보임 → 연결 안내를 그 상황에 맞게 */
+setTimeout(function(){try{if(!isStandalone())return;const t=$("lnkTip");if(!t)return;
+  t.textContent="홈 화면에 추가한 앱은 "+(isIOS?"사파리와 ":"브라우저와 ")+"기록이 따로 저장돼서 처음 한 번만 연결이 필요해요. 쓰던 "+(isIOS?"사파리":"브라우저")+"(또는 다른 기기)의 FS 포털 → 설정 → 「다른 기기 연결」에서 6자리 코드를 만들어 아래에 넣으세요. 관리자 승인 없이 바로 열립니다.";
+  $("lnkBox").classList.add("hl");}catch(e){}},0);   // isIOS 등이 아래에서 선언되므로 다음 틈에
 $("regForm").addEventListener("submit",async e=>{
   e.preventDefault();
   let name,team,office;
