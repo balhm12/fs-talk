@@ -1359,7 +1359,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.121";
+const APP_VERSION="2026-10-31.122";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2246,7 +2246,7 @@ function kpiCompute(){
           const tops=teams.filter(r=>!r.p&&r.nc),W=f=>{let a=0,b=0;tops.forEach(r=>{if(r[f]!=null){a+=r[f]*r.nc;b+=r.nc;}});return b?Math.round(a/b*10)/10:null;};
           const fsg={nc:tops.reduce((a,r)=>a+r.nc,0),sc:W("sc"),scP:W("scP"),cs:W("cs"),csP:W("csP")};
           return JSON.stringify({label:p.label,plabel:pp.label,prov:isProvisional(p.months.filter(m=>D.months.includes(m)).length?p.months.filter(m=>D.months.includes(m)):[D.months[D.months.length-1]]),
-            cur:pick(c),prev:pick(v),tg:{ftfr:TARGET_FTFR,rev:TARGET_REV,mttr:TARGET_MTTR},plabelP:(P.labels||{})[PR]||PR,people,teams,fsg,src:(typeof SRC!=="undefined"&&SRC.at)||null});})()`);
+            cur:pick(c),prev:pick(v),tg:{ftfr:TARGET_FTFR,rev:TARGET_REV,mttr:TARGET_MTTR},plabelP:(P.period_label||{})[PR]||(P.labels||{})[PR]||PR,people,teams,fsg,src:(typeof SRC!=="undefined"&&SRC.at)||null});})()`);
           return fin(null,JSON.parse(out));}
       }catch(e){if(n>8&&!/undefined|null/.test(String(e.message)))return fin(e);}
       if(n>180)fin(new Error("시간 초과 — KPI 대시보드가 열리지 않았습니다"));},500);
@@ -2323,7 +2323,7 @@ function renderKpi(){
     const g=el("div","kpig me");const t=(lab,v,sub)=>{const c=el("div","kpit");c.appendChild(el("small",null,lab));c.appendChild(el("b",null,v));if(sub)c.appendChild(el("span","kgoal",sub));g.appendChild(c);};
     t("KPI 종합 점수",f1(M.score),M.gi!=null?"직급 보정 "+f1(M.gi):null);t("처리 건수",String(M.total||0),"고장 "+(M.rep||0)+" · PM "+(M.pm||0)+" · 설치 "+(M.ins||0));
     t("MTTR(고장수리)",M.mttr==null?"–":f1(M.mttr)+"분",null);t("순위",M.trank?M.trank+" / "+M.tn:"–","팀 안 · FSG "+(M.rank||"–")+" / "+(M.n||"–"));box.appendChild(g);}
-  else if(me&&myRole()!=="group")box.appendChild(el("div","hsoon","내 KPI는 관리자가 KPI를 올리면 이곳에 보입니다 (나만 볼 수 있음)."));
+  else if(me&&myRole()!=="group"&&myField())box.appendChild(el("div","hsoon","내 KPI는 관리자가 KPI를 올리면 이곳에 보입니다 (나만 볼 수 있음)."));   // 지원 팀(FSS·FSOM)은 개인 KPI 대상이 아님
   const ft=el("div","schft");if(S&&S.at)ft.appendChild(el("span",null,"KPI 대시보드 기준 · "+fmtTime(S.at)+" 올림"));
   if(isAdmin&&kpiHasCode()){const pb=el("button","hmore","KPI 다시 올리기");pb.id="kpiPubBtn";pb.onclick=()=>kpiPublish(true);ft.appendChild(pb);}
   if(kpiErr&&isAdmin)ft.appendChild(el("span","schwarn",kpiErr));
