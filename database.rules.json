@@ -363,6 +363,37 @@
           ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && auth.uid === $uid",
           ".validate": "newData.isNumber()"
         }
+      },
+      "board": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$kind": {
+          ".validate": "$kind === 'tech' || $kind === 'video'",
+          "$id": {
+            ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+            ".validate": "newData.hasChildren(['t','u','ts','by'])",
+            "t": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val().length <= 500 && newData.val().matches(/^https:\\/\\/[^ ]+$/)"
+            },
+            "d": {
+              ".validate": "newData.isString() && newData.val().length <= 20"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "by": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
       }
     }
   }
