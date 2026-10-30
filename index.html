@@ -1174,6 +1174,8 @@ html[data-theme=dark] :focus-visible{outline-color:#5AA9F0}
 }
 .kpt2 td.good,.kpt2 td small.up{color:#2E8B35}.kpt2 td.low,.kpt2 td small.down{color:#C9302C}
 html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{color:#6FD675}html[data-theme=dark] .kpt2 td.low,html[data-theme=dark] .kpt2 td small.down{color:#FF7A7A}
+.usp{display:inline-flex;align-items:flex-end;gap:2px;height:24px}.usp i{display:block;width:6px;background:#00B8EE;border-radius:2px}
+.usg td{text-align:right}.usg td.tn{text-align:left}
 </style>
 
 </head>
@@ -1382,7 +1384,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.124";
+const APP_VERSION="2026-10-31.125";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1692,7 +1694,7 @@ $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("
 let started=false,renderQ=false;
 function start(){
   if(started){renderNav();return;}
-  started=true;setTimeout(guideAuto,4000);
+  started=true;setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();renderNav();},()=>{});
   myKey=personKey(me.team,me.name);
   R("joined/"+myKey).set(true).catch(()=>{});
@@ -2152,7 +2154,7 @@ function silFavToggle(r,btn){const k=silFavKey(r),on=!!silFav[k];
     .then(()=>{toast(on?"즐겨찾기에서 뺐습니다.":"즐겨찾기에 넣었습니다.");}).catch(e=>toast("실패: "+(e.code||e.message)));}
 /* 실마리 결과 미리보기: 원인·조치·관련 부품 (실마리 장비 파일을 풀어서 — 실마리 앱과 같은 데이터) */
 const silDevJ={};
-async function silDetail(r){
+async function silDetail(r){track("sil");
   if(!silDevJ[r.d]){const a=await silGetAuth();if(!silKey)throw new Error("locked");
     const res=await fetch(SIL_BASE+"data/device/"+encodeURIComponent(r.d)+".json.enc",{cache:"no-cache"});if(!res.ok)throw new Error("실마리 "+res.status);
     const raw=await silOpen(silKey,await res.arrayBuffer());silDevJ[r.d]=a.gz?await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).json():JSON.parse(new TextDecoder().decode(raw));}
@@ -2603,7 +2605,7 @@ function renderHome(){
   const q=el("input");q.id="hq";q.type="search";q.placeholder="장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
   f.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";f.appendChild(sb);
-  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}$("q").value=v;go("search");};
+  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");$("q").value=v;go("search");};
   hd.appendChild(f);
   const tools=el("div","htools");
   if(!isTouch()){const ck=el("button","htool hck");ck.title="빠른 이동 (Ctrl+K)";ck.setAttribute("aria-label","빠른 이동");ck.appendChild(el("span",null,/Mac/.test(navigator.platform)?"⌘K":"Ctrl K"));ck.onclick=openCmd;tools.appendChild(ck);}
@@ -2699,7 +2701,7 @@ function schMineEv(e){if(!me||!schData)return false;const a=String(e.assignee||"
    설치: schedule-overrides/custom/user-{시각} — 일정표의 「일정 추가」와 같은 모양 */
 const WK_TYPES=[["휴가","휴가(전일)","all"],["오전휴가","오전 휴가","am"],["오후휴가","오후 휴가","pm"],["교육","교육","pick"],["회의","회의","pick"],["내근","내근","pick"],["DP","DP","all"]];
 const nowStampS=()=>{const d=new Date();return ymd(d)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
-async function schPut(path,val){const t=await schToken();const r=await fetch(SCH.db+"/"+path+".json?auth="+encodeURIComponent(t),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(val)});if(!r.ok)throw new Error("저장 실패 "+r.status);return true;}
+async function schPut(path,val){track("sch_add");const t=await schToken();const r=await fetch(SCH.db+"/"+path+".json?auth="+encodeURIComponent(t),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(val)});if(!r.ok)throw new Error("저장 실패 "+r.status);return true;}
 function schDates(a,b){const out=[];if(!a)return out;b=b&&b>=a?b:a;let d=a;for(let i=0;i<62&&d<=b;i++){out.push(d);d=schAdd(d,1);}return out;}
 function openWorkForm(pre){
   pre=pre||{};const tk=me?schTeamKey(me.team):"";
@@ -2915,7 +2917,7 @@ function scanClean(v){v=String(v||"").trim();
   if(/^https?:\/\//i.test(v)){try{const u=new URL(v);return u.searchParams.get("q")||u.searchParams.get("pn")||u.searchParams.get("sn")||v;}catch(e){}}
   return v.slice(0,80);}
 function scanDone(raw){const v=scanClean(raw);if(!v)return;scanStop();closeProfile();try{navigator.vibrate&&navigator.vibrate(60);}catch(e){}
-  techQ=v;silHistAdd(v);go("tech");toast("「"+v+"」 검색");}
+  techQ=v;silHistAdd(v);track("scan");go("tech");toast("「"+v+"」 검색");}
 async function openScan(){
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
@@ -2945,6 +2947,29 @@ async function openScan(){
     try{const r=await d.detect(vd);if(r&&r.length&&scanStream){scanDone(r[0].rawValue);return;}}catch(e){}busy=false;};
   scanRaf=requestAnimationFrame(tick);
 }
+/* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
+   talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
+const TRK={v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+  open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
+function track(f){
+  try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
+    const done=JSON.parse(localStorage.getItem(k)||"[]");if(done.includes(f))return;done.push(f);localStorage.setItem(k,JSON.stringify(done));
+    Object.keys(localStorage).filter(x=>x.startsWith("fstalk-trk-")&&x!==k).forEach(x=>localStorage.removeItem(x));
+    R("usage/"+d+"/"+f).transaction(v=>(v||0)+1).catch(()=>{});}catch(e){}
+}
+async function renderUsage(box){
+  box.textContent="";box.appendChild(el("div","nthint","기기마다 기능별로 하루 한 번만 셉니다(이름·시각 같은 개인 기록 없음). 숫자 = 그날 그 기능을 쓴 기기 수."));
+  const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(ymd(d));}
+  let v={};try{v=(await R("usage").once("value")).val()||{};}catch(e){box.appendChild(el("div","nthint","읽지 못했습니다: "+(e.code||e.message)+" (DB 규칙 배포 확인)"));return;}
+  const sum=(f,ds)=>ds.reduce((a,d)=>a+(((v[d]||{})[f])||0),0),last7=days.slice(-7),prev7=days.slice(0,7);
+  const wrap=el("div","kptw");const t=el("table","kpt kpt2 usg");const hr=el("tr");["기능","오늘","최근 7일","그 전 7일","14일 추이"].forEach(h=>hr.appendChild(el("th",null,h)));t.appendChild(hr);
+  Object.keys(TRK).map(f=>[f,sum(f,last7),sum(f,prev7)]).sort((a,b)=>b[1]-a[1]).forEach(([f,a,b])=>{const tr=el("tr");tr.appendChild(el("td","tn",TRK[f]));
+    tr.appendChild(el("td",null,String(((v[days[13]]||{})[f])||0)));const c=el("td",null,String(a));if(b&&a!==b)c.appendChild(el("small",a>b?"up":"down",(a>b?" ▲":" ▼")+Math.abs(a-b)));tr.appendChild(c);tr.appendChild(el("td",null,String(b)));
+    const sp=el("td");const mx=Math.max(1,...days.map(d=>((v[d]||{})[f])||0));const bars=el("span","usp");days.forEach(d=>{const i=el("i");i.style.height=Math.max(2,(((v[d]||{})[f])||0)/mx*22)+"px";i.title=d+" · "+(((v[d]||{})[f])||0);bars.appendChild(i);});sp.appendChild(bars);tr.appendChild(sp);
+    t.appendChild(tr);});
+  wrap.appendChild(t);box.appendChild(wrap);
+  if(!Object.keys(v).length)box.appendChild(el("div","nthint","아직 모인 숫자가 없습니다. 오늘부터 쌓입니다."));
+}
 /* ===== 처음 쓰는 사람 안내(1분 둘러보기) + 새 기능 안내(묶음마다 한 번) =====
    처음 = 이 기기에서 안내를 본 적 없음 → 둘러보기 / 이미 쓰던 사람 = 새 묶음(GUIDE_NEW.k)이 바뀌었을 때만 새 기능 안내. 메뉴 「사용 안내」로 언제든 다시 봄 */
 const GUIDE_NEW={k:"2026-10-31",t:"새로 바뀐 것",items:[
@@ -2960,7 +2985,7 @@ const GUIDE_TOUR=[
   ["doc","기술","에러코드·부품번호·장비 이름으로 실마리·기술회보·매뉴얼·교육 영상을 한 번에 찾아요. 바코드로 찍어도 돼요."],
   ["menu","메뉴","검색·저장한 글·알림 센터·설정, 설치·근무일정표 등 업무 도구가 모여 있어요."]];
 function guideSeen(){try{return localStorage.getItem("fstalk-guide")||"";}catch(e){return "x";}}
-function openGuide(mode){
+function openGuide(mode){track("guide");
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");c.appendChild(x);
   const done=()=>{try{localStorage.setItem("fstalk-guide",GUIDE_NEW.k);}catch(e){}closeProfile();};x.onclick=done;
@@ -3108,7 +3133,7 @@ function renderTechPage(){
   sf.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";sf.appendChild(sb);
   let t0=0;q.oninput=()=>{clearTimeout(t0);t0=setTimeout(()=>{techQ=q.value.trim();drawRes();},200);};
-  sf.onsubmit=e=>{e.preventDefault();techQ=q.value.trim();if(techQ)silHistAdd(techQ);drawRes();};
+  sf.onsubmit=e=>{e.preventDefault();techQ=q.value.trim();if(techQ){silHistAdd(techQ);track("search");}drawRes();};
   b.appendChild(sf);
   const fl=el("div","obchips");b.appendChild(fl);
   const res=el("div","tres");b.appendChild(res);
@@ -3181,7 +3206,7 @@ function renderOrgBoard(){
     x.appendChild(m);x.onclick=()=>openProfile(p);row.appendChild(x);
     // 현장에서 바로 연락: 전화·1:1 (프로필을 열지 않고)
     const acts=el("span","obpa");
-    if(pf.phone){const a=el("a","obpi");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");a.title=p.name+"님에게 전화";a.setAttribute("aria-label",p.name+"님에게 전화");a.appendChild(icEl("phone","",17));acts.appendChild(a);}
+    if(pf.phone){const a=el("a","obpi");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");a.title=p.name+"님에게 전화";a.onclick=()=>track("call");a.setAttribute("aria-label",p.name+"님에게 전화");a.appendChild(icEl("phone","",17));acts.appendChild(a);}
     if(!isMe){const c=el("button","obpi");c.title=p.name+"님과 1:1 대화";c.setAttribute("aria-label",p.name+"님과 1:1 대화");c.appendChild(icEl("chat","",17));c.onclick=()=>openDm(p);acts.appendChild(c);}
     row.appendChild(acts);return row;};
   const shown=teams.filter(t=>!orgTeam||t===orgTeam);let any=false;
@@ -3288,7 +3313,7 @@ function showView(){
 }
 const curHash=()=>{try{return decodeURIComponent(location.hash.slice(1));}catch(e){return location.hash.slice(1);}};
 function go(h){if(curHash()!==h)location.hash=h;route();}
-function route(){
+function route(){setTimeout(()=>{if(started)track("v_"+(view==="chat"?(room?"chat":"chat"):view));},0);
   if(!started)return;
   const h=curHash();
   infoOpen=false;
@@ -3976,7 +4001,7 @@ async function leaveDm(id){
     alert(denied?"나가기가 저장되지 않았습니다.\n\nFirebase 콘솔에서 최신 규칙(database.rules.json)을 게시해야 1:1 나가기가 됩니다. 게시한 뒤 다시 눌러 주세요.":"나가기 실패: "+(e.code||e.message));
   }
 }
-async function openDm(p){
+async function openDm(p){track("dm");
   if(!me||!myKey)return;
   const id=dmId(p);if(!dmOther(id)){toast("나와의 대화는 만들 수 없어요.");return;}
   closeProfile();
@@ -4461,6 +4486,7 @@ function renderAdmin(){
   body.appendChild(el("div","nthint","새 직원이 등록을 요청하면 관리자(같은 사람의 휴대폰·PC 모두)에게 알림이 갑니다. 안 오면 아래 버튼으로 확인하세요."));
   const nb=el("button","btn","🔔 등록 알림 테스트");nb.onclick=()=>testAdminNotify(nb);body.appendChild(nb);
   const nr=el("div","nthint");nr.id="ntRes";nr.style.margin="8px 0 24px";body.appendChild(nr);
+  body.appendChild(el("div","sec","사용 현황 (최근 14일)"));const ub=el("div");body.appendChild(ub);renderUsage(ub);
 }
 
 /* ---------- 홈 화면 설치 (PWA) ---------- */

@@ -483,6 +483,15 @@
           ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())",
           ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
         }
+      },
+      "usage": {
+        ".read": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+        "$day": {
+          "$f": {
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $day.matches(/^20[0-9][0-9]-[01][0-9]-[0-3][0-9]$/) && $f.matches(/^[a-z0-9_]{1,24}$/)",
+            ".validate": "newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1"
+          }
+        }
       }
     }
   }
