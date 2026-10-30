@@ -307,6 +307,9 @@
             "$id": {
               ".validate": "newData.isBoolean()"
             }
+          },
+          "hlayout": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
           }
         }
       },

@@ -1178,6 +1178,14 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 .usp{display:inline-flex;align-items:flex-end;gap:2px;height:24px}.usp i{display:block;width:6px;background:#00B8EE;border-radius:2px}
 .usg td{text-align:right}.usg td.tn{text-align:left}
 @media (max-width:820px){.kpig.me{grid-template-columns:repeat(2,minmax(0,1fr))}}   /* 휴대폰: 내 KPI 4칸이 좁아 글자가 쪼개짐 → 2×2 */
+
+/* 홈 개인 배치 */
+.hdash.custom{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-items:start}
+.hdash.custom>.hsec{grid-column:1/-1}
+@media (max-width:820px){.hdash.custom{grid-template-columns:minmax(0,1fr)}}
+.hedit{display:flex;justify-content:center;margin:4px 0 0}
+.lerow .lname{flex:1;min-width:0;text-align:left}.lerow.off .lname{color:var(--sub);text-decoration:line-through}
+@media (pointer:coarse){.lebtn{width:40px;height:40px}}
 </style>
 
 </head>
@@ -1386,7 +1394,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.128";
+const APP_VERSION="2026-10-31.130";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1723,6 +1731,7 @@ function start(){
   setTimeout(()=>{if(isAdmin||myLead())R("vocfu").on("value",s=>{vocFu=s.val()||{};renderVoc();},()=>{});},1500);
   setTimeout(()=>{let last=0;try{last=+localStorage.getItem("fstalk-kpi-pub")||0;}catch(e){}   // 관리자 PC: 하루 한 번 KPI 자동 갱신
     if(isAdmin&&!isM()&&kpiHasCode()&&Date.now()-last>20*3600e3&&(!kpiSvc||Date.now()-(kpiSvc.at||0)>20*3600e3))kpiPublish(false);},12000);
+  R("prefs/"+myKey+"/hlayout").on("value",s=>{const v=s.val();myLayout=typeof v==="string"&&v?v:null;homeBuilt="";if(view==="home")renderHome();},()=>{});
   R("prefs/"+myKey+"/links").on("value",s=>{const v=s.val();myLinks=typeof v==="string"&&v?v:null;if(view==="home")renderHome();},()=>{});
   R("prefs/"+myKey+"/digest").on("value",s=>{myDigest=s.val()!==false;if(view==="settings")renderSettings();},()=>{});
   setTimeout(()=>{if(!schData&&!schP)schLoad();},3500);   // 대화 속 병원 일정 칩·조직도 상태용
@@ -2624,13 +2633,13 @@ function renderHome(){
   const sec=(id,title)=>{const s=el("section","hsec "+id);if(title)s.appendChild(el("h2","hsect",title));grid.appendChild(s);return s;};
   // 1. 오늘의 업무 + 업무 커뮤니케이션
   const s1=sec("work");const s1w=el("div","hrow2");s1.appendChild(s1w);
-  const sc=hcard("오늘의 업무","calendar","sched");sc.id="hc-sched";
+  const sc=hcard("오늘의 업무","calendar","sched");sc.id="hc-sched";sc.dataset.hk="sched";
   const sr=el("div","hbtns sm");[["box","설치일정",LINKS.install],["calendar","근무일정",LINKS.work]].forEach(([i,t,u])=>{const x=el("button","hbtn");x.appendChild(icEl(i,"",16));x.appendChild(el("span",null,t));x.onclick=()=>openApp(u===LINKS.install?"install":"work");sr.appendChild(x);});
   sc._head.appendChild(sr);const hs=el("div","hsch");hs.id="hsch";sc.appendChild(hs);
   const ad=el("div","hadd");if(isAdmin||myLead()){const tb=el("button","btn","팀 현황 ›");tb.onclick=()=>go("team");ad.appendChild(tb);}const a1=el("button","btn","+ 내 근무 등록");a1.onclick=()=>openWorkForm();const a2=el("button","btn","+ 설치·평가 일정 등록");a2.onclick=()=>openInstallForm();ad.appendChild(a1);ad.appendChild(a2);ad.appendChild(el("span","hsoon","대화창에서 「/휴가 11/3」「/설치 11/10 병원 장비」로도 등록"));sc.appendChild(ad);
   s1w.appendChild(sc);
   const cm=hcard("업무 커뮤니케이션","chat","comm");hmore(cm,"대화 전체",()=>{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");});
-  cm.appendChild(el("div","hcomm"));s1w.appendChild(cm);
+  cm.appendChild(el("div","hcomm"));cm.dataset.hk="comm";s1w.appendChild(cm);
   // 2. 기술지원
   const s2=sec("tech");const t2h=el("div","hsech");t2h.appendChild(el("h2","hsect","기술지원"));const t2l=el("button","hmore","기술정보 검색 ›");t2l.onclick=()=>go("tech");t2h.appendChild(t2l);s2.appendChild(t2h);const s2w=el("div","hrow3");s2.appendChild(s2w);
   const sl=hcard("실마리 빠른 찾기","compass","sil");hmore(sl,"실마리 열기",()=>openApp("silmari"));
@@ -2644,16 +2653,18 @@ function renderHome(){
     rows.forEach(r=>sres.appendChild(silRowEl(r)));},250);};
   renderSilHome(sres);
   const chips=el("div","hchips");["XN","XN-L","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 에러 목록 (실마리)";c.onclick=()=>openApp("silmari",LINKS.silmari+"#/d/"+encodeURIComponent(dv));chips.appendChild(c);});
-  sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);s2w.appendChild(sl);silStatus();
-  ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
+  sl.dataset.hk="sil";sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);s2w.appendChild(sl);silStatus();
+  ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
   renderBoardCards();
   // 3. 서비스 현황
   const s3=sec("svc","서비스 현황");const s3w=el("div","hrow2 even");s3.appendChild(s3w);
-  const vc=hcard("고객 만족도","star","voc");hmore(vc,"대시보드",()=>openApp("voc"));const hv=el("div","hvoc");hv.id="hvoc";vc.appendChild(hv);s3w.appendChild(vc);
-  const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);s3w.appendChild(kc);
+  const vc=hcard("고객 만족도","star","voc");hmore(vc,"대시보드",()=>openApp("voc"));const hv=el("div","hvoc");hv.id="hvoc";vc.appendChild(hv);vc.dataset.hk="voc";s3w.appendChild(vc);
+  const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";s3w.appendChild(kc);
   // 4. 바로가기
-  const s4=sec("links");const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
+  const s4=sec("links");s4.dataset.hk="links";const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
   const lg=el("div","hlg");homeLinks().filter(k=>k!=="kpi"||isAdmin||myLead()).forEach(k=>{const [i,t,fn]=HLINKS[k];const x=el("button","hlink");x.appendChild(icEl(i,"",20));x.appendChild(el("span",null,t));x.onclick=fn;lg.appendChild(x);});s4.appendChild(lg);
+  applyHomeLayout(grid);
+  const eh=el("div","hedit");const eb=el("button","hmore","홈 화면 순서·표시 바꾸기");eb.onclick=openLayoutEditor;eh.appendChild(eb);b.appendChild(eh);
   navFooter(b);
   renderSch();renderVoc();renderKpi();
   updateHome();
@@ -2848,13 +2859,43 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"전체 메뉴"));
   const L=[["home","홈",()=>go("home")],["chat","대화",()=>{listTab="rooms";go("");}],["users","조직도",()=>go("org")],["search","통합 검색",()=>go("search")],["bookmark","저장한 글",()=>go("saved")],["bell","알림 센터",()=>setTimeout(openNotiCenter,50)]]
-    .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")],["info","사용 안내 · 새 기능",()=>setTimeout(()=>openGuide("tour"),0)]]);
+    .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")],["info","사용 안내 · 새 기능",()=>setTimeout(()=>openGuide("tour"),0)],["home","홈 화면 순서·표시",()=>{go("home");setTimeout(openLayoutEditor,0);}]]);
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
   grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[]).map(k=>HLINKS[k]));
   grp("기술지원",[HLINKS.tech,HLINKS.video,["compass","실마리",()=>openApp("silmari")]]);
   $("pOv").hidden=false;
+}
+/* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
+let myLayout=null;
+const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
+const HCARD_DEF=Object.keys(HCARDS);
+function homeLayout(){const v=String(myLayout||"");const [o,h]=v.split("|");const order=(o||"").split(",").filter(k=>HCARDS[k]);HCARD_DEF.forEach(k=>{if(!order.includes(k))order.push(k);});
+  return {order,hidden:(h||"").split(",").filter(k=>HCARDS[k]),custom:!!myLayout};}
+function applyHomeLayout(grid){
+  const L=homeLayout();if(!L.custom)return;   // 바꾼 적 없으면 기본 배치(줄 단위 디자인) 그대로
+  const cards={};grid.querySelectorAll("[data-hk]").forEach(c=>{cards[c.dataset.hk]=c;});
+  grid.textContent="";grid.classList.add("custom");
+  L.order.forEach(k=>{const c=cards[k];if(!c||L.hidden.includes(k))return;c.classList.add("hcc");grid.appendChild(c);});
+}
+function openLayoutEditor(){
+  const L=homeLayout();let cur=L.order.slice(),hid=new Set(L.hidden);
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"홈 화면 순서·표시"));c.appendChild(el("div","pkhint","자주 보는 카드를 위로 올리고, 안 보는 카드는 끄세요. 내 계정의 모든 기기에 같이 적용돼요. 위쪽 요약 숫자·오늘의 브리핑은 항상 맨 위에 있어요."));
+  const list=el("div","ledit");c.appendChild(list);
+  const draw=()=>{list.textContent="";cur.forEach((k,i)=>{const r=el("div","lerow"+(hid.has(k)?" off":""));
+    const cb=el("input");cb.type="checkbox";cb.checked=!hid.has(k);cb.setAttribute("aria-label",HCARDS[k]+" 보이기");cb.onchange=()=>{cb.checked?hid.delete(k):hid.add(k);draw();};r.appendChild(cb);
+    r.appendChild(el("span","lname",HCARDS[k]));
+    const up=el("button","lebtn","▲");up.setAttribute("aria-label",HCARDS[k]+" 위로");up.disabled=i===0;up.onclick=()=>{[cur[i-1],cur[i]]=[cur[i],cur[i-1]];draw();};r.appendChild(up);
+    const dn=el("button","lebtn","▼");dn.setAttribute("aria-label",HCARDS[k]+" 아래로");dn.disabled=i===cur.length-1;dn.onclick=()=>{[cur[i+1],cur[i]]=[cur[i],cur[i+1]];draw();};r.appendChild(dn);
+    list.appendChild(r);});};draw();
+  const row=el("div","lebtns");
+  const rs=el("button","btn","기본으로");rs.onclick=async()=>{try{await R("prefs/"+myKey+"/hlayout").remove();toast("기본 배치로 돌렸습니다.");closeProfile();}catch(e){toast("저장 실패: "+(e.code||e.message));}};row.appendChild(rs);
+  const ok=el("button","btn pri","저장");ok.onclick=async()=>{if(hid.size>=cur.length){toast("하나 이상은 보여야 해요.");return;}
+    try{await R("prefs/"+myKey+"/hlayout").set(cur.join(",")+"|"+[...hid].join(","));toast("홈 화면을 저장했습니다.");closeProfile();}catch(e){toast("저장 실패: "+(e.code||e.message));}};row.appendChild(ok);
+  c.appendChild(row);$("pOv").hidden=false;
 }
 function openLinkEditor(){                                 // 바로가기 고르기·순서 바꾸기 → prefs/{나}/links
   let cur=homeLinks().slice();
@@ -3083,9 +3124,9 @@ function renderTeamPage(){
   const b=$("teamBody");if(!b||!me)return;if(!(isAdmin||myLead())){go("home");return;}
   if(!schData&&!schP&&!schErr)schLoad();if(!vocData&&!vocP)vocLoad();
   b.textContent="";
-  const field=FIELD_TEAMS.map(t=>TEAM_ORDER.find(x=>x.toUpperCase()===t)||t);
+  const field=TEAM_ORDER.filter(t=>t!=="FSG"&&rosterList().some(p=>p.team===t));   // 현장 4팀 + 지원 팀(FSS·FSOM)
   const canPick=isAdmin||myRole()==="group"||!myField();
-  if(!teamSel)teamSel=myField()?me.team:field[0];
+  if(!teamSel||!field.includes(teamSel))teamSel=field.includes(me.team)?me.team:field[0];   // 처음엔 본인 팀
   const T=teamSel,TU=T.toUpperCase(),tk=schTeamKey(T),tl=(SCH_TEAMS.find(x=>x[0]===tk)||[])[1];
   const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"팀 현황"));tt.appendChild(el("span",null,teamLabel(T)+" · 오늘 "+(new Date().getMonth()+1)+"/"+new Date().getDate()));hd.appendChild(tt);b.appendChild(hd);
   if(canPick){const ch=el("div","obchips");field.forEach(t=>{const x=el("button","hchip sm"+(t===T?" on":""),teamLabel(t).replace(/^FS /,""));x.onclick=()=>{teamSel=t;renderTeamPage();};ch.appendChild(x);});b.appendChild(ch);}
