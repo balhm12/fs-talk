@@ -312,9 +312,10 @@ html[data-theme=dark] .hdelta.up{background:#163A1A;color:#86D98C}html[data-them
 .hsec{display:flex;flex-direction:column;gap:10px}
 .hsect{margin:0;font-size:15px;color:var(--strong);font-weight:800}
 .hsech{display:flex;align-items:center;gap:8px}
-.hrow2{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:16px;align-items:start}
+.hrow2{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:16px;align-items:stretch}
+.hsec.work .hcard.sched{display:flex;flex-direction:column}.hsec.work .hcard.sched .hsch{flex:1;align-content:flex-start}.hsec.work .hcard.comm{max-height:560px;overflow:auto}
 .hrow2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.hrow3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.hrow3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
 .hdash .hcard{flex:none;min-height:0}
 .hcard{border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .hsub{margin:6px 0 2px;font-size:12.5px;color:var(--sub);font-weight:700}
@@ -1315,6 +1316,7 @@ const ICON={
   panel:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M14.5 4.5v15"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   send:'<path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5z"/>',
+  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
   chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   sysgrid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7M17.5 14v7"/>',
   home:'<path d="M3 10.5 12 3l9 7.5V21H3z"/><path d="M9 21v-6h6v6"/>',
@@ -1883,7 +1885,7 @@ let myDigest=true,schData=null,schAt=0,schP=null,schErr="",schStale=false,schBas
 try{const c=JSON.parse(localStorage.getItem("fstalk-sch-cache")||"null");if(c&&c.d&&c.d.today===ymd(new Date())){schData=c.d;schAt=c.at;schStale=true;}}catch(e){}   // 지난번 받은 오늘 일정 — 바로 보여 주고 뒤에서 새로 받음
 const schTeamKey=t=>({"FS WEST":"west","FS EAST":"east","FS CENTRAL":"central","FS SOUTH":"south","FSS TEAM":"fss","FSOM TEAM":"fsom"})[String(t||"").toUpperCase()]||"";
 let schScope="";try{schScope=localStorage.getItem("fstalk-sch-scope")||"";}catch(e){}
-const schScopeNow=()=>schScope||(myRole()==="group"?"all":"team");   // 고른 적 없으면: 그룹장 전체, 팀장·직원 우리 팀
+const schScopeNow=()=>schScope||(myRole()==="group"||!myField()?"all":"team");   // 그룹장·지원 팀 = 전체, 현장 팀 = 우리 팀   // 고른 적 없으면: 그룹장 전체, 팀장·직원 우리 팀
 let schTokP=null;
 function schToken(){if(!schTokP)schTokP=schToken0().finally(()=>{schTokP=null;});return schTokP;}   // 동시에 여러 번 불려도 익명 계정은 하나만
 async function schToken0(){
@@ -2079,7 +2081,7 @@ function openVocLow(){
   c.appendChild(el("h3",null,S.mlabel+" 3점 이하 응답 · 후속 조치"));
   c.appendChild(el("div","pkhint","항목마다 조치 상태를 남기면 팀장·관리자가 함께 봅니다. (만족도 원본 데이터는 바꾸지 않음)"));
   const myTeam=me?String(me.team||"").toUpperCase():"";
-  const L=S.R.filter(vocLow).filter(r=>isAdmin||me.team==="FSG"||String(r.team||"").toUpperCase()===myTeam).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+  const L=S.R.filter(vocLow).filter(r=>isAdmin||me.team==="FSG"||!myField()||String(r.team||"").toUpperCase()===myTeam).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
   const list=el("div","vlist");if(!L.length)list.appendChild(el("p","hp","해당하는 응답이 없습니다."));
   L.forEach(r=>{const k=vocKey(r),fu=vocFu[k]||{};const row=el("div","vrow");
     const h=el("div","vrh");h.appendChild(el("b",null,String(r.org||"")));h.appendChild(el("span",null,[r.fsr,r.team,String(r.ts||"").slice(0,10)].filter(Boolean).join(" · ")));
@@ -2620,13 +2622,14 @@ function renderStats(){
   const vs=vocSummary();
   if(role==="staff"){const pn=pendingNotices().length,un=homeUnread();
     tile("megaphone","확인할 공지",String(pn),"안 읽은 대화 "+un+"건",pn?"warn":null,()=>{if(pn)go("room-notice");else{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");}});}
-  else{if(vs){const tm=myTeamU(),L=vs.R.filter(vocLow).filter(r=>role==="group"||String(r.team||"").toUpperCase()===tm),open=L.filter(r=>(vocFu[vocKey(r)]||{}).s!=="done");
-      tile("star","3점 이하 미조치",String(open.length),vs.mlabel+" 3점 이하 "+L.length+"건"+(role==="group"?" · FSG":" · 우리 팀"),open.length?"warn":null,openVocLow);}
+  else{if(vs){const tm=myTeamU(),all=role==="group"||!myField(),L=vs.R.filter(vocLow).filter(r=>all||String(r.team||"").toUpperCase()===tm),open=L.filter(r=>(vocFu[vocKey(r)]||{}).s!=="done");
+      tile("flag","3점 이하 미조치",String(open.length),vs.mlabel+" 3점 이하 "+L.length+"건"+(all?" · FSG":" · 우리 팀"),open.length?"warn":null,openVocLow);}
     else tile("star","3점 이하 미조치","–",vocErr?"만족도 연결 안 됨":"불러오는 중",null,null);}
   // 4 — 만족도: 직원 = 나(없으면 팀), 팀장 = 팀, 그룹장 = FSG
   if(vs){const tm=myTeamU();let R=vs.R,lab="FSG";
-    if(role==="lead"){R=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm);lab=me.team;}
+    if(role==="lead"&&myField()){R=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm);lab=me.team;}
     else if(role==="staff"){const M=vs.R.filter(r=>r.fsr===me.name);if(M.length){R=M;lab="내";}else{const T=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm);if(T.length){R=T;lab=me.team;}}}
+    if(!R.length){R=vs.R;lab="FSG";}   // 우리 팀 응답이 없으면(지원 팀 등) FSG 전체
     const avg=vs.avgOf(R);const pR=vocData.recs.filter(r=>r&&r.month===vs.ms[vs.ms.length-2]&&(lab==="FSG"||(lab==="내"?r.fsr===me.name:String(r.team||"").toUpperCase()===tm)));const prev=pR.length?vs.avgOf(pR):null;
     let bd=null;if(prev!=null&&avg!=null){const dd=avg-prev;bd=el("span","hdelta "+(Math.abs(dd)<0.005?"":dd>0?"up":"down"),(dd>0?"▲ ":dd<0?"▼ ":"")+Math.abs(dd).toFixed(2));bd.title="지난달 대비";}
     tile("star",vs.mlabel+" "+lab+" 만족도",avg==null?"–":avg.toFixed(2),"응답 "+R.length+"건"+(lab==="FSG"&&vs.rate!=null?" · 응답률 "+vs.rate+"%":""),null,toCard("hvoc"),bd);}
@@ -2669,6 +2672,8 @@ function openLinkEditor(){                                 // 바로가기 고�
   $("pOv").hidden=false;
 }
 /* 보는 기준: 직원 = 나 + 우리 팀, 팀장 = 우리 팀, 그룹장(FSG) = 전체 */
+const FIELD_TEAMS=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH"];
+const myField=()=>!!me&&FIELD_TEAMS.includes(String(me.team||"").toUpperCase());   // 현장 팀 여부 (FSS·FSOM 등 지원 팀은 FSG 전체 기준)
 const myRole=()=>!me?"staff":me.team==="FSG"?"group":myLead()?"lead":"staff";
 const myTeamU=()=>me?String(me.team||"").toUpperCase():"";
 const myLead=()=>{if(!me)return false;if(me.team==="FSG")return true;const p=rosterList().find(x=>x.name===me.name&&x.team===me.team);return !!(p&&p.lead);};
