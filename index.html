@@ -234,7 +234,7 @@ html[data-theme=dark] .bcard.miss{background:#2E2617}
 .schsec h3{margin:0 0 2px;font-size:13px;color:var(--sub);font-weight:700}
 .schev{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:10px;background:var(--soft2)}
 .schev.now{background:var(--sel2);box-shadow:inset 3px 0 0 var(--blue)}
-.schd{flex:0 0 54px;font-size:12.5px;font-weight:700;color:var(--strong);padding-top:2px}
+.schd{flex:0 0 64px;white-space:nowrap;font-size:12.5px;font-weight:700;color:var(--strong);padding-top:2px}
 .schc{flex:0 0 auto;font-size:11.5px;font-weight:700;color:#fff;background:var(--c);border-radius:6px;padding:2px 6px;margin-top:1px}
 .scht{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .scht b{font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -278,6 +278,7 @@ html[data-theme=dark] .hbd{background:#16273A;color:#8CC4F5}
 .stag{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;vertical-align:1px;background:#EEF2FF;color:#4F46E5}
 .stag.l{background:#FEE2E2;color:#B91C1C}.stag.d{background:#EDE9FE;color:#6D28D9}.stag.e{background:#CCFBF1;color:#0F766E}
 html[data-theme=dark] .stag{background:#262A4A;color:#A5B4FC}html[data-theme=dark] .stag.l{background:#4A1F1F;color:#FCA5A5}html[data-theme=dark] .stag.d{background:#33264A;color:#C4B5FD}html[data-theme=dark] .stag.e{background:#163A36;color:#5EEAD4}
+.schwarn{color:#B87A00}
 .hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
@@ -1061,7 +1062,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.88";
+const APP_VERSION="2026-10-30.89";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1380,7 +1381,7 @@ function start(){
   R("pins").on("value",s=>{pins=s.val()||{};renderPin();renderNav();},()=>{});
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
-  setTimeout(()=>{silRecall().then(k=>{if(k){silKey=k;silLoad().catch(()=>{});}else{silErr="locked";silStatus();}}).catch(e=>{silErr=e.message||"연결 실패";silStatus();});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
+  setTimeout(()=>{silRecall().then(k=>{silChecked=true;if(k){silKey=k;silLoad().catch(()=>{});}else{silErr="locked";silStatus();}}).catch(e=>{silChecked=true;silErr=e.message||"연결 실패";silStatus();});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
   try{const k="fstalk-seen-day",d=ymd(new Date());if(localStorage.getItem(k)!==d){R("seen/"+uid).set(SV).then(()=>{try{localStorage.setItem(k,d);}catch(e){}}).catch(()=>{});}}catch(e){}   // 관리 화면의 「마지막 사용」 (하루 한 번)
   R("board").on("value",s=>{board=s.val()||{};renderBoardCards();if(view==="search")renderExt($("q").value);},()=>{});
   R("acks").on("value",s=>{acks=s.val()||{};schedule();if(!acksLoaded){acksLoaded=true;setTimeout(maybeNoticePrompt,2500);}},()=>{});
@@ -1665,7 +1666,7 @@ let homeBuilt="";
 const SCH={db:"https://sysmex-system-schedule-default-rtdb.firebaseio.com",key:"AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8",tk:"fstalk-sch-auth",bk:"fstalk-sch-base"};
 const SCH_TEAMS=[["west","WEST"],["east","EAST"],["central","CENTRAL"],["south","SOUTH"],["fss","FSS"],["fsom","FSOM"]];
 const SCH_CAT={install:["설치","#005BAC"],relocation:["이전","#00B8EE"],evaluation:["평가","#3FBA46"],demo:["데모","#E69E0B"],education:["교육","#7E49DC"]};
-let schData=null,schAt=0,schP=null,schErr="",schStale=false;
+let schData=null,schAt=0,schP=null,schErr="",schStale=false,schBaseWarn=false;
 try{const c=JSON.parse(localStorage.getItem("fstalk-sch-cache")||"null");if(c&&c.d&&c.d.today===ymd(new Date())){schData=c.d;schAt=c.at;schStale=true;}}catch(e){}   // 지난번 받은 오늘 일정 — 바로 보여 주고 뒤에서 새로 받음
 const schTeamKey=t=>({"FS WEST":"west","FS EAST":"east","FS CENTRAL":"central","FS SOUTH":"south","FSS TEAM":"fss","FSOM TEAM":"fsom"})[String(t||"").toUpperCase()]||"";
 let schScope="all";try{schScope=localStorage.getItem("fstalk-sch-scope")||"all";}catch(e){}
@@ -1683,32 +1684,33 @@ async function schToken0(){
   try{localStorage.setItem(SCH.tk,JSON.stringify(a));}catch(e){}
   return a.id;
 }
-async function schGet(path,qs){
+async function schGet(path,qs,retried){
   const t=await schToken();const r=await fetch(SCH.db+"/"+path+".json?auth="+encodeURIComponent(t)+(qs||""),{cache:"no-store"});
-  if(r.status===401){try{localStorage.removeItem(SCH.tk);}catch(e){}}
+  if(r.status===401&&!retried){try{const a=JSON.parse(localStorage.getItem(SCH.tk)||"null");if(a){a.exp=0;localStorage.setItem(SCH.tk,JSON.stringify(a));}}catch(e){}return schGet(path,qs,true);}   // 토큰만 새로 (익명 계정은 그대로)
   if(!r.ok)throw new Error("일정표 "+r.status);return r.json();
 }
 async function schBase(){                              // 설치일정 페이지에 박혀 있는 기본 일정 — 하루 한 번만 받아 둠
   const d=ymd(new Date());let c=null;try{c=JSON.parse(localStorage.getItem(SCH.bk)||"null");}catch(e){}
   if(c&&c.d===d&&Array.isArray(c.ev))return c.ev;
-  try{const r=await fetch(LINKS.install,{cache:"no-cache"});const h=await r.text();const m=/const\s+BASE_EVENTS\s*=\s*(\[[\s\S]*?\]);\s*\n/.exec(h);
-    const ev=m?JSON.parse(m[1]):[];try{localStorage.setItem(SCH.bk,JSON.stringify({d,ev}));}catch(e){}return ev;}
-  catch(e){return c&&Array.isArray(c.ev)?c.ev:[];}
+  try{const r=await fetch(LINKS.install,{cache:"no-cache"});if(!r.ok)throw new Error(r.status);const h=await r.text();const m=/const\s+BASE_EVENTS\s*=\s*(\[[\s\S]*?\]);\s*\n/.exec(h);
+    if(!m)throw new Error("형식");const ev=JSON.parse(m[1]);try{localStorage.setItem(SCH.bk,JSON.stringify({d,ev}));}catch(e){}return ev;}   // 실패는 저장하지 않음
+  catch(e){schBaseWarn=true;return c&&Array.isArray(c.ev)?c.ev:[];}
 }
 const schVals=v=>!v?[]:Array.isArray(v)?v.filter(Boolean):Object.values(v).filter(Boolean);
 const schKey=v=>String(v||"").split(":")[0].trim();
 function schAdd(d,n){const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);return ymd(x);}
 function schLoad(force){
   if(schP)return schP;
-  if(!force&&schData&&!schStale&&Date.now()-schAt<10*60000)return Promise.resolve(schData);
+  if(!force&&schData&&!schStale&&schData.today===ymd(new Date())&&Date.now()-schAt<10*60000)return Promise.resolve(schData);
   schP=(async()=>{
     const today=ymd(new Date()),end=schAdd(today,6),tom=schAdd(today,1);
-    const [base,custom,edited,deleted,...work]=await Promise.all([schBase(),schGet("schedule-overrides/custom"),schGet("schedule-overrides/edited"),schGet("schedule-overrides/deleted")]
-      .concat(SCH_TEAMS.map(([k])=>schGet("work-schedule/"+k,"&orderBy="+encodeURIComponent('"$key"')+"&startAt="+encodeURIComponent('"'+today+'"')+"&endAt="+encodeURIComponent('"'+end+'"')))));   // 팀마다 7일치 한 번에
+    const [base,custom,edited,deleted,...workS]=await Promise.all([schBase(),schGet("schedule-overrides/custom"),schGet("schedule-overrides/edited"),schGet("schedule-overrides/deleted")]
+      .concat(SCH_TEAMS.map(([k])=>schGet("work-schedule/"+k,"&orderBy="+encodeURIComponent('"$key"')+"&startAt="+encodeURIComponent('"'+today+'"')+"&endAt="+encodeURIComponent('"'+end+'"')).then(v=>({v}),e=>({e})))));   // 팀마다 7일치 한 번에 — 한 팀이 실패해도 나머지는 보임
+    const work=workS.map(x=>x.v||{}),workFail=SCH_TEAMS.filter((t,i)=>workS[i].e).map(t=>t[1]);
     const del=new Set(Array.isArray(deleted)?deleted:Object.keys(deleted||{}));const ed=edited||{};
     const all=base.filter(e=>e&&!del.has(e.id)).map(e=>ed[e.id]||e).concat(schVals(custom).filter(e=>!del.has(e.id)));
-    const ev=all.filter(e=>e&&e.start&&e.category!=="holiday"&&e.start<=end&&(e.end||e.start)>=today)
-      .sort((x,y)=>x.start.localeCompare(y.start)||String(x.title).localeCompare(String(y.title)));
+    const ev=all.filter(e=>e&&typeof e.start==="string"&&e.category!=="holiday"&&e.start<=end&&String(e.end||e.start)>=today)
+      .sort((x,y)=>x.start.localeCompare(y.start)||String(x.title||"").localeCompare(String(y.title||"")));
     const day=list=>{const o={night:[],leave:[],duty:[],edu:[]};
       list.forEach((w,i)=>{const tl=SCH_TEAMS[i][1];Object.entries(w||{}).forEach(([nm,e])=>{if(!e||typeof e!=="object")return;
         const nk=schKey(e.night);if(nk&&nk!=="OFF"&&nk!=="잔업")o.night.push({nm,tl,k:nk});
@@ -1718,11 +1720,11 @@ function schLoad(force){
         if(lv)o.leave.push({nm,tl,k:lv});else if(sl.includes("교육"))o.edu.push({nm,tl,k:"교육"});});});return o;};
     const at=d=>work.map(w=>(w||{})[d]||{});
     const week=[];for(let i=0;i<7;i++){const d=schAdd(today,i);week.push({d,o:day(at(d))});}
-    schData={today,tom,ev,w:week[0].o,w2:week[1].o,week};schAt=Date.now();schErr="";schStale=false;
+    schData={today,tom,ev,w:week[0].o,w2:week[1].o,week,workFail};schAt=Date.now();schErr="";schStale=false;
     try{localStorage.setItem("fstalk-sch-cache",JSON.stringify({at:schAt,d:schData}));}catch(e){}
     return schData;
   })();
-  schP.then(()=>{schP=null;renderSch();if(listTab==="org"||view==="org")renderNav();},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
+  schP.then(()=>{schP=null;renderSch();if(listTab==="org"||view==="org")renderNav();if(view==="search")renderExt($("q").value);},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
   return schP;
 }
 const schOff=d=>{const x=new Date(d+"T00:00:00").getDay();return x===0||x===6;};
@@ -1770,10 +1772,11 @@ function renderSch(){
   if(schOff(D.tom)&&D.w2.duty.length)line("내일 당직",D.w2.duty,"d");
   box.appendChild(w);
   const ft=el("div","schft");ft.appendChild(el("span",null,(schStale?(schErr?"연결 안 됨 · 마지막 ":"갱신 중… · "):"일정표 기준 · ")+new Date(schAt).toTimeString().slice(0,5)+(schStale?" 기준":" 갱신")));
+  if((schData.workFail||[]).length||schBaseWarn)ft.appendChild(el("span","schwarn",(schBaseWarn?"설치 기본 일정 ":"")+((schData.workFail||[]).length?"근무("+schData.workFail.join("·")+") ":"")+"일부를 못 받음"));
   const wb=el("button","hmore","7일 근무 보기");wb.onclick=()=>openSchWeek();ft.appendChild(wb);
   const rb=el("button","hmore","새로고침");rb.style.marginLeft="12px";rb.onclick=()=>{schLoad(true);};ft.appendChild(rb);box.appendChild(ft);
 }
-setInterval(()=>{if(view==="home"&&!document.hidden&&schData)schLoad();if(view==="home"&&!document.hidden&&vocData)vocLoad();},5*60000);
+setInterval(()=>{if(view==="home"&&!document.hidden&&(schData||schErr)){schErr=schData?schErr:"";schLoad();}if(view==="home"&&!document.hidden&&vocData)vocLoad();},5*60000);
 /* 고객 만족도 (이번 달) — 만족도 대시보드와 같은 데이터(voc-dashboard/data)를 읽기만 */
 let vocData=null,vocAt=0,vocP=null,vocErr="";
 function vocLoad(force){
@@ -1803,7 +1806,7 @@ function openSchWeek(){
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"7일 근무 (야간·당직·휴가)"));
   const myTk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===myTk)||[])[1];
-  let only=false;try{only=localStorage.getItem("fstalk-sch-scope")==="team";}catch(e){}
+  let only=false;try{only=localStorage.getItem("fstalk-sch-scope")==="team"&&!!myTk;}catch(e){}
   const draw=()=>{list.textContent="";
     schData.week.forEach(({d,o},i)=>{const dd=new Date(d+"T00:00:00");const off=dd.getDay()===0||dd.getDay()===6;
       const day=el("div","swday"+(off?" off":"")+(i===0?" today":""));day.appendChild(el("div","swd",(i===0?"오늘 ":i===1?"내일 ":"")+(dd.getMonth()+1)+"/"+dd.getDate()+" ("+"일월화수목금토"[dd.getDay()]+")"));
@@ -1859,7 +1862,7 @@ function renderBoardCards(){
     const nN=boardList(k).filter(boardNew).length;let bd=c._head.querySelector(".hbcnt");if(nN){if(!bd){bd=el("span","hbcnt");c._head.insertBefore(bd,c._head.querySelector(".hmore"));}bd.textContent="새 "+nN;}else if(bd)bd.remove();
     const L=boardList(k);if(!L.length)l.appendChild(el("p","hp",BOARD[k].hint+"를 이곳에 모읍니다. "+(isAdmin?"아래 「등록」으로 첫 글을 올려 주세요.":"곧 올라옵니다.")));
     L.slice(0,4).forEach(x=>l.appendChild(boardRow(x)));
-    if(L.length>4)l.appendChild(el("p","hsoon","외 "+(L.length-4)+"건 — 전체 보기"));
+    if(L.length>4){const mb=el("button","sillink","외 "+(L.length-4)+"건 — 전체 보기 ›");mb.onclick=()=>openBoard(k);l.appendChild(mb);}
     let ab=c.querySelector(".hbadd");if(isAdmin&&!ab){ab=el("button","btn hbadd","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}else if(!isAdmin&&ab)ab.remove();});
 }
 function openBoard(k,dev){
@@ -2929,7 +2932,7 @@ $("micBtn").onclick=()=>{if(vRec&&vRec.rec.state==="recording")vRec.rec.stop();e
    실마리 데이터는 비밀번호로 잠겨 있음(AES-256-GCM). 키는 이 기기에만 두고(실마리와 같은 방식·같은 저장 이름, 30일) 서버로 보내지 않음.
    같은 사이트(balhm12.github.io)라 PC·안드로이드 크롬에서는 실마리에서 넣은 비밀번호를 그대로 씀. */
 const SIL_BASE="https://balhm12.github.io/sysmex-ts/",SIL_KEY="sysmex-ts-key";
-let silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null,silBi=null,silParts=null;
+let silChecked=false,silAuth=null,silKey=null,silIdx=null,silP=null,silVer=0,silErr="",silCodes=null,silTitles=null,silBi=null,silParts=null;
 /* 부품 이름: 장비별 상세 데이터의 「교체 부품」 표에서 가져옴 (부품번호가 처음 나올 때 그 장비 데이터만 불러옴) */
 const silDevP={},silPN=new Map();
 function silLoadDev(d){
@@ -2997,7 +3000,7 @@ function silLoad(){                                    // 검색용 목록(에�
 function silStatus(){                                  // 포털 홈: 이 기기(브라우저)에 실마리가 연결됐는지 보여 줌 — PC는 따로 한 번 풀어야 함
   const st=$("hsilst");if(!st)return;st.textContent="";
   if(silIdx){st.className="hsilst ok";st.appendChild(el("span",null,"이 기기에 연결됨 · 대화 속 에러·부품번호에 실마리 버튼이 붙습니다"));return;}
-  if(silErr==="locked"||(!silKey&&!silP)){st.className="hsilst off";st.appendChild(el("span",null,"이 기기는 아직 실마리 연결 전입니다"));const ub=el("button","btn pri","연결하기");ub.onclick=openSilUnlock;st.appendChild(ub);return;}
+  if(silErr==="locked"||(!silKey&&!silP&&silChecked)){st.className="hsilst off";st.appendChild(el("span",null,"이 기기는 아직 실마리 연결 전입니다"));const ub=el("button","btn pri","연결하기");ub.onclick=openSilUnlock;st.appendChild(ub);return;}
   if(silErr){st.className="hsilst off";st.appendChild(el("span",null,"실마리를 불러오지 못했습니다"));const rb=el("button","btn","다시 시도");rb.onclick=()=>{silErr="";silLoad().catch(()=>{});silStatus();};st.appendChild(rb);return;}
   st.className="hsilst";st.appendChild(el("span",null,"실마리 연결 중…"));
 }
