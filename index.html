@@ -1336,7 +1336,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.114";
+const APP_VERSION="2026-10-30.115";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1840,8 +1840,8 @@ function renderNav(){
   renderAllBell();
   const tu=totalUnread();syncBadge(tu);
   [["rChat","tChat"],["rOrg","tOrg"],["rSearch","tSearch"],["rAdmin","tAdmin"],["rSaved","tSaved"]].forEach(([a,b],i)=>{
-    const on=i===0?(view==="chat"&&listTab==="rooms"):i===1?listTab==="org"&&(view==="chat"):i===2?view==="search":i===3?view==="admin":view==="saved";
-    const onM=isM()?(i===0?(mList&&listTab==="rooms"):i===1?(mList&&listTab==="org"):on):on;
+    const on=i===0?(view==="chat"&&listTab==="rooms"):i===1?view==="org":i===2?view==="search":i===3?view==="admin":view==="saved";
+    const onM=isM()?(i===0?(view==="chat"&&mList&&listTab==="rooms"):on):on;
     $(a).classList.toggle("on",on);$(b).classList.toggle("on",onM);
     [a,b].forEach(id=>{const e=$(id);const old=e.querySelector(".dot");if(old)old.remove();
       const n=i===0?tu:i===3?pendingCount:0;if(n){const d=el("span","dot",n>99?"99+":String(n));e.appendChild(d);}});
@@ -2881,24 +2881,36 @@ async function openScan(){
     try{const r=await d.detect(vd);if(r&&r.length&&scanStream){scanDone(r[0].rawValue);return;}}catch(e){}busy=false;};
   scanRaf=requestAnimationFrame(tick);
 }
-/* ===== 휴대폰: 좌우로 밀어 아래 탭 이동 (홈 ↔ 대화 ↔ 조직도 ↔ 검색 ↔ 저장 ↔ 관리) =====
-   대화방 안·팝업·입력칸·가로로 스크롤되는 줄(칩·표)·화면 가장자리(아이폰 뒤로 가기 제스처)에서는 동작하지 않는다. */
+/* ===== 휴대폰: 좌우로 밀어 아래 탭 이동 (홈 ↔ 대화 ↔ 조직도 ↔ 검색 ↔ 저장 ↔ 관리) — 손가락을 따라 화면이 움직임 =====
+   지금 탭은 주소(#)가 아니라 실제 보이는 화면(view·mList)으로 판단한다(첫 화면은 주소가 비어 있어 순서가 어긋났음).
+   대화방 안·팝업·입력칸·가로로 스크롤되는 줄(칩·표)·화면 가장자리(아이폰 뒤로 가기)에서는 동작하지 않는다. */
 (function(){const TABS=[["home","tHome"],["","tChat"],["org","tOrg"],["search","tSearch"],["saved","tSaved"],["admin","tAdmin"]];
-  let sx=0,sy=0,st=0,ok=false;
-  const cur=()=>{const h=curHash();return TABS.findIndex(t=>t[0]===h);};
-  const xscroll=n=>{for(;n&&n!==document.body;n=n.parentElement){if(n.matches&&n.matches("input,textarea,select,video,iframe,[contenteditable],.tabbar"))return true;
+  let sx=0,sy=0,st=0,dx=0,arm=false,lock=false,tg=null,nb=null;
+  const curKey=()=>view==="home"?"home":(view==="chat"&&mList&&!room)||(view==="chat"&&isM()&&mList)?"":["org","search","saved","admin"].includes(view)?view:null;
+  const vis=()=>TABS.filter(x=>{const b=$(x[1]);return b&&!b.hidden&&getComputedStyle(b).display!=="none";});
+  const target=()=>(view==="chat"&&mList)?$("side"):document.querySelector("#app .main");
+  const xscroll=n=>{for(;n&&n!==document.body;n=n.parentElement){if(n.matches&&n.matches("input,textarea,select,video,iframe,[contenteditable],.tabbar,.kptw,.tpw"))return true;
     if(n.scrollWidth>n.clientWidth+4){const o=getComputedStyle(n).overflowX;if(o==="auto"||o==="scroll")return true;}}return false;};
-  document.addEventListener("touchstart",e=>{ok=false;if(!isM()||e.touches.length!==1)return;const t=e.touches[0];
-    if(t.clientX<28||t.clientX>innerWidth-28)return;if(!$("pOv").hidden||!$("actOv").hidden)return;if(cur()<0||xscroll(e.target))return;
-    sx=t.clientX;sy=t.clientY;st=Date.now();ok=true;},{passive:true});
-  document.addEventListener("touchend",e=>{if(!ok)return;ok=false;const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
-    if(Date.now()-st>700||Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*2)return;
-    const vis=TABS.filter(x=>{const b=$(x[1]);return b&&!b.hidden;});const i=vis.findIndex(x=>x[0]===curHash());if(i<0)return;
-    const n=vis[i+(dx<0?1:-1)];if(!n)return;
-    if(n[0]===""){listTab="rooms";$("lq").value="";}
-    go(n[0]);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}
-    document.querySelectorAll(".view").forEach(v=>{if(v.offsetParent!==null){v.classList.remove("swl","swr");void v.offsetWidth;v.classList.add(dx<0?"swl":"swr");setTimeout(()=>v.classList.remove("swl","swr"),260);}});
-  },{passive:true});})();
+  const setT=(el,x,o,tr)=>{if(!el)return;el.style.transition=tr||"none";el.style.transform=x?"translate3d("+x+"px,0,0)":"";el.style.opacity=o==null?"":String(o);};
+  const clear=el=>{if(!el)return;el.style.transition="";el.style.transform="";el.style.opacity="";el.style.willChange="";};
+  document.addEventListener("touchstart",e=>{arm=false;lock=false;if(!isM()||e.touches.length!==1)return;const t=e.touches[0];
+    if(t.clientX<24||t.clientX>innerWidth-24)return;if(!$("pOv").hidden||!$("actOv").hidden)return;
+    const k=curKey();if(k==null||xscroll(e.target))return;const V=vis(),i=V.findIndex(x=>x[0]===k);if(i<0)return;
+    nb={prev:V[i-1]||null,next:V[i+1]||null};sx=t.clientX;sy=t.clientY;st=Date.now();dx=0;arm=true;},{passive:true});
+  document.addEventListener("touchmove",e=>{if(!arm)return;const t=e.touches[0];dx=t.clientX-sx;const dy=t.clientY-sy;
+    if(!lock){if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){arm=false;return;}
+      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.3){lock=true;tg=target();if(tg)tg.style.willChange="transform,opacity";}else return;}
+    e.preventDefault();
+    const has=dx<0?nb.next:nb.prev,x=has?dx:dx/3.2;                       // 끝 탭에서는 고무줄처럼 덜 움직임
+    setT(tg,x,1-Math.min(Math.abs(x)/innerWidth,1)*.35);},{passive:false});
+  const end=()=>{if(!arm)return;arm=false;if(!lock)return;lock=false;const el=tg;tg=null;
+    const v=dx/Math.max(1,Date.now()-st),n=dx<0?nb.next:nb.prev,go2=n&&(Math.abs(dx)>innerWidth*.25||Math.abs(v)>.45);
+    if(!go2){setT(el,0,1,"transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s");setTimeout(()=>clear(el),240);return;}
+    const dir=dx<0?-1:1;setT(el,dir*innerWidth*.45,0,"transform .14s ease-in,opacity .14s ease-in");
+    setTimeout(()=>{clear(el);if(n[0]===""){listTab="rooms";$("lq").value="";}go(n[0]);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}
+      const nt=target();setT(nt,-dir*innerWidth*.3,.35);void(nt&&nt.offsetWidth);
+      requestAnimationFrame(()=>{setT(nt,0,1,"transform .24s cubic-bezier(.2,.8,.2,1),opacity .24s");setTimeout(()=>clear(nt),260);});},140);};
+  document.addEventListener("touchend",end,{passive:true});document.addEventListener("touchcancel",end,{passive:true});})();
 /* ===== 휴대폰: 홈을 아래로 당겨서 새로고침 (일정·만족도·KPI·게시판 다시 받기) ===== */
 (function(){let y0=null,dy=0,ind=null;const H=()=>document.querySelector("#homeView .home");
   document.addEventListener("touchstart",e=>{const h=H();if(view!=="home"||!h||h.scrollTop>0||!e.touches[0]||!h.contains(e.target))return;y0=e.touches[0].clientY;dy=0;},{passive:true});
