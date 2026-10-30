@@ -360,6 +360,7 @@ html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4
 .sillock .btn{width:auto;flex:none;margin:0;padding:6px 12px}
 .silchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
 .row.mine .silchips{justify-content:flex-end}
+.silchips .silchip.sch{border-color:#CDE8C9;background:#EEF8EC;color:#2E7D32}html[data-theme=dark] .silchips .silchip.sch{background:#17301A;border-color:#2E5A33;color:#9AD99F}
 .silchip{display:inline-flex;align-items:center;gap:5px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;border-radius:14px;padding:3px 10px;font-size:12px;max-width:100%}
 .silchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .silchip:hover{border-color:#005BAC}
@@ -1063,7 +1064,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.92";
+const APP_VERSION="2026-10-30.93";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1383,6 +1384,7 @@ function start(){
   R("prefs/"+myKey+"/fav").on("value",s=>{favs=s.val()||{};schedule();syncFavBtn();},()=>{});
   R("prefs/"+myKey+"/saved").on("value",s=>{saved=s.val()||{};schedule();},()=>{});
   R("prefs/"+myKey+"/digest").on("value",s=>{myDigest=s.val()!==false;if(view==="settings")renderSettings();},()=>{});
+  setTimeout(()=>{if(!schData&&!schP)schLoad();},3500);   // 대화 속 병원 일정 칩·조직도 상태용
   setTimeout(()=>{silRecall().then(k=>{silChecked=true;if(k){silKey=k;silLoad().catch(()=>{});}else{silErr="locked";silStatus();}}).catch(e=>{silChecked=true;silErr=e.message||"연결 실패";silStatus();});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
   try{const k="fstalk-seen-day",d=ymd(new Date());if(localStorage.getItem(k)!==d){R("seen/"+uid).set(SV).then(()=>{try{localStorage.setItem(k,d);}catch(e){}}).catch(()=>{});}}catch(e){}   // 관리 화면의 「마지막 사용」 (하루 한 번)
   R("board").on("value",s=>{board=s.val()||{};renderBoardCards();if(view==="search")renderExt($("q").value);},()=>{});
@@ -1726,7 +1728,7 @@ function schLoad(force){
     try{localStorage.setItem("fstalk-sch-cache",JSON.stringify({at:schAt,d:schData}));}catch(e){}
     return schData;
   })();
-  schP.then(()=>{schP=null;renderSch();if(listTab==="org"||view==="org")renderNav();if(view==="search")renderExt($("q").value);},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
+  schP.then(()=>{schP=null;renderSch();if(view==="chat")schedule();if(listTab==="org"||view==="org")renderNav();if(view==="search")renderExt($("q").value);},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
   return schP;
 }
 const schOff=d=>{const x=new Date(d+"T00:00:00").getDay();return x===0||x===6;};
@@ -1802,6 +1804,21 @@ function renderVoc(){
   if(TR.length)tile(me.team,f(mean(TR.map(r=>+r.avg).filter(x=>!isNaN(x)))),TR.length+"건");
   if(MR.length)tile("나",f(mean(MR.map(r=>+r.avg).filter(x=>!isNaN(x)))),MR.length+"건");
   box.appendChild(g);
+}
+/* 대화 속 병원 이름 → 이번 주 설치·이전·평가 일정 칩 (최근 3일 안에 쓴 글만) */
+const schNorm=t=>String(t||"").replace(/\(.*?\)/g,"").replace(/\s+/g,"").toLowerCase();
+function schChips(m){
+  if(!schData||!m.text||Date.now()-(m.ts||0)>3*864e5)return null;
+  const t=m.text.replace(/\s+/g,"").toLowerCase(),hit=[];
+  schData.ev.forEach(e=>{const n=schNorm(e.title);if(n.length<3||!/[가-힣]/.test(n))return;   // 「Hema」 같은 영문 약칭은 오탐이 많아 제외
+    const short=n.replace(/(대학교병원|대학병원|병원|의료원|의원|센터|재단|연구소)$/,"");
+    if(t.includes(n)||(short.length>=3&&t.includes(short)))hit.push(e);});
+  if(!hit.length)return null;
+  const w=el("div","silchips");hit.slice(0,2).forEach(e=>{const c=SCH_CAT[e.category]||[e.category||"일정"];const b=el("button","silchip sch");b.appendChild(icEl("calendar","",13));
+    const dl=schDateLbl(e,schData.today).lb+(String(e.end||e.start)>e.start?"~"+(+String(e.end).slice(5,7))+"/"+(+String(e.end).slice(8,10)):"");
+    b.appendChild(el("span",null,c[0]+" · "+String(e.title||"").slice(0,20)+" · "+dl+(e.device?" · "+String(e.device).slice(0,16):"")));b.title="설치일정 열기";
+    b.onclick=ev=>{ev.stopPropagation();openUrl(LINKS.install);};w.appendChild(b);});
+  return w;
 }
 function openSchWeek(){
   if(!schData||!schData.week)return;
@@ -2249,6 +2266,7 @@ function renderMsgs(scroll){
     if(rx.length){const rw=el("div","reacts");const mineR=myReact(m);rx.forEach(([c,n])=>{const k=el("button","rc"+(mineR===c?" on":""),REACT_EMO[c]+" "+n);k.title=reactWho(m,c);k.onclick=()=>setReact(m,c);rw.appendChild(k);});col.appendChild(rw);}
     if(isNoticeMsg(m)&&!pending.has(m.id)&&m.ts>Date.now()-ACK_DAYS*864e5)col.appendChild(ackBar(m,mine));
     if(silIdx){const sc=silChips(m);if(sc)col.appendChild(sc);}
+    if(schData){const cc=schChips(m);if(cc)col.appendChild(cc);}
     row.appendChild(col);
     box.appendChild(row);
   });
