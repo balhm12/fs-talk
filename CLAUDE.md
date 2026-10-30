@@ -10,7 +10,7 @@
 | 앱 | `index.html` 한 파일(HTML·CSS·JS), 프레임워크 없음 · `sw.js`(오프라인·푸시 배지, 캐시 이름 `fstalk-vN`) · `manifest.json`(이름 「FS 포털」) |
 | 주소 | GitHub Pages `https://balhm12.github.io/fs-talk/` (main 푸시 = 즉시 배포) |
 | 자체 DB | Firebase RTDB `fs-talk-fa383` (asia-southeast1), 경로 `talk/*`, 익명 인증 + 명단·관리자 승인 |
-| 서버 | Apps Script 「FS TALK 알림」 = `apps-script/notify.gs` (알림·첨부·요약·음성·기기 연결·아침 근무 알림·백업) |
+| 서버 | Apps Script 「FS TALK 알림」 = `apps-script/notify.gs` (알림·첨부·요약·음성·기기 연결·아침 일정 브리핑·백업) |
 | 자동 배포 | `.github/workflows/deploy-rules.yml`(규칙) · `deploy-apps-script.yml`(clasp, 같은 웹앱 URL로 새 버전). 비밀값 이름: `FIREBASE_SERVICE_ACCOUNT`, `CLASPRC_JSON`, `SCRIPT_ID`, `DEPLOYMENT_ID` (값은 GitHub Secrets에만) |
 | 결과 확인 | `curl https://api.github.com/repos/balhm12/fs-talk/actions/runs?per_page=3` (인증 없이 읽힘) |
 
@@ -50,7 +50,7 @@
 6. 디자인: 글꼴 `var(--font)`(Pretendard → 맑은 고딕), 색은 Sysmex 브랜드(#005BAC·#00B8EE·#3FBA46·#E69E0B·#E7413E), 디자인 v3 블록은 `</style>` 바로 앞(마지막에 덮어씀). 로고 비율 유지.
 7. 테스트: Playwright + Firebase 목(`/tmp/fbmock/mock.js` 방식), PC 1440·휴대폰(iPhone 13)·다크, 콘솔 오류 0.
 
-## 6. 현재 상태 (2026-10-30 23:20 기준, 버전 2026-10-30.111)
+## 6. 현재 상태 (2026-10-30 23:20 기준, 버전 2026-10-30.112)
 
 - 배포됨: 디자인 v3(Pretendard 웹폰트·흰 레일·파란 선택 띠·카드 그림자, sysmex.co.kr 톤), 동영상 교육에 sysmex.co.kr 공식 교육 영상(장비 12종) 바로가기, 기술정보 분류(기술회보·매뉴얼 개정·부품 변경)·개정 표시·즐겨찾기(`prefs/{나}/bfav`)·최근 본 자료·검색, 홈 v2·역할별 요약, 알림 센터, 실마리 미리보기·즐겨찾기, 만족도 추이·팀별·3점 이하 조치, KPI 요약·개인 KPI, 포털 안 앱, 일정 등록(근무·설치)·대화 명령, 조직도 보드, 이름 FS 포털
 - 사용자 확인 완료(2026-10-30 22:28): KPI 첫 올리기, 실제 데이터 카드 확인, 근무 등록 시험, `installDigestTrigger` 실행
@@ -58,6 +58,7 @@
 
 ## 7. 변경 이력 (최근 것 위)
 
+- 2026-10-30 · 112 바코드·QR 스캔(검색창 옆 버튼·Ctrl+K, 사진·직접 입력 대체, P/N·S/N 값만 뽑아 기술정보 검색), 아침 알림 → 「아침 일정 브리핑」(notify v18: 내 일정·근무·우리 팀 설치·휴가·내일, 트리거 그대로), APP_VERSION 문자열이 93에 멈춰 있던 것 바로잡음(새 버전 알림 정상화)
 - 2026-10-30 · 111 불러오는 중 스켈레톤(일정·만족도), 만족도 오류 시 「다시 시도」, 휴대폰 홈 당겨서 새로고침(일정·만족도 다시 받기)
 - 2026-10-30 · 110 빠른 이동(Ctrl+K), 글자 크기 설정(.app zoom, 이 기기 `fstalk-fs`)
 - 2026-10-30 · 109 팀 현황 화면(#team): 팀원 7일 근무·팀 설치·만족도·3점 이하·팀원 KPI, 그룹장·관리자·지원 팀은 팀 선택
@@ -78,7 +79,7 @@
 
 1. **IT 요청서 1장 작성** (Docs 문서): Salesforce Connected App·API 권한 계정(처음엔 읽기 전용), Slack 앱 승인(Webhook → 이후 명령·이벤트), 회사 서버 이전 요구사항.
 2. **Slack 연동**
-   - 1차: 포털 → Slack (전체공지·새 기술정보·3점 이하 만족도·아침 근무 알림을 채널로) — Incoming Webhook, notify.gs에서 발송
+   - 1차: 포털 → Slack (전체공지·새 기술정보·3점 이하 만족도·아침 일정 브리핑을 채널로) — Incoming Webhook, notify.gs에서 발송
    - 2차: Slack → 포털 (`/실마리 코드` 조회, 채널 글 가져오기) — Slack 앱(Events·Slash Command), 워크스페이스 관리자 승인 필요
 3. **Salesforce(NEW CRM) 연동** — 서버에서 OAuth, 읽기부터
    - 오늘 내 방문·작업 지시 → 「오늘의 업무」 / 설치·근무일정과 CRM 일정 맞추기 / 실마리 결과에 장비 수리 이력 / KPI를 CRM 데이터로 직접 계산(엑셀 업로드 대체 — 단 KPI 계산 기준은 fsg-kpi `kpiCore()`와 같게)
@@ -101,6 +102,6 @@
 | C2 | 팀 현황(#team, 팀장·그룹장·관리자): 팀원 7일 근무표, 이번 주 팀 설치, 팀 만족도·3점 이하, 팀원 KPI | ServiceNow Today's Roster·Manager Mobile | 완료(109) |
 | C3 | PC 빠른 이동(Ctrl+K/⌘K: 화면·앱·대화방·사람·할 일·검색) + 글자 크기(보통·크게·아주 크게, 설정 → 화면) | SaaS 공통 | 완료(110) |
 | C4 | 불러오는 중 스켈레톤·빈 화면 안내·휴대폰 당겨서 새로고침 | SaaS 공통 | 완료(111) |
-| C5 | 카메라로 부품번호·S/N 바코드/QR 스캔 → 실마리·검색 | SF·D365 Barcode scan | 대기 |
+| C5 | 카메라로 부품번호·S/N 바코드/QR 스캔 → 실마리·검색 | SF·D365 Barcode scan | 완료(112) |
 | C6 | 새 기능 안내(버전별 한 번) + 접근성(대비·키보드·스크린리더 이름) | 공통 | 대기 |
 | C7 | 전체 회귀·첫 화면 속도 점검·최종 보고 | — | 대기 |

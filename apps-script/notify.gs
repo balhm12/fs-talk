@@ -99,7 +99,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v17';
+const NOTIFY_VER = 'v18';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -572,36 +572,81 @@ function schDay_(day){
   });
   return out;
 }
+/* 아침 일정 브리핑 (v18) — 예전 「아침 근무(당직) 알림」을 대신한다. 트리거 이름(morningDigest)은 그대로라 다시 설치할 필요 없음.
+   사람마다: 오늘 내 일정(설치·이전·평가 등, 담당자 이름·별명 기준) + 오늘 내 근무(교육·당직 등) + 우리 팀 오늘 설치·휴가 인원 + 내일 내 일정.
+   지원 팀(FSS·FSOM)·그룹장은 FSG 전체 설치 건수. 휴가인 날, 주말에 아무 일정 없는 사람, 브리핑을 끈 사람(prefs.digest=false)은 보내지 않는다. */
+const SCH_PAGE = 'https://balhm12.github.io/Sysmex-schedule/index.html';
+const SCH_CATK = {install:'설치', relocation:'이전', evaluation:'평가', demo:'데모', education:'교육'};
+function schEvents_(){
+  let base = [];
+  try{ const h = UrlFetchApp.fetch(SCH_PAGE, {muteHttpExceptions:true}).getContentText();
+       const m = /const\s+BASE_EVENTS\s*=\s*(\[[\s\S]*?\]);\s*\n/.exec(h); if(m) base = JSON.parse(m[1]); }catch(e){ console.error('BASE_EVENTS', e); }
+  const vals = function(o){ return Array.isArray(o) ? o.filter(Boolean) : Object.keys(o||{}).map(function(k){ return o[k]; }).filter(Boolean); };
+  let custom = {}, edited = {}, deleted = {};
+  try{ custom = schGet_('schedule-overrides/custom') || {}; }catch(e){}
+  try{ edited = schGet_('schedule-overrides/edited') || {}; }catch(e){}
+  try{ deleted = schGet_('schedule-overrides/deleted') || {}; }catch(e){}
+  const del = {}; (Array.isArray(deleted) ? deleted : Object.keys(deleted)).forEach(function(k){ del[k] = 1; });
+  return base.filter(function(e){ return e && !del[e.id]; }).map(function(e){ return edited[e.id] || e; })
+    .concat(vals(custom).filter(function(e){ return !del[e.id]; }));
+}
+function evOn_(e, day){ const s = String(e.start||''), en = String(e.end||e.start||''); return s && s <= day && day <= en; }
 function morningDigest(){
   const tz = 'Asia/Seoul', now = new Date();
-  const today = Utilities.formatDate(now, tz, 'yyyy-MM-dd'), tom = Utilities.formatDate(new Date(now.getTime()+864e5), tz, 'yyyy-MM-dd');
+  const fmt = function(d, p){ return Utilities.formatDate(d, tz, p); };
+  const today = fmt(now, 'yyyy-MM-dd'), tmd = new Date(now.getTime()+864e5), tom = fmt(tmd, 'yyyy-MM-dd');
+  const wd = function(d){ return '월화수목금토일'.charAt(+fmt(d, 'u') - 1); };
+  const weekend = +fmt(now, 'u') >= 6;
+  const tl = fmt(now, 'M/d') + '(' + wd(now) + ')', tl1 = fmt(tmd, 'M/d') + '(' + wd(tmd) + ')';
   const D0 = schDay_(today), D1 = schDay_(tom);
+  const EV = schEvents_().filter(function(e){ return e.category !== 'holiday'; });
+  const E0 = EV.filter(function(e){ return evOn_(e, today); }), E1 = EV.filter(function(e){ return evOn_(e, tom); });
+  let troster = {}; try{ troster = schGet_('work-schedule/teamRoster') || {}; }catch(e){}
+  const nick = {}; Object.keys(troster).forEach(function(tk){ const t = troster[tk] || {};
+    Object.keys(t).forEach(function(k){ const m = t[k]; if(m && m.name) nick[m.name] = String(m.nickname||'').trim(); }); });
+  const mine = function(e, name){ const a = String(e.assignee||''); if(!a) return false; if(a.indexOf(name) >= 0) return true;
+    const nn = nick[name]; return !!nn && new RegExp('(^|[^A-Za-z])' + nn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^A-Za-z]|$)', 'i').test(a); };
+  const lbl = function(e){ return (SCH_CATK[e.category] || '일정') + ' ' + String(e.title||'').slice(0, 14) + (e.device ? '(' + String(e.device).slice(0, 10) + ')' : ''); };
+  const FIELD = ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH'];
   const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {}, prefs = db_('talk/prefs') || {};
-  const tmd = new Date(now.getTime()+864e5), tl = Utilities.formatDate(tmd, tz, 'M/d') + '(' + '월화수목금토일'.charAt(+Utilities.formatDate(tmd, tz, 'u') - 1) + ')';
+  const roster = db_('talk/roster') || {};
+  const teamOf = {}; Object.keys(roster).forEach(function(t){ Object.keys(roster[t]||{}).forEach(function(n){ teamOf[n] = t; }); });
   const LEAVE = ['휴가','오전휴가','오후휴가'];
   let people = 0, sent = 0; const done = {};
   Object.keys(users).forEach(function(id){
     const u = users[id]; if(!u || u.status !== 'approved') return;
-    const pk = u.team + '_' + u.name;
-    const a = (D0[u.name] || []).filter(function(x){ return LEAVE.indexOf(x) < 0; });                 // 쉬는 날엔 알림 안 보냄
-    const b = (D1[u.name] || []).filter(function(x){ return LEAVE.indexOf(x) < 0 && x !== '교육'; });   // 내일은 당직·야간만 미리
-    if(!a.length && !b.length) return;
+    const pk = u.team + '_' + u.name; if(done[pk]) return;
     if(prefs[pk] && prefs[pk].digest === false) return;
     if(mute[id] && mute[id]._all) return;
+    const w0 = D0[u.name] || [];
+    if(w0.indexOf('휴가') >= 0) return;                                            // 하루 휴가면 보내지 않음
     const t = tokens[id] || {}, targets = [];
     Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id,key:k,token:t[k].token}); });
     if(!targets.length) return;
-    if(!done[pk]){ done[pk] = true; people++; }
-    const parts = []; if(a.length) parts.push('오늘 ' + a.join('·')); if(b.length) parts.push('내일 ' + tl + ' ' + b.join('·'));
-    sent += send_(targets, '📅 ' + (a.length ? '오늘 근무 · ' + a.join('·') : '내일 ' + b.join('·')), parts.join(' / ') + ' — 근무일정표 기준', APP_URL + '#home', 'digest-' + today, {room:''});
+    const my0 = E0.filter(function(e){ return mine(e, u.name); }), my1 = E1.filter(function(e){ return mine(e, u.name); });
+    const work1 = (D1[u.name] || []).filter(function(x){ return LEAVE.indexOf(x) < 0 && x !== '교육'; });
+    const tu = String(u.team||'').toUpperCase(), field = FIELD.indexOf(tu) >= 0;
+    const scopeEv = field ? E0.filter(function(e){ return String(e.team||'').toUpperCase() === tu; }) : E0;
+    const off = Object.keys(D0).filter(function(n){ return LEAVE.indexOf((D0[n]||[])[0]) >= 0 && (!field || String(teamOf[n]||'').toUpperCase() === tu); }).length;
+    if(weekend && !my0.length && !w0.length && !my1.length && !work1.length) return;   // 주말엔 내 일이 있을 때만
+    const lines = [];
+    if(my0.length) lines.push('내 일정 ' + my0.map(lbl).join(', '));
+    if(w0.length) lines.push('근무 ' + w0.join('·'));
+    const inst = scopeEv.filter(function(e){ return e.category === 'install' || e.category === 'relocation'; }).length;
+    const tp = []; if(inst) tp.push('설치·이전 ' + inst + '건'); if(off) tp.push('휴가 ' + off + '명');
+    if(tp.length) lines.push((field ? '우리 팀 ' : 'FSG ') + tp.join(' · '));
+    const n1 = my1.map(lbl).concat(work1); if(n1.length) lines.push('내일 ' + tl1 + ' ' + n1.join(', '));
+    if(!lines.length) lines.push('오늘 등록된 내 일정은 없습니다');
+    done[pk] = true; people++;
+    sent += send_(targets, '오늘의 일정 브리핑 · ' + tl, lines.join(' / '), APP_URL + '#home', 'digest-' + today, {room:''});
   });
-  Logger.log('✅ 아침 근무 알림: ' + people + '명 · ' + sent + '대 발송 (' + today + ')');
+  Logger.log('✅ 아침 일정 브리핑: ' + people + '명 · ' + sent + '대 발송 (' + today + ', 일정 ' + E0.length + '건)');
   return {people:people, sent:sent};
 }
 function installDigestTrigger(){
   removeDigestTrigger();
   ScriptApp.newTrigger('morningDigest').timeBased().everyDays(1).atHour(7).inTimezone('Asia/Seoul').create();
-  Logger.log('✅ 매일 아침 7시대 「아침 근무 알림」을 예약했습니다. 바로 확인하려면 morningDigest 를 한 번 실행하세요.');
+  Logger.log('✅ 매일 아침 7시대 「아침 일정 브리핑」을 예약했습니다. 바로 확인하려면 morningDigest 를 한 번 실행하세요.');
 }
 function removeDigestTrigger(){
   ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction()==='morningDigest') ScriptApp.deleteTrigger(t); });

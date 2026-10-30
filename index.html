@@ -1105,6 +1105,17 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 @media (prefers-reduced-motion:reduce){.skel i{animation:none}}
 .ptr{display:flex;align-items:center;justify-content:center;gap:6px;height:0;overflow:hidden;font-size:12.5px;color:var(--sub);transition:height .15s}
 .ptr.go{color:#005BAC}.ptr.spin .ico{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 바코드 스캔 */
+.scanb{flex:0 0 auto;width:40px;height:38px;border:0;background:transparent;color:var(--sub);border-radius:10px;display:grid;place-items:center;cursor:pointer}
+.scanb:hover,.scanb:focus-visible{background:var(--soft);color:#005BAC}
+.scanbox{position:relative;border-radius:14px;overflow:hidden;background:#0b1220;aspect-ratio:4/3;margin:10px 0 6px}
+.scanbox video{width:100%;height:100%;object-fit:cover;display:block}
+.scanframe{position:absolute;inset:22% 12%;border:2px solid #00B8EE;border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.scanframe::after{content:"";position:absolute;left:6%;right:6%;top:50%;height:2px;background:#E7413E;opacity:.8}
+.scanrow{display:flex;gap:8px;margin:6px 0}.scanrow .btn{flex:1}
+.scanman{display:flex;gap:8px;margin-top:6px}.scanman input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;background:var(--panel);color:var(--strong)}
+.scanman .btn{width:auto;margin:0;padding:0 16px}
 </style>
 
 </head>
@@ -1311,7 +1322,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.93";
+const APP_VERSION="2026-10-30.112";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1370,6 +1381,7 @@ const ICON={
   home:'<path d="M3 10.5 12 3l9 7.5V21H3z"/><path d="M9 21v-6h6v6"/>',
   doc:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
   video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>',
+  scan:'<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>',
   bell:'<path d="M6 9a6 6 0 0 1 12 0c0 6.5 2.5 8 2.5 8h-17S6 15.5 6 9"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
   bellOff:'<path d="M6 9a6 6 0 0 1 9.5-4.9M18 9c0 6.5 2.5 8 2.5 8H8"/><path d="M6 9c0 3.3-.6 5.4-1.3 6.6M10 20.5a2.2 2.2 0 0 0 4 0M3 3l18 18"/>',
@@ -2480,6 +2492,7 @@ function renderHome(){
   const f=el("form","hsearch");f.setAttribute("role","search");f.appendChild(icEl("search","",20));
   const lb=el("label","vh","통합 검색");lb.htmlFor="hq";f.appendChild(lb);
   const q=el("input");q.id="hq";q.type="search";q.placeholder="장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
+  f.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";f.appendChild(sb);
   f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}$("q").value=v;go("search");};
   hd.appendChild(f);
@@ -2776,6 +2789,53 @@ function schTodayOf(nm){                                 // 조직도: 오늘 �
   o.leave.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"l"]));o.night.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"n"]));
   o.duty.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"d"]));o.edu.filter(x=>x.nm===nm).forEach(x=>out.push(["교육","e"]));return out;
 }
+/* ===== 바코드·QR 스캔 → 기술정보 검색 (부품번호·S/N·에러코드) =====
+   브라우저 기본 BarcodeDetector(안드로이드 크롬·PC 크롬)를 쓰고, 없으면(아이폰 사파리) 그때만 공개 라이브러리를 불러온다.
+   카메라를 못 쓰면 사진 찍기 → 직접 입력 순으로 대체. 찍은 값은 어디에도 저장하지 않고 검색어로만 쓴다. */
+let scanStream=null,scanRaf=0,scanDet=null;
+function scanBtn(){const b=el("button","scanb");b.type="button";b.title="바코드·QR 스캔";b.setAttribute("aria-label","바코드·QR 스캔");b.appendChild(icEl("scan","",20));b.onclick=openScan;return b;}
+function scanStop(){cancelAnimationFrame(scanRaf);scanRaf=0;if(scanStream){scanStream.getTracks().forEach(t=>{try{t.stop();}catch(e){}});scanStream=null;}}
+async function scanDetector(){
+  if(scanDet)return scanDet;
+  const F=["code_128","code_39","ean_13","ean_8","qr_code","data_matrix","upc_a","itf"];
+  if("BarcodeDetector" in window){try{const ok=await BarcodeDetector.getSupportedFormats();scanDet=new BarcodeDetector({formats:F.filter(f=>ok.includes(f))});return scanDet;}catch(e){}}
+  const m=await import("https://cdn.jsdelivr.net/npm/barcode-detector@2/dist/es/pure.min.js");scanDet=new m.BarcodeDetector({formats:F});return scanDet;
+}
+function scanClean(v){v=String(v||"").trim();
+  const m=v.match(/(?:P\/?N|PN|S\/?N|SN)[\s:=#-]*([A-Z0-9][A-Z0-9\-\.]{3,})/i);if(m)return m[1];   // "P/N:CY-772405" 같은 라벨은 값만
+  if(/^https?:\/\//i.test(v)){try{const u=new URL(v);return u.searchParams.get("q")||u.searchParams.get("pn")||u.searchParams.get("sn")||v;}catch(e){}}
+  return v.slice(0,80);}
+function scanDone(raw){const v=scanClean(raw);if(!v)return;scanStop();closeProfile();try{navigator.vibrate&&navigator.vibrate(60);}catch(e){}
+  techQ=v;silHistAdd(v);go("tech");toast("「"+v+"」 검색");}
+async function openScan(){
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"바코드·QR 스캔"));
+  c.appendChild(el("div","pkhint","부품 라벨의 부품번호(P/N)·시리얼(S/N)이나 QR을 네모 안에 맞추세요. 읽히면 바로 기술정보·실마리 검색으로 이어집니다."));
+  const box=el("div","scanbox");const vd=document.createElement("video");vd.setAttribute("playsinline","");vd.muted=true;box.appendChild(vd);box.appendChild(el("i","scanframe"));c.appendChild(box);
+  const st=el("div","pkhint scanst","카메라를 켜는 중…");c.appendChild(st);
+  const row=el("div","scanrow");
+  const pf=document.createElement("input");pf.type="file";pf.accept="image/*";pf.setAttribute("capture","environment");pf.hidden=true;
+  const pb=el("button","btn","사진으로 읽기");pb.onclick=()=>pf.click();
+  pf.onchange=async()=>{const f=pf.files&&pf.files[0];if(!f)return;st.textContent="사진을 읽는 중…";
+    try{const d=await scanDetector();const bm=await createImageBitmap(f);const r=await d.detect(bm);if(r&&r.length)scanDone(r[0].rawValue);else st.textContent="사진에서 코드를 찾지 못했습니다. 라벨을 가까이, 밝게 찍거나 아래에 직접 입력하세요.";}
+    catch(e){st.textContent="이 기기에서는 사진 판독을 할 수 없습니다. 아래에 직접 입력하세요.";}};
+  row.appendChild(pb);row.appendChild(pf);c.appendChild(row);
+  const mf=el("form","scanman");const mi=el("input");mi.placeholder="직접 입력 (예: CY-772405, 37005)";mi.autocomplete="off";mi.setAttribute("aria-label","부품번호·S/N 직접 입력");mf.appendChild(mi);
+  const mb=el("button","btn pri","검색");mb.type="submit";mf.appendChild(mb);mf.onsubmit=e=>{e.preventDefault();if(mi.value.trim())scanDone(mi.value);};c.appendChild(mf);
+  $("pOv").hidden=false;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){box.hidden=true;st.textContent="이 브라우저에서는 카메라를 쓸 수 없습니다. 사진으로 읽거나 직접 입력하세요.";return;}
+  try{scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false});}
+  catch(e){box.hidden=true;st.textContent=(e&&e.name==="NotAllowedError")?"카메라 권한이 꺼져 있습니다. 브라우저 설정에서 허용하거나, 사진으로 읽기·직접 입력을 쓰세요.":"카메라를 열지 못했습니다. 사진으로 읽거나 직접 입력하세요.";return;}
+  if($("pOv").hidden){scanStop();return;}
+  vd.srcObject=scanStream;try{await vd.play();}catch(e){}
+  let d;try{d=await scanDetector();}catch(e){st.textContent="이 기기에서는 자동 판독을 할 수 없습니다. 직접 입력하세요.";return;}
+  st.textContent="읽는 중… 라벨을 천천히 가까이 대 보세요.";
+  let busy=false,last=0;
+  const tick=async t=>{if(!scanStream)return;scanRaf=requestAnimationFrame(tick);if(busy||t-last<250||vd.readyState<2)return;busy=true;last=t;
+    try{const r=await d.detect(vd);if(r&&r.length&&scanStream){scanDone(r[0].rawValue);return;}}catch(e){}busy=false;};
+  scanRaf=requestAnimationFrame(tick);
+}
 /* ===== 휴대폰: 홈을 아래로 당겨서 새로고침 (일정·만족도·KPI·게시판 다시 받기) ===== */
 (function(){let y0=null,dy=0,ind=null;const H=()=>document.querySelector("#homeView .home");
   document.addEventListener("touchstart",e=>{const h=H();if(view!=="home"||!h||h.scrollTop>0||!e.touches[0]||!h.contains(e.target))return;y0=e.touches[0].clientY;dy=0;},{passive:true});
@@ -2789,7 +2849,7 @@ function schTodayOf(nm){                                 // 조직도: 오늘 �
 function cmdItems(){
   const L=[];const add=(ic,t,sub,fn,kw)=>L.push({ic,t,sub,fn,kw:(t+" "+(sub||"")+" "+(kw||"")).toLowerCase()});
   add("home","홈","화면",()=>go("home"));add("chat","대화","화면",()=>{listTab="rooms";go("");});add("users","조직도","화면",()=>go("org"));
-  add("doc","기술정보 검색","화면",()=>go("tech"),"tb 회보 매뉴얼 부품");add("search","통합 검색","화면",()=>go("search"));add("bookmark","저장한 글","화면",()=>go("saved"));
+  add("doc","기술정보 검색","화면",()=>go("tech"),"tb 회보 매뉴얼 부품");add("scan","바코드·QR 스캔","할 일",()=>setTimeout(openScan,0),"카메라 부품번호 시리얼 sn pn");add("search","통합 검색","화면",()=>go("search"));add("bookmark","저장한 글","화면",()=>go("saved"));
   if(isAdmin||myLead())add("users","팀 현황","화면",()=>go("team"),"팀장");if(isAdmin)add("shield","관리","화면",()=>go("admin"));add("gear","설정","화면",()=>go("settings"));
   Object.keys(APPS).filter(k=>!APPS[k].lead||isAdmin||myLead()).forEach(k=>add(APPS[k].ic,APPS[k].t,"업무 앱",()=>openApp(k)));
   add("bell","알림 센터","할 일",()=>openNotiCenter());add("plus","내 근무 등록 (휴가·교육)","할 일",()=>openWorkForm(),"휴가 교육 회의");add("plus","설치·평가 일정 등록","할 일",()=>openInstallForm(),"설치 이전 평가");
@@ -2871,6 +2931,7 @@ function renderTechPage(){
   const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"기술정보 검색"));tt.appendChild(el("span",null,"기술회보·매뉴얼·부품 변경·교육 영상·실마리·대화"));hd.appendChild(tt);b.appendChild(hd);
   const sf=el("form","hsearch tsearch");sf.setAttribute("role","search");sf.appendChild(icEl("search","",20));
   const q=el("input");q.id="tq";q.type="search";q.placeholder="장비·에러 이름·코드·부품번호·제목 (예: XN WB, 37005, CY-772405)";q.value=techQ;q.autocomplete="off";sf.appendChild(q);
+  sf.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";sf.appendChild(sb);
   let t0=0;q.oninput=()=>{clearTimeout(t0);t0=setTimeout(()=>{techQ=q.value.trim();drawRes();},200);};
   sf.onsubmit=e=>{e.preventDefault();techQ=q.value.trim();if(techQ)silHistAdd(techQ);drawRes();};
@@ -4257,7 +4318,7 @@ renderInstall();
 
 /* ---------- 프로필 (연락처·메일) ---------- */
 let profiles={};
-function closeProfile(){if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer","cmdk");if(view==="settings")renderSettings();}
+function closeProfile(){scanStop();if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer","cmdk");if(view==="settings")renderSettings();}
 $("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
@@ -4642,7 +4703,7 @@ function renderSettings(){
     setRow(c,myMute._all?"bellOff":"bell","이 기기 알림",myMute._all?"모든 대화방 알림이 꺼져 있어요":"방별로 끄려면 대화방 ☰ 정보에서",null,sw);
     const dw=el("button","switch"+(myDigest?" on":""));dw.setAttribute("role","switch");dw.setAttribute("aria-checked",myDigest?"true":"false");
     dw.onclick=async e=>{e.stopPropagation();try{await R("prefs/"+myKey+"/digest").set(!myDigest);}catch(er){toast("저장 실패: "+(er.code||er.message));}};
-    setRow(c,"calendar","아침 근무 알림",myDigest?"오늘 석간·석/야·당직, 내일 당직이 있으면 아침 7시대에 알려 드려요":"꺼짐",null,dw);
+    setRow(c,"calendar","아침 일정 브리핑",myDigest?"매일 아침 7시대에 오늘 내 일정·우리 팀 설치·휴가, 내일 일정을 한 줄로 알려 드려요 (휴가인 날·주말 빈 날 제외)":"꺼짐",null,dw);
   }
   // 화면
   c=setSec(wrap,"화면");
