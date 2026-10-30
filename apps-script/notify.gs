@@ -99,7 +99,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v18';
+const NOTIFY_VER = 'v19';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -567,7 +567,13 @@ function schDay_(day){
       const wk = schKey_(e.weekend); if(wk) add(nm, wk==='전화' ? '전화대기' : wk);
       const sl = ['am1','am2','pm1','pm2'].map(function(k){ return schKey_(e[k]); });
       if(sl.indexOf('휴가')>=0) add(nm,'휴가'); else if(sl.indexOf('오전휴가')>=0) add(nm,'오전휴가'); else if(sl.indexOf('오후휴가')>=0) add(nm,'오후휴가');
-      else if(sl.indexOf('교육')>=0) add(nm,'교육');
+      // v19: 개인 일정 — 교육·회의·내근·DP와 세부 내용(「회의:팀장회의」), 반나절이면 (오전)/(오후)
+      const pl = {};
+      ['am1','am2','pm1','pm2'].forEach(function(k, j){ const v = String(e[k]||'').trim(), k0 = schKey_(v);
+        if(['교육','회의','내근','DP'].indexOf(k0) < 0) return;
+        const d = v.indexOf(':') >= 0 ? v.slice(v.indexOf(':')+1).trim().slice(0,20) : '', lab = k0 + (d ? ' ' + d : '');
+        (pl[lab] = pl[lab] || {}); pl[lab][j < 2 ? 'am' : 'pm'] = 1; });
+      Object.keys(pl).forEach(function(lab){ const h = pl[lab]; add(nm, lab + (h.am && h.pm ? '' : h.am ? '(오전)' : '(오후)')); });
     });
   });
   return out;
