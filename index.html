@@ -211,6 +211,7 @@ html[data-theme=dark] .bcard.miss{background:#2E2617}
 .hcol.side{flex:1 1 300px;flex-direction:column;flex-wrap:nowrap}
 .hcard{flex:1 1 280px;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
 .hcard.wide{flex-basis:100%}
+.hcol.side .hcard{flex:0 0 auto}
 .hch{display:flex;align-items:center;gap:8px}
 .hch h2{margin:0;font-size:17px;color:var(--strong)}
 .hcic{color:var(--blue)}
@@ -247,7 +248,7 @@ html[data-theme=dark] .schw.n .schwl{color:#A5B4FC}html[data-theme=dark] .schw.d
 .schme{flex-basis:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#FFF6E5;color:#7A4E00;font-size:13.5px}.schme b{flex:0 0 auto}.schme .ico{color:#E69E0B}
 html[data-theme=dark] .schme{background:#3A2E14;color:#F5D58A}
 .schft{flex-basis:100%;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub)}.schft .hmore{font-size:12px}
-@media (max-width:520px){.hcard.sched .hch{flex-wrap:wrap}.hbtns.sm{margin-left:0;flex-basis:100%}.hbtns.sm .hbtn{flex:1 1 0}}
+@media (max-width:820px){.hcard.sched .hbtns.sm{display:none}}   /* 휴대폰은 위 바로가기에 같은 버튼이 있음 */
 .hblist{display:flex;flex-direction:column;gap:4px;margin:0 -6px}
 .hblist.full{margin:10px 0;max-height:min(60vh,520px);overflow:auto}
 .hbrow{display:flex;align-items:center;gap:4px}
@@ -270,6 +271,10 @@ html[data-theme=dark] .hbd{background:#16273A;color:#8CC4F5}
 .hsilres{display:flex;flex-direction:column;gap:4px}.hsilres:empty{display:none}
 .hbcnt{font-size:11.5px;font-weight:800;color:#fff;background:#E7413E;border-radius:9px;padding:1px 7px}
 .bvid{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin:8px 0 12px}.bvid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.hvoc{display:flex;flex-direction:column;gap:8px}.vocm{font-size:12.5px;color:var(--sub)}
+.vocg{display:flex;gap:8px}
+.voct{flex:1;min-width:0;border-radius:12px;background:var(--soft2);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.voct small{font-size:12px;line-height:16px;height:16px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.voct b{font-size:22px;color:var(--blue);line-height:28px;font-family:Arial,sans-serif}.voct span{font-size:11.5px;color:var(--sub)}
 .hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
@@ -291,7 +296,8 @@ html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4
   .hlg{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .hlink{flex-direction:column;height:66px;gap:4px;font-size:12.5px;padding:0 2px;text-align:center;line-height:1.2}
   .hhead{order:0}.hnotice{order:1}.hlinks{order:2}.hgrid{order:3}.home .navfoot{order:4}   /* 휴대폰: 바로가기를 위로 */
-  .hcol.side{order:-1}                                                                       /* 휴대폰: 최근 대화를 카드 맨 앞에 */
+  .hcol,.hcol.side{display:contents}                                                         /* 휴대폰: 카드 순서를 한 줄로 — 최근 대화 → 오늘 일정 → 만족도 → 나머지 */
+  .hgrid .hcard,.hcol.side .hcard{order:5;flex:1 1 100%}.hgrid .hcard.talk{order:1}.hgrid .hcard.sched{order:2}.hgrid .hcard.voc{order:3}
 }
 @media (pointer:coarse){.hp{font-size:15px}.hch h2{font-size:18px}.hbtn{font-size:15px;height:50px}}
 /* 관리: 사람별 기기 목록 */
@@ -1052,7 +1058,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.86";
+const APP_VERSION="2026-10-30.87";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1764,7 +1770,30 @@ function renderSch(){
   const wb=el("button","hmore","7일 근무 보기");wb.onclick=()=>openSchWeek();ft.appendChild(wb);
   const rb=el("button","hmore","새로고침");rb.style.marginLeft="12px";rb.onclick=()=>{schLoad(true);};ft.appendChild(rb);box.appendChild(ft);
 }
-setInterval(()=>{if(view==="home"&&!document.hidden&&schData)schLoad();},5*60000);
+setInterval(()=>{if(view==="home"&&!document.hidden&&schData)schLoad();if(view==="home"&&!document.hidden&&vocData)vocLoad();},5*60000);
+/* 고객 만족도 (이번 달) — 만족도 대시보드와 같은 데이터(voc-dashboard/data)를 읽기만 */
+let vocData=null,vocAt=0,vocP=null,vocErr="";
+function vocLoad(force){
+  if(vocP)return vocP;if(!force&&vocData&&Date.now()-vocAt<30*60000)return Promise.resolve(vocData);
+  vocP=schGet("voc-dashboard/data").then(d=>{if(!d||!Array.isArray(d.recs))throw new Error("데이터 없음");vocData=d;vocAt=Date.now();vocErr="";return d;});
+  vocP.then(()=>{vocP=null;renderVoc();},e=>{vocP=null;vocErr=e.message||"연결 실패";renderVoc();});return vocP;
+}
+function renderVoc(){
+  const box=document.getElementById("hvoc");if(!box)return;box.textContent="";
+  if(!vocData){if(vocErr)box.appendChild(el("div","schmsg","만족도를 불러오지 못했습니다"));else{box.appendChild(el("div","schmsg","불러오는 중…"));vocLoad();}return;}
+  const D=vocData,ms=Object.keys(D.total||{}).sort(),m=ms[ms.length-1];if(!m){box.appendChild(el("div","schmsg","아직 집계가 없습니다"));return;}
+  const R=D.recs.filter(r=>r&&r.month===m),mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,f=v=>v==null?"–":v.toFixed(2);
+  const asOf=(D.visitAsOf||{})[m]||"",vc=new Set(R.filter(r=>!asOf||String(r.ts||"").slice(0,10)<=asOf).map(r=>r.fsr+"|"+r.org+"|"+String(r.ts||"").slice(0,10))).size;
+  const tot=+D.total[m]||0,rate=tot?Math.round(100*vc/tot):null;
+  const tm=me?String(me.team||"").toUpperCase():"",TR=R.filter(r=>String(r.team||"").toUpperCase()===tm),MR=me?R.filter(r=>r.fsr===me.name):[];
+  box.appendChild(el("div","vocm",(+m.slice(5))+"월 · 응답 "+R.length+"건"+(rate!=null?" · 응답률 "+rate+"%":"")));
+  const g=el("div","vocg");
+  const tile=(lab,v,sub)=>{const t=el("div","voct");t.appendChild(el("small",null,lab));t.appendChild(el("b",null,v));if(sub)t.appendChild(el("span",null,sub));g.appendChild(t);};
+  tile("FSG 전체",f(mean(R.map(r=>+r.avg).filter(x=>!isNaN(x)))),R.length+"건");
+  if(TR.length)tile(me.team,f(mean(TR.map(r=>+r.avg).filter(x=>!isNaN(x)))),TR.length+"건");
+  if(MR.length)tile("나",f(mean(MR.map(r=>+r.avg).filter(x=>!isNaN(x)))),MR.length+"건");
+  box.appendChild(g);
+}
 function openSchWeek(){
   if(!schData||!schData.week)return;
   const c=$("pCard");c.textContent="";c.classList.add("wide");
@@ -1924,6 +1953,7 @@ function renderHome(){
   // 최근 대화
   const tk=hcard("FS Talk","chat","talk");hmore(tk,"대화 전체",()=>{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");});
   tk.appendChild(el("div","htalk"));colB.appendChild(tk);
+  const vc=hcard("고객 만족도","star","voc");hmore(vc,"대시보드",()=>openUrl(LINKS.voc));const hv=el("div","hvoc");hv.id="hvoc";vc.appendChild(hv);colB.appendChild(vc);renderVoc();
   // 바로가기
   const ls=el("section","hlinks");ls.appendChild(el("h2",null,"바로가기"));const lg=el("div","hlg");
   [["box","설치일정",()=>openUrl(LINKS.install)],["calendar","근무일정",()=>openUrl(LINKS.work)],["compass","실마리",()=>openUrl(LINKS.silmari)],["sysgrid","전국시스템",()=>openUrl(LINKS.system)],["star","고객 만족도",()=>openUrl(LINKS.voc)]].concat(isAdmin?[["shield","KPI 대시보드",()=>openUrl(LINKS.kpi)]]:[]).concat([["bookmark","저장한 글",()=>go("saved")],["users","조직도",()=>{isM()?go("org"):(listTab="org",go(room?"room-"+room:"org"));}]])
