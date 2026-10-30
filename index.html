@@ -1083,6 +1083,18 @@ html[data-theme=dark] .hbi2.hot{background:#2E2614;border-color:#5A4A20}html[dat
 .tmwrap{overflow-x:auto;margin:0 -4px}
 .tmt td{vertical-align:top;min-width:64px}.tmt td.tmn{min-width:150px}.tmt th.off{color:#E7413E}
 .tmt .obp{padding:2px}.tmt .stag{display:inline-block;margin:1px 2px 1px 0}
+
+/* 빠른 이동 · 글자 크기 */
+.pcard.cmdk{width:min(640px,100%);padding:0;align-self:flex-start;margin-top:10vh;overflow:hidden}
+.cmdbox{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);color:var(--sub)}.cmdbox input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:var(--strong)}
+.cmdlist{max-height:min(56vh,480px);overflow:auto;padding:6px}
+.cmdrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;border-radius:10px;padding:9px 10px;color:var(--text)}.cmdrow .ico{color:var(--sub)}
+.cmdrow.on{background:#EAF2FB}.cmdrow.on .ico{color:#005BAC}html[data-theme=dark] .cmdrow.on{background:#16273A}
+.cmdt{flex:1;min-width:0;font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmdrow small{font-size:12px;color:var(--sub)}
+.cmdhint{font-size:11.5px;color:var(--sub);padding:8px 14px;border-top:1px solid var(--line2)}
+.hck{width:auto;padding:0 10px;font-size:12px;font-weight:700;color:var(--sub)}
+html[data-fs=l] .app{zoom:1.08;height:calc(100vh / 1.08);height:calc(100dvh / 1.08)}html[data-fs=xl] .app{zoom:1.17;height:calc(100vh / 1.17);height:calc(100dvh / 1.17)}
+html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 </style>
 
 </head>
@@ -1430,6 +1442,9 @@ function groupAutoName(names){const o=names.filter(n=>!me||n!==me.name);return o
 const THEMES=["system","light","dark"],THEME_LABEL={system:"시스템 설정 따름",light:"밝게",dark:"어둡게"};
 let theme=(()=>{try{return localStorage.getItem("fstalk-theme")||"system";}catch(e){return "system";}})();
 const darkMQ=window.matchMedia("(prefers-color-scheme: dark)");
+let fsz=(()=>{try{return localStorage.getItem("fstalk-fs")||"m";}catch(e){return "m";}})();   // 글자 크기: m 보통 · l 크게 · xl 아주 크게
+function applyFs(){document.documentElement.dataset.fs=fsz;}
+applyFs();
 function applyTheme(){
   const d=theme==="dark"||(theme==="system"&&darkMQ.matches);
   document.documentElement.dataset.theme=d?"dark":"light";
@@ -2458,6 +2473,7 @@ function renderHome(){
   f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}$("q").value=v;go("search");};
   hd.appendChild(f);
   const tools=el("div","htools");
+  if(!isTouch()){const ck=el("button","htool hck");ck.title="빠른 이동 (Ctrl+K)";ck.setAttribute("aria-label","빠른 이동");ck.appendChild(el("span",null,/Mac/.test(navigator.platform)?"⌘K":"Ctrl K"));ck.onclick=openCmd;tools.appendChild(ck);}
   const bell=el("button","htool");bell.id="hBell";bell.setAttribute("aria-label","알림 센터");bell.title="알림 센터";bell.appendChild(icEl("bell","",20));bell.appendChild(el("span","hbadge"));bell.onclick=openNotiCenter;tools.appendChild(bell);
   const th=el("button","htool");th.setAttribute("aria-label","밝게/어둡게");th.title="밝게 / 어둡게";th.appendChild(icEl(document.documentElement.dataset.theme==="dark"?"sun":"moon","",20));
   th.onclick=()=>{theme=document.documentElement.dataset.theme==="dark"?"light":"dark";try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();homeBuilt="";renderHome();};tools.appendChild(th);
@@ -2749,6 +2765,38 @@ function schTodayOf(nm){                                 // 조직도: 오늘 �
   o.leave.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"l"]));o.night.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"n"]));
   o.duty.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"d"]));o.edu.filter(x=>x.nm===nm).forEach(x=>out.push(["교육","e"]));return out;
 }
+/* ===== 빠른 이동 (Ctrl+K / ⌘K): 화면·업무 앱·대화방·사람·할 일을 한 창에서 ===== */
+function cmdItems(){
+  const L=[];const add=(ic,t,sub,fn,kw)=>L.push({ic,t,sub,fn,kw:(t+" "+(sub||"")+" "+(kw||"")).toLowerCase()});
+  add("home","홈","화면",()=>go("home"));add("chat","대화","화면",()=>{listTab="rooms";go("");});add("users","조직도","화면",()=>go("org"));
+  add("doc","기술정보 검색","화면",()=>go("tech"),"tb 회보 매뉴얼 부품");add("search","통합 검색","화면",()=>go("search"));add("bookmark","저장한 글","화면",()=>go("saved"));
+  if(isAdmin||myLead())add("users","팀 현황","화면",()=>go("team"),"팀장");if(isAdmin)add("shield","관리","화면",()=>go("admin"));add("gear","설정","화면",()=>go("settings"));
+  Object.keys(APPS).filter(k=>!APPS[k].lead||isAdmin||myLead()).forEach(k=>add(APPS[k].ic,APPS[k].t,"업무 앱",()=>openApp(k)));
+  add("bell","알림 센터","할 일",()=>openNotiCenter());add("plus","내 근무 등록 (휴가·교육)","할 일",()=>openWorkForm(),"휴가 교육 회의");add("plus","설치·평가 일정 등록","할 일",()=>openInstallForm(),"설치 이전 평가");
+  add("calendar","7일 근무 보기","할 일",()=>openSchWeek(),"당직 야간 석간");add("edit","바로가기 편집","할 일",()=>openLinkEditor());
+  add(document.documentElement.dataset.theme==="dark"?"sun":"moon","밝게 / 어둡게 바꾸기","할 일",()=>{theme=document.documentElement.dataset.theme==="dark"?"light":"dark";try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();homeBuilt="";if(view==="home")renderHome();},"테마 다크");
+  ROOMS.filter(r=>r.id!=="all"||true).forEach(r=>add("chat",r.name,"대화방",()=>go("room-"+r.id),r.desc));
+  Object.keys(groups).filter(myGroup).forEach(id=>{const r=getRoom(id);if(r)add("users",r.name,"그룹 대화",()=>go("room-"+id));});
+  rosterList().forEach(p=>add("user",p.name,teamLabel(p.team)+(p.office?" · "+p.office:""),()=>openProfile(p)));
+  return L;
+}
+function openCmd(){
+  const c=$("pCard");c.textContent="";c.classList.add("wide","cmdk");
+  const box=el("div","cmdbox");const ic=icEl("search","",20);box.appendChild(ic);const q=el("input");q.type="search";q.placeholder="어디로 갈까요? 화면·앱·대화방·사람·할 일 (Enter: 기술정보에서 찾기)";q.autocomplete="off";box.appendChild(q);c.appendChild(box);
+  const list=el("div","cmdlist");c.appendChild(list);c.appendChild(el("div","cmdhint","↑↓ 이동 · Enter 열기 · Esc 닫기"));
+  const all=cmdItems();let sel=0,cur=[];
+  const draw=()=>{const ws=q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);cur=all.filter(x=>ws.every(w=>x.kw.includes(w))).slice(0,40);
+    if(ws.length)cur.push({ic:"search",t:"「"+q.value.trim()+"」 기술정보에서 찾기",sub:"검색",fn:()=>{techQ=q.value.trim();go("tech");}},{ic:"chat",t:"「"+q.value.trim()+"」 대화에서 찾기",sub:"검색",fn:()=>{$("q").value=q.value.trim();go("search");}});
+    if(sel>=cur.length)sel=Math.max(0,cur.length-1);list.textContent="";
+    cur.forEach((x,i)=>{const r=el("button","cmdrow"+(i===sel?" on":""));r.appendChild(icEl(x.ic,"",18));r.appendChild(el("span","cmdt",x.t));r.appendChild(el("small",null,x.sub||""));r.onmouseenter=()=>{sel=i;[...list.children].forEach((n,j)=>n.classList.toggle("on",j===i));};r.onclick=()=>run(x);list.appendChild(r);});};
+  const run=x=>{closeProfile();setTimeout(x.fn,20);};
+  q.oninput=()=>{sel=0;draw();};
+  q.onkeydown=e=>{if(e.key==="ArrowDown"){e.preventDefault();sel=Math.min(cur.length-1,sel+1);draw();list.children[sel]&&list.children[sel].scrollIntoView({block:"nearest"});}
+    else if(e.key==="ArrowUp"){e.preventDefault();sel=Math.max(0,sel-1);draw();list.children[sel]&&list.children[sel].scrollIntoView({block:"nearest"});}
+    else if(e.key==="Enter"){e.preventDefault();if(cur[sel])run(cur[sel]);}else if(e.key==="Escape"){closeProfile();}};
+  draw();$("pOv").hidden=false;setTimeout(()=>q.focus(),30);
+}
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&(e.key==="k"||e.key==="K")&&started&&me&&!isLocked()){e.preventDefault();if(!$("pOv").hidden&&$("pCard").classList.contains("cmdk"))closeProfile();else openCmd();}});
 /* ===== 팀 현황 (팀장 = 우리 팀, 그룹장·관리자 = 팀 선택): 팀원 7일 근무 · 이번 주 설치 · 만족도 · 3점 이하 · KPI ===== */
 let teamSel="";
 function renderTeamPage(){
@@ -4189,7 +4237,7 @@ renderInstall();
 
 /* ---------- 프로필 (연락처·메일) ---------- */
 let profiles={};
-function closeProfile(){if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer");if(view==="settings")renderSettings();}
+function closeProfile(){if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer","cmdk");if(view==="settings")renderSettings();}
 $("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
@@ -4578,6 +4626,8 @@ function renderSettings(){
   }
   // 화면
   c=setSec(wrap,"화면");
+  const fseg=el("div","seg");[["m","보통"],["l","크게"],["xl","아주 크게"]].forEach(([k,l])=>{const b=el("button",fsz===k?"on":"",l);b.onclick=()=>{fsz=k;try{localStorage.setItem("fstalk-fs",k);}catch(e){}applyFs();renderSettings();};fseg.appendChild(b);});
+  setRow(c,"zoom","글자 크기","이 기기에만 적용",null,fseg);
   const seg=el("div","seg");[["system","시스템"],["light","밝게"],["dark","어둡게"]].forEach(([k,l])=>{const b=el("button",theme===k?"on":"",l);b.onclick=()=>{theme=k;try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();renderSettings();};seg.appendChild(b);});
   setRow(c,"contrast","화면 테마","",null,seg);
   // 보안
