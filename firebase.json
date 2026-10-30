@@ -1,3 +1,5 @@
 {
-  "database": { "rules": "database.rules.json" }
+  "database": [
+    { "instance": "fs-talk-fa383-default-rtdb", "rules": "database.rules.json" }
+  ]
 }

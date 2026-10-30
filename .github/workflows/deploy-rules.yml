@@ -4,7 +4,7 @@ name: Deploy DB rules
 on:
   push:
     branches: [main]
-    paths: [database.rules.json]
+    paths: [database.rules.json, firebase.json]
   workflow_dispatch:
 concurrency: deploy-rules
 jobs:
