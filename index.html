@@ -1145,6 +1145,8 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 .obof{margin-top:6px}
 @media (min-width:821px){.obgrid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}}
 .kpth{display:flex;align-items:center;justify-content:space-between;gap:8px}.kpth .seg.sm button{padding:4px 10px;font-size:12.5px}
+/* 설정 행 오른쪽 화살표(.schev)가 일정 행 스타일(.schev, width:100%)과 이름이 겹쳐 깨지던 것 */
+.srow>.ico.schev{display:inline-flex;width:auto;flex:none;padding:0;background:none;border-radius:0;box-shadow:none}
 </style>
 
 </head>
@@ -1351,7 +1353,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.117";
+const APP_VERSION="2026-10-30.118";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
