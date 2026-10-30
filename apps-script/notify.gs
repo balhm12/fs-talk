@@ -157,7 +157,7 @@ function voice_(req){
   const ext = /mp4|m4a|aac/.test(mt) ? 'm4a' : /ogg/.test(mt) ? 'ogg' : /wav/.test(mt) ? 'wav' : /mpeg|mp3/.test(mt) ? 'mp3' : 'webm';
   const rooms = (Array.isArray(req.rooms) ? req.rooms : []).map(function(x){ return String(x).replace(/[\r\n]+/g,' ').slice(0,40); }).filter(String).slice(0,200);
   // 1) 받아쓰기 — 방 이름·장비 용어를 힌트로 주면 더 정확함
-  const hint = ('FS Talk 사내 메신저. 방: ' + rooms.slice(0,40).join(', ') + '. 장비: XN, XN-L, UF, UC, SP-50, CN, HISCL, CS-1600, CA-620.').slice(0,600);
+  const hint = ('FS 포털(사내 메신저·업무 포털). 방: ' + rooms.slice(0,40).join(', ') + '. 장비: XN, XN-L, UF, UC, SP-50, CN, HISCL, CS-1600, CA-620.').slice(0,600);
   const blob = Utilities.newBlob(Utilities.base64Decode(data), mt, 'voice.'+ext);
   const tr = UrlFetchApp.fetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'post',muteHttpExceptions:true,
     headers:{Authorization:'Bearer '+key},

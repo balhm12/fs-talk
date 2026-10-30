@@ -1,7 +1,7 @@
 {
-  "name": "FS Talk",
-  "short_name": "FS Talk",
-  "description": "FSG 사내 메신저",
+  "name": "FS 포털",
+  "short_name": "FS 포털",
+  "description": "FS 포털 — Field Service Integrated Portal (FSG 사내 메신저·업무 포털)",
   "id": "./",
   "start_url": "./",
   "scope": "./",

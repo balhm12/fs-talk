@@ -1,4 +1,4 @@
-/* FS Talk 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면) + 푸시 알림 수신. 메시지 데이터는 캐시하지 않음 */
+/* FS 포털 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면) + 푸시 알림 수신. 메시지 데이터는 캐시하지 않음 */
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 firebase.initializeApp({
@@ -12,7 +12,7 @@ firebase.initializeApp({
 });
 firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
 
-const CACHE = "fstalk-v3";
+const CACHE = "fstalk-v4";   // v4: 이름 FS 포털 — 새 manifest를 받도록
 const META = "fstalk-meta";   // 앱 아이콘 숫자(안 읽은 수) 보관 — 캐시 정리 때 지우지 않음
 
 // 앱이 꺼져 있을 때 알림이 오면 앱 아이콘 숫자 +1 (앱을 열면 정확한 수로 다시 맞춤)

@@ -9,9 +9,9 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="FS Talk">
+<meta name="apple-mobile-web-app-title" content="FS 포털">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>FS Talk</title>
+<title>FS 포털</title>
 <style>
 :root{--blue:#005BAC;--blue-d:#00457F;--cyan:#00B8EE;--navy:#00457F;--bg:#F7F9FC;--panel:#fff;--line:#DDDDDD;--text:#3F3F3F;--strong:#262626;--sub:#6E6E6E;--mark:#FFE58A;--bad:#E7413E;--ok:#3FBA46;--warn:#E69E0B;
   --soft:#F1F3F6;--soft2:#F7F9FC;--sel:#EAF2FB;--sel2:#F4F8FD;--selline:#C5DBF2;--chat:#EEF2F7;--input:#F7F9FC;--line2:#EEEEEE;--link:#005BAC;color-scheme:light;
@@ -397,6 +397,30 @@ html[data-theme=dark] .ncic{background:#16273A;color:#8CC4F5}
 .appframes{flex:1;min-height:0;position:relative}.appframes iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
 .rail a.rlink.on{background:rgba(255,255,255,.18)}
 @media (max-width:820px){.app.v-app .tabbar{display:flex}.apphd b{display:none}.apptabs{margin-left:0;flex:1}#appView{padding-bottom:calc(64px + env(safe-area-inset-bottom))}}
+/* 조직도 보드 */
+.ob{gap:14px}
+.obhd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.obt{display:flex;align-items:baseline;gap:10px}.obt h1{margin:0;font-size:24px;color:var(--strong)}.obt span{font-size:13px;color:var(--sub)}
+.obsearch{flex:1 1 260px;max-width:420px;margin-left:auto;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--sub)}
+.obsearch input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:15px;color:var(--strong)}
+.obhd .seg{flex:0 0 auto}
+.obchips{display:flex;flex-wrap:wrap;gap:6px}
+.obsum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.obsl{font-size:12.5px;font-weight:800;color:var(--strong)}
+.obs{display:inline-flex;gap:6px;align-items:baseline;font-size:13px;border-radius:10px;padding:4px 10px;background:var(--soft2)}.obs b{font-size:12.5px}
+.obs.l b{color:#C8332F}.obs.n b{color:#4F46E5}.obs.d b{color:#6D28D9}.obs.e b{color:#0F766E}
+.obgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
+.obteam{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.obth{display:flex;align-items:baseline;gap:8px}.obth b{font-size:16px;color:var(--strong)}.obth span{font-size:12.5px;color:var(--sub)}.obth .hmore{margin-left:auto}
+.obof{font-size:11.5px;font-weight:800;color:var(--sub);margin-top:4px;letter-spacing:.02em}
+.obpg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.obp{display:flex;align-items:center;gap:8px;min-width:0;text-align:left;border:0;background:none;border-radius:10px;padding:6px;color:var(--text)}
+.obp:hover{background:var(--sel2)}.obp.me{background:#EEF5FC}html[data-theme=dark] .obp.me{background:#16273A}
+.obp.lead{background:var(--soft2);padding:8px 10px}.obp.lead .av{width:44px;height:44px}
+.obpm{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.obpm b{font-size:14px;color:var(--strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obpm small{font-size:11.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.obst{display:flex;flex-wrap:wrap;gap:3px}.obst .stag{margin-left:0}
+.oblist{display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px}
+.obft{display:flex;justify-content:center}.obft .btn{width:auto;margin:0;padding:10px 18px}
+@media (max-width:820px){.obsearch{order:3;flex-basis:100%;max-width:none;margin-left:0}.obgrid{grid-template-columns:minmax(0,1fr)}.obsearch input{font-size:16px}}
 .hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
@@ -993,14 +1017,14 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <body>
 <!-- 로딩·등록·대기 화면 -->
 <div class="gate splash" id="gLoad"><div class="splbox">
-  <div class="spllogo">FS</div><div class="splname">FS Talk</div>
+  <div class="spllogo">FS</div><div class="splname">FS 포털</div>
   <div class="splbar"><i></i></div><p id="loadMsg">연결 중…</p>
   <img class="splsys" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="118" height="36">
 </div></div>
 <div class="gate" id="gInApp" hidden>
   <div class="card">
     <h1>다른 브라우저로 열어 주세요</h1>
-    <p id="inAppMsg">카카오톡·네이버 같은 앱 안의 브라우저에서는 FS Talk이 새 기기로 인식되어 다시 등록해야 합니다.</p>
+    <p id="inAppMsg">카카오톡·네이버 같은 앱 안의 브라우저에서는 FS 포털이 새 기기로 인식되어 다시 등록해야 합니다.</p>
     <button class="btn pri" type="button" id="inAppOpen">브라우저로 열기</button>
     <button class="btn" type="button" id="inAppCopy">주소 복사</button>
     <p class="hint" id="inAppHint" style="margin-top:12px"></p>
@@ -1010,11 +1034,11 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <div class="gate" id="gReg" hidden>
   <form class="card" id="regForm" autocomplete="off">
     <div class="lnkbox" id="lnkBox">
-      <b>이미 FS Talk을 쓰고 있나요?</b>
-      <p id="lnkTip">쓰던 기기의 FS Talk → 설정 → 「다른 기기 연결」에서 6자리 코드를 만들어 넣으면, 승인 없이 바로 열립니다.</p>
+      <b>이미 FS 포털을 쓰고 있나요?</b>
+      <p id="lnkTip">쓰던 기기의 FS 포털 → 설정 → 「다른 기기 연결」에서 6자리 코드를 만들어 넣으면, 승인 없이 바로 열립니다.</p>
       <div class="lnkrow"><label for="lnkCode" class="vh">연결 코드</label><input id="lnkCode" inputmode="numeric" maxlength="6" placeholder="6자리 코드" autocomplete="one-time-code"><button class="btn pri" type="button" id="lnkBtn">연결</button></div>
     </div>
-    <h1>FS Talk 사용 등록</h1>
+    <h1>FS 포털 사용 등록</h1>
     <p>처음 한 번만 등록하면 됩니다. 관리자가 승인하면 대화방이 열립니다.</p>
     <div id="rPick" hidden>
       <div class="f"><label for="pTeam">팀</label>
@@ -1141,6 +1165,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
       <div class="sw" id="settingsBody"></div>
     </section>
 
+    <section class="view" id="orgView"><div class="home ob" id="orgBody"></div></section>
     <section class="view" id="appView">
       <div class="apphd"><button class="appbk" id="appBack" aria-label="뒤로"><span data-ic="back"></span></button><span class="appic" id="appIc"></span><b id="appTitle"></b>
         <span class="apptabs" id="appTabs"></span><span class="grow"></span>
@@ -1169,7 +1194,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <div class="lockov" id="lockOv" hidden>
   <div class="lockbox">
     <div class="locklogo">FS</div>
-    <div class="locktitle">FS Talk 잠금</div>
+    <div class="locktitle">FS 포털 잠금</div>
     <div class="lockmsg" id="lockMsg">PIN 4자리를 입력하세요</div>
     <div class="lockdots" id="lockDots"><i></i><i></i><i></i><i></i></div>
     <div class="lockpad" id="lockPad"></div>
@@ -1351,7 +1376,7 @@ auth.onAuthStateChanged(u=>{
 });
 let meLoaded=false;
 /* ---------- 앱 안 브라우저(카카오톡 등) 막기 + 기기 연결 코드 ----------
-   브라우저마다 저장 공간이 달라 FS Talk이 새 기기로 인식됨 → 외부 브라우저로 보내거나, 쓰던 기기의 6자리 코드로 바로 연결 */
+   브라우저마다 저장 공간이 달라 FS 포털이 새 기기로 인식됨 → 외부 브라우저로 보내거나, 쓰던 기기의 6자리 코드로 바로 연결 */
 const UA=navigator.userAgent||"";
 const isKakao=/KAKAOTALK/i.test(UA),uaAndroid=/Android/i.test(UA),uaIOS=/iPhone|iPad|iPod/.test(UA);
 let inAppStay=false;try{inAppStay=sessionStorage.getItem("fstalk-inapp-stay")==="1";}catch(e){}
@@ -1366,7 +1391,7 @@ function inAppGate(){
   $("inAppOpen").onclick=openExt;
   $("inAppCopy").onclick=()=>copyText(url);
   $("inAppStay").onclick=()=>{inAppStay=true;try{sessionStorage.setItem("fstalk-inapp-stay","1");}catch(e){}applyMe();};
-  $("inAppHint").textContent=uaIOS?"아이폰에서 홈 화면에 FS Talk을 설치해 쓰고 있다면, 이 링크 대신 홈 화면의 FS Talk 아이콘으로 여는 것이 가장 좋습니다.":"Chrome에 설치한 FS Talk이 있으면 같은 계정으로 바로 열립니다.";
+  $("inAppHint").textContent=uaIOS?"아이폰에서 홈 화면에 FS 포털을 설치해 쓰고 있다면, 이 링크 대신 홈 화면의 FS 포털 아이콘으로 여는 것이 가장 좋습니다.":"Chrome에 설치한 FS 포털이 있으면 같은 계정으로 바로 열립니다.";
   $("inAppOpen").textContent=isKakao?"브라우저로 열기":uaAndroid?"Chrome으로 열기":"Safari로 여는 방법";
   if(isKakao&&!inAppTried){inAppTried=true;setTimeout(openExt,300);}   // 카카오톡은 자동으로 외부 브라우저로
 }
@@ -1391,7 +1416,7 @@ async function openLinkCode(){
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");c.appendChild(x);
   c.appendChild(el("h3",null,"다른 기기 연결"));
-  c.appendChild(el("div","pkhint","새 휴대폰·PC, 카카오톡 링크로 열린 브라우저처럼 FS Talk이 처음 열린 곳의 등록 화면에서 아래 코드를 넣으세요. 관리자 승인 없이 "+me.name+"님으로 바로 열립니다."));
+  c.appendChild(el("div","pkhint","새 휴대폰·PC, 카카오톡 링크로 열린 브라우저처럼 FS 포털이 처음 열린 곳의 등록 화면에서 아래 코드를 넣으세요. 관리자 승인 없이 "+me.name+"님으로 바로 열립니다."));
   const cd=el("div","lcode","······");c.appendChild(cd);const tm=el("div","ltime","만드는 중…");c.appendChild(tm);
   const warn=el("div","pkhint","코드는 5분 동안 한 번만 쓸 수 있습니다. 다른 사람에게 알려 주지 마세요.");c.appendChild(warn);
   const done=el("button","btn","닫기");c.appendChild(done);
@@ -1499,7 +1524,7 @@ function start(){
   R("joined/"+myKey).set(true).catch(()=>{});
   R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
   R("reads").on("value",s=>{reads=s.val()||{};schedule();},()=>{});
-  R("profiles").on("value",s=>{profiles=s.val()||{};if(listTab==="org")renderNav();if(view==="settings")renderSettings();},()=>{});
+  R("profiles").on("value",s=>{profiles=s.val()||{};if(listTab==="org")renderNav();if(view==="org")renderOrgBoard();if(view==="settings")renderSettings();},()=>{});
   R("avatars").on("value",s=>{avatars=s.val()||{};schedule();renderInfo();if(view==="settings")renderSettings();},()=>{});
   refreshPush();
   ROOMS.forEach(r=>watchRoom(r.id));
@@ -1866,7 +1891,7 @@ function schLoad(force){
     try{localStorage.setItem("fstalk-sch-cache",JSON.stringify({at:schAt,d:schData}));}catch(e){}
     return schData;
   })();
-  schP.then(()=>{schP=null;renderSch();renderStats();updateNotiBadge();if(view==="chat")schedule();if(listTab==="org"||view==="org")renderNav();if(view==="search")renderExt($("q").value);},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
+  schP.then(()=>{schP=null;renderSch();renderStats();updateNotiBadge();if(view==="chat")schedule();if(listTab==="org")renderNav();if(view==="org")renderOrgBoard();if(view==="search")renderExt($("q").value);},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
   return schP;
 }
 const schOff=d=>{const x=new Date(d+"T00:00:00").getDay();return x===0||x===6;};
@@ -2290,13 +2315,13 @@ function renderExt(q){
 }
 function hcard(title,ic,cls){const c=el("section","hcard"+(cls?" "+cls:""));const h=el("div","hch");h.appendChild(icEl(ic,"hcic",20));h.appendChild(el("h2",null,title));c.appendChild(h);c._head=h;return c;}
 function hmore(c,label,fn){const a=el("button","hmore",label+" ›");a.onclick=fn;c._head.appendChild(a);}
-/* ===== 홈 대시보드 (FS Talk – Field Service Integrated Portal) =====
+/* ===== 홈 대시보드 (FS 포털 – Field Service Integrated Portal) =====
    위쪽 바(날짜·인사·통합 검색·알림 센터·테마·프로필) → 요약 숫자 4개 → 오늘의 업무 | 업무 커뮤니케이션
    → 기술지원(실마리·기술정보·교육) → 서비스 현황(만족도·KPI) → 바로가기(사용자 선택·순서)
    모든 숫자는 실제 데이터에서만 — 데이터가 없으면 「–」와 이유를 보여 줌 */
 const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calendar","근무일정",()=>openApp("work")],silmari:["compass","실마리",()=>openApp("silmari")],
   system:["sysgrid","전국시스템",()=>openApp("system")],voc:["star","고객 만족도",()=>openApp("voc")],kpi:["chart","KPI 대시보드",()=>openApp("kpi")],
-  saved:["bookmark","저장한 글",()=>go("saved")],org:["users","조직도",()=>{isM()?go("org"):(listTab="org",go(room?"room-"+room:"org"));}],
+  saved:["bookmark","저장한 글",()=>go("saved")],org:["users","조직도",()=>go("org")],
   search:["search","통합 검색",()=>go("search")],notice:["megaphone","전체공지",()=>go("room-notice")],tech:["doc","기술정보",()=>openBoard("tech")],video:["video","동영상 교육",()=>openBoard("video")]};
 const HLINKS_DEF=["install","work","silmari","system","voc","kpi","saved","org"];
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
@@ -2536,7 +2561,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const L=[["home","홈",()=>go("home")],["chat","대화",()=>{listTab="rooms";go("");}],["users","조직도",()=>go("org")],["search","통합 검색",()=>go("search")],["bookmark","저장한 글",()=>go("saved")],["bell","알림 센터",()=>setTimeout(openNotiCenter,50)]]
     .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")]]);
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
-  grp("FS Talk",L);
+  grp("FS 포털",L);
   grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[]).map(k=>HLINKS[k]));
   grp("기술지원",[HLINKS.tech,HLINKS.video]);
   $("pOv").hidden=false;
@@ -2578,12 +2603,53 @@ function noticeCards(nav){
 }
 function navFooter(nav){
   const f=el("div","navfoot");const i=el("img","brandlogo");i.alt="Sysmex";i.width=59;i.height=18;i.src=document.documentElement.dataset.theme==="dark"?"icons/sysmex-logo-white.png":"icons/sysmex-logo-blue.png";
-  f.appendChild(i);f.appendChild(el("span",null,"FS Talk · Made by FSS Team"));nav.appendChild(f);
+  f.appendChild(i);f.appendChild(el("span",null,"FS 포털 · Made by FSS Team"));nav.appendChild(f);
 }
 function schTodayOf(nm){                                 // 조직도: 오늘 근무일정(휴가·야간·당직·교육) 표시
   if(!schData||schData.today!==ymd(new Date()))return [];const o=schData.w,out=[];
   o.leave.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"l"]));o.night.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"n"]));
   o.duty.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"d"]));o.edu.filter(x=>x.nm===nm).forEach(x=>out.push(["교육","e"]));return out;
+}
+/* ===== 조직도 보드: 팀별 카드 · 팀장 맨 위 · 사무소별 · 오늘 근무(휴가·야간·당직·교육) · 검색·팀 필터 ===== */
+let orgQ="",orgTeam="",orgView=(()=>{try{return localStorage.getItem("fstalk-orgview")||"card";}catch(e){return "card";}})();
+function renderOrgBoard(){
+  const b=$("orgBody");if(!b||!me)return;
+  if(!schData&&!schP&&!schErr)schLoad();
+  const keepFocus=document.activeElement&&document.activeElement.id==="obq";
+  b.textContent="";
+  const all=rosterList(),teams=TEAM_ORDER.filter(t=>all.some(p=>p.team===t)).concat([...new Set(all.map(p=>p.team))].filter(t=>!TEAM_ORDER.includes(t)));
+  // 머리
+  const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"조직도"));tt.appendChild(el("span",null,"FS Group · "+all.length+"명"));hd.appendChild(tt);
+  const sf=el("div","obsearch");sf.appendChild(icEl("search","",18));const q=el("input");q.id="obq";q.type="search";q.placeholder="이름·팀·사무소 찾기";q.value=orgQ;q.oninput=()=>{orgQ=q.value.trim();renderOrgBoard();};sf.appendChild(q);hd.appendChild(sf);
+  const vw=el("div","seg");[["card","팀별 카드"],["list","목록"]].forEach(([k,l])=>{const x=el("button",orgView===k?"on":"",l);x.onclick=()=>{orgView=k;try{localStorage.setItem("fstalk-orgview",k);}catch(e){}renderOrgBoard();};vw.appendChild(x);});hd.appendChild(vw);
+  b.appendChild(hd);
+  // 팀 칩 + 오늘 근무 요약
+  const ch=el("div","obchips");const chip=(t,l,n)=>{const x=el("button","hchip sm"+(orgTeam===t?" on":""),l+" "+n);x.onclick=()=>{orgTeam=orgTeam===t?"":t;renderOrgBoard();};ch.appendChild(x);};
+  chip("","전체",all.length);teams.forEach(t=>chip(t,teamLabel(t).replace(/^FS /,""),all.filter(p=>p.team===t).length));b.appendChild(ch);
+  if(schData&&schData.today===ymd(new Date())){const w=schData.w,sm=el("div","obsum");const it=(c,l,a)=>{if(!a.length)return;const x=el("span","obs "+c);x.appendChild(el("b",null,l+" "+a.length));x.appendChild(el("span",null,a.map(v=>v.nm).join(", ")));sm.appendChild(x);};
+    it("l","휴가",w.leave);it("n","야간·석간",w.night);it("d","당직",w.duty);it("e","교육",w.edu);if(sm.children.length){sm.insertBefore(el("span","obsl","오늘"),sm.firstChild);b.appendChild(sm);}}
+  const qq=orgQ.toLowerCase().replace(/\s+/g,"");
+  const hit=p=>!qq||(p.name+p.team+(p.office||"")+((profiles[personKey(p.team,p.name)]||{}).phone||"")).toLowerCase().replace(/\s+/g,"").includes(qq);
+  const person=(p,big)=>{const x=el("button","obp"+(big?" lead":"")+(me&&p.name===me.name&&p.team===me.team?" me":""));x.appendChild(personAv(p.name,big?null:"s"));
+    const m=el("span","obpm");const nm=el("b",null,p.name);const tg=roleTag(p);if(tg)nm.appendChild(tg);m.appendChild(nm);
+    const pf=profiles[personKey(p.team,p.name)]||{};const sub=[p.office?p.office:"",pf.phone||""].filter(Boolean).join(" · ");if(sub)m.appendChild(el("small",null,sub));
+    const st=schTodayOf(p.name);if(st.length){const sw=el("span","obst");st.forEach(v=>sw.appendChild(el("span","stag "+v[1],v[0])));m.appendChild(sw);}
+    x.appendChild(m);x.onclick=()=>openProfile(p);return x;};
+  const shown=teams.filter(t=>!orgTeam||t===orgTeam);let any=false;
+  if(orgView==="list"){const L=el("div","oblist");shown.forEach(t=>{const ps=all.filter(p=>p.team===t&&hit(p)).sort(byTeamLead);if(!ps.length)return;any=true;
+      L.appendChild(el("div","lgrp",teamLabel(t)+" · "+ps.length+"명"));ps.forEach(p=>L.appendChild(person(p)));});b.appendChild(L);}
+  else{const G=el("div","obgrid");shown.forEach(t=>{const ps=all.filter(p=>p.team===t&&hit(p)).sort(byTeamLead);if(!ps.length)return;any=true;
+      const c=el("section","obteam");c.style.setProperty("--tc",TEAM_COLOR[t]||"#005BAC");
+      const h=el("div","obth");h.appendChild(el("b",null,teamLabel(t)));h.appendChild(el("span",null,ps.length+"명"));
+      const tr=teamRoomOf({team:t,office:""});if(tr){const rb=el("button","hmore","팀방 ›");rb.onclick=()=>go("room-"+tr);h.appendChild(rb);}c.appendChild(h);
+      const leads=ps.filter(p=>p.lead||t==="FSG");leads.forEach(p=>c.appendChild(person(p,true)));
+      const rest=ps.filter(p=>!leads.includes(p));const offs=[...new Set(rest.map(p=>p.office||""))];
+      offs.forEach(o=>{if(offs.length>1||o)c.appendChild(el("div","obof",o?o+" 사무소":"본사·기타"));const g=el("div","obpg");rest.filter(p=>(p.office||"")===o).forEach(p=>g.appendChild(person(p)));c.appendChild(g);});
+      G.appendChild(c);});b.appendChild(G);}
+  if(!any)b.appendChild(el("div","more",all.length?"찾는 사람이 없습니다.":"관리자가 명단을 아직 등록하지 않았습니다."));
+  const ft=el("div","obft");const eb=el("button","btn","내 정보 수정 (사진·연락처)");eb.onclick=()=>go("settings");ft.appendChild(eb);b.appendChild(ft);
+  navFooter(b);
+  if(keepFocus){const n=$("obq");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}
 }
 function renderOrg(nav,q){
   if(!schData&&!schP&&!schErr)schLoad();
@@ -2642,8 +2708,8 @@ $("infoBtn").onclick=()=>{
 };
 document.addEventListener("click",e=>{if(infoOpen&&!$("info").contains(e.target)&&!$("infoBtn").contains(e.target)){infoOpen=false;renderInfo();}});
 function showView(){
-  ["chatView","searchView","savedView","settingsView","adminView","homeView","appView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
-  $("app").classList.toggle("v-home",view==="home"||view==="app");$("app").classList.toggle("v-app",view==="app");
+  ["chatView","searchView","savedView","settingsView","adminView","homeView","appView","orgView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
+  $("app").classList.toggle("v-home",view==="home"||view==="app"||view==="org");$("app").classList.toggle("v-app",view==="app");
   document.querySelectorAll("[data-app]").forEach(a=>a.classList.toggle("on",view==="app"&&a.dataset.app===appKey));
   if(view==="app")showApp();
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
@@ -2651,12 +2717,13 @@ function showView(){
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   $("popBtn").hidden=view!=="chat"||!room||isTouch();
   $("aiBtn").hidden=view!=="chat"||!room;
-  if(view==="chat"&&!room){$("title").textContent="FS Talk";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(icEl("chat","emptyic",44));e.appendChild(el("b",null,"대화방을 선택하세요"));e.appendChild(el("span",null,"왼쪽 목록에서 방을 고르거나 ＋ 새 방으로 대화를 시작하세요."));b.appendChild(e);}
+  if(view==="chat"&&!room){$("title").textContent="FS 포털";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(icEl("chat","emptyic",44));e.appendChild(el("b",null,"대화방을 선택하세요"));e.appendChild(el("span",null,"왼쪽 목록에서 방을 고르거나 ＋ 새 방으로 대화를 시작하세요."));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}
     if(isTouch()&&!(()=>{try{return localStorage.getItem("fstalk-tip-lp");}catch(e){return 1;}})()){setTimeout(()=>{if(view!=="chat"||!room||(isM()&&mList)||!document.querySelector("#msgs .bubble"))return;   // 대화방을 실제로 보고 있을 때만 한 번
       try{localStorage.setItem("fstalk-tip-lp","1");}catch(e){}toast("메시지를 길게 누르면 답장·반응·저장 메뉴가 열려요");},900);}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
   else if(view==="settings"){$("title").textContent="설정";$("desc").textContent="내 정보 · 알림 · 화면 · 보안 · 앱 정보";renderSettings();}
+  else if(view==="org"){$("title").textContent="조직도";$("desc").textContent="";renderOrgBoard();}
   else if(view==="app"){$("title").textContent=(APPS[appKey]||{}).t||"";$("desc").textContent="";}
   else if(view==="home"){$("title").textContent="FS 포털";$("desc").textContent="";renderHome();}
   else if(view==="saved"){$("title").textContent="저장한 글";$("desc").textContent="중요한 글을 모아 둔 곳 · 나만 볼 수 있어요";renderSaved();}
@@ -2679,7 +2746,7 @@ function route(){
   else if(h==="settings"){view="settings";mList=false;}
   else if(h==="admin"&&isAdmin){view="admin";mList=false;}
   else if(h.indexOf("app-")===0&&APPS[h.slice(4).split("~")[0]]){view="app";mList=false;appKey=h.slice(4).split("~")[0];}
-  else if(h==="org"){listTab="org";view="chat";mList=true;}
+  else if(h==="org"){view="org";mList=false;}
   else if(h.indexOf("room-")===0&&(ROOMS.some(r=>r.id===h.slice(5))||dmOther(h.slice(5))||(isGroup(h.slice(5))&&(myGroup(h.slice(5))||gidx[h.slice(5)])))){
     const nr=h.slice(5);if(nr!==room&&(replyTo||editing)){if(editing)input.value="";replyTo=null;editing=null;}
     if(nr!==room||mList||view!=="chat"){const ms=msgs.filter(m=>inRoom(m,nr)&&isUnread(m,nr));entryUnread[nr]={n:ms.length,since:ms.length?ms[0].ts-1:0};dividerScroll=ms.length>=3&&!jumpId;}
@@ -2694,7 +2761,7 @@ window.addEventListener("resize",()=>{if(started)renderInfo();});
 window.matchMedia("(max-width:820px)").addEventListener("change",()=>{if(started)showView();});
 $("backBtn").onclick=()=>{if(history.length>1&&location.hash)history.back();else go("");};
 $("rChat").onclick=$("tChat").onclick=()=>{listTab="rooms";$("lq").value="";isM()?go(""):(view!=="chat"?go(room?"room-"+room:""):renderNav());};
-$("rOrg").onclick=$("tOrg").onclick=()=>{$("lq").value="";if(isM())go("org");else{listTab="org";if(view!=="chat")go(room?"room-"+room:"org");else renderNav();}};
+$("rOrg").onclick=$("tOrg").onclick=()=>{$("lq").value="";go("org");};
 $("rSearch").onclick=$("tSearch").onclick=()=>{go("search");setTimeout(()=>$("q").focus(),30);};
 $("rSaved").onclick=$("tSaved").onclick=()=>go("saved");
 $("rSettings").onclick=()=>go("settings");
@@ -3454,7 +3521,7 @@ async function voiceStart(mode){
   if(vRec)return;
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
-  catch(e){toast(e&&e.name==="NotAllowedError"?"마이크 사용을 허용해 주세요 (브라우저·휴대폰 설정 → FS Talk → 마이크).":"마이크를 열지 못했습니다.");return;}
+  catch(e){toast(e&&e.name==="NotAllowedError"?"마이크 사용을 허용해 주세요 (브라우저·휴대폰 설정 → FS 포털 → 마이크).":"마이크를 열지 못했습니다.");return;}
   const types=["audio/webm;codecs=opus","audio/mp4","audio/webm","audio/ogg"];const mt=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||"";
   const rec=new MediaRecorder(stream,mt?{mimeType:mt,audioBitsPerSecond:32000}:undefined);const chunks=[];
   vRec={rec,stream,mode,cancel:false,t0:Date.now()};
@@ -3859,7 +3926,7 @@ function renderInstall(){
   if(!instOpen){const mo=el("span","instmore","방법 보기 ›");c.appendChild(mo);c.onclick=()=>{instOpen=true;renderInstall();};box.appendChild(c);return;}
   if(isIOS){
     c.appendChild(document.createTextNode("앱처럼 전체 화면으로 열리고, 다음 단계에서 알림도 받을 수 있어요."));
-    const ol=el("ol");["Safari 주소창 옆 ⋯ 버튼(또는 공유 □↑)을 누르세요","「공유」 → 「홈 화면에 추가」 → 「추가」를 누르세요","홈 화면의 FS Talk 아이콘으로 여세요"].forEach(t=>ol.appendChild(el("li",null,t)));c.appendChild(ol);
+    const ol=el("ol");["Safari 주소창 옆 ⋯ 버튼(또는 공유 □↑)을 누르세요","「공유」 → 「홈 화면에 추가」 → 「추가」를 누르세요","홈 화면의 FS 포털 아이콘으로 여세요"].forEach(t=>ol.appendChild(el("li",null,t)));c.appendChild(ol);
     if(!/Safari/.test(navigator.userAgent)||/CriOS|FxiOS|EdgiOS|NAVER|KAKAOTALK/.test(navigator.userAgent))c.appendChild(el("div",null,"※ 지금 브라우저에서 안 되면 Safari로 이 주소를 열어 주세요."));
   }else if(deferredInstall){
     c.appendChild(document.createTextNode("앱처럼 바로 열고, 다음 단계에서 알림도 받을 수 있어요."));c.appendChild(el("br"));
@@ -3964,7 +4031,7 @@ function editMyProfile(){
   const c=$("pCard");c.textContent="";
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(personAv(me.name));c.appendChild(el("h3",null,"내 연락처"));
-  c.appendChild(el("div","tm2","FS Talk 사용자 모두가 볼 수 있어요"));
+  c.appendChild(el("div","tm2","FS 포털 사용자 모두가 볼 수 있어요"));
   const pf=profiles[myKey]||{};
   const f=el("form");f.style.marginTop="14px";
   const mk=(lab,id,type,ph,val)=>{const d=el("div","f");const l=el("label",null,lab);l.htmlFor=id;const i=el("input");i.id=id;i.type=type;i.placeholder=ph;i.value=val||"";i.autocomplete="off";d.appendChild(l);d.appendChild(i);return d;};
@@ -4002,7 +4069,7 @@ async function saveToken(){
 async function enablePush(){
   try{
     const perm=await Notification.requestPermission();
-    if(perm!=="granted"){toast(perm==="denied"?"알림이 차단돼 있어요. 휴대폰 설정에서 FS Talk 알림을 허용해 주세요.":"알림 허용을 누르지 않았어요.");renderPushCard();return;}
+    if(perm!=="granted"){toast(perm==="denied"?"알림이 차단돼 있어요. 휴대폰 설정에서 FS 포털 알림을 허용해 주세요.":"알림 허용을 누르지 않았어요.");renderPushCard();return;}
     await saveToken();toast("이 기기에서 알림을 받습니다.");
   }catch(e){toast("알림 설정 실패: "+(e.code||e.message));}
   renderPushCard();renderInfo();
@@ -4048,7 +4115,7 @@ function renderPushCard(){
   if(!pushSupported()||pushOn())return;
   const c=el("div","inst");
   c.appendChild(el("b",null,"🔔 새 메시지 알림 받기"));
-  if(Notification.permission==="denied"){c.appendChild(document.createTextNode("알림이 차단돼 있어요. 휴대폰(또는 브라우저) 설정 → 알림에서 FS Talk을 허용한 뒤 다시 열어 주세요."));}
+  if(Notification.permission==="denied"){c.appendChild(document.createTextNode("알림이 차단돼 있어요. 휴대폰(또는 브라우저) 설정 → 알림에서 FS 포털을 허용한 뒤 다시 열어 주세요."));}
   else{c.appendChild(document.createTextNode("앱을 닫아 둬도 새 메시지가 오면 알려 드려요."));c.appendChild(el("br"));const b=el("button","btn pri","알림 켜기");b.onclick=enablePush;c.appendChild(b);}
   box.appendChild(c);
 }
@@ -4067,9 +4134,9 @@ async function testAdminNotify(btn){
     if(!j)t="❌ 알림 발송기 응답이 없습니다.";
     else if(!j.ver)t="❌ Apps Script가 예전 버전입니다. GitHub의 apps-script/notify.gs로 코드를 바꾸고 「배포 관리 → ✏️ → 새 버전 → 배포」를 해 주세요.";
     else if(!j.ok)t="❌ 실패: "+(j.err||"알 수 없음");
-    else if(!j.targets)t="⚠️ 알림을 켠 관리자 기기가 없습니다 (관리자 "+j.people+"명 · 기기 "+j.devices+"대). 관리자 휴대폰에서 FS Talk을 열고 「알림 켜기」를 눌러 주세요.";
+    else if(!j.targets)t="⚠️ 알림을 켠 관리자 기기가 없습니다 (관리자 "+j.people+"명 · 기기 "+j.devices+"대). 관리자 휴대폰에서 FS 포털을 열고 「알림 켜기」를 눌러 주세요.";
     else t="✅ 관리자 기기 "+j.targets+"대 중 "+j.sent+"대로 보냈습니다. 각 기기에 알림이 왔는지 확인하세요."+
-      (pushOn()?" 이 기기도 대상입니다 — 안 뜨면 윈도우 「설정 → 시스템 → 알림」에서 Microsoft Edge(또는 FS Talk) 알림과 방해 금지를 확인하세요.":" (이 기기는 아직 알림을 안 켰어요 — 대화 목록 위 「🔔 알림 켜기」)");
+      (pushOn()?" 이 기기도 대상입니다 — 안 뜨면 윈도우 「설정 → 시스템 → 알림」에서 Microsoft Edge(또는 FS 포털) 알림과 방해 금지를 확인하세요.":" (이 기기는 아직 알림을 안 켰어요 — 대화 목록 위 「🔔 알림 켜기」)");
     box.textContent=t;
   }catch(e){box.textContent="❌ 알림 발송기 연결 실패: "+e.message;}
   btn.disabled=false;
@@ -4091,7 +4158,7 @@ async function notifyOthers(r,msgId){
     }
   }catch(e){if(isAdmin)toast("알림 발송기 연결 실패: "+e.message);}
 }
-/* 앱 창이 열려 있을 때 온 알림: 다른 창을 보고 있으면 윈도우(시스템) 알림, FS Talk을 보고 있으면 앱 안 안내 */
+/* 앱 창이 열려 있을 때 온 알림: 다른 창을 보고 있으면 윈도우(시스템) 알림, FS 포털을 보고 있으면 앱 안 안내 */
 if(messaging){
   messaging.onMessage(async p=>{
     const r=p&&p.data&&p.data.room||"";
@@ -4103,7 +4170,7 @@ if(messaging){
     if(!adminNote&&focused){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));return;}
     try{
       const reg=await getSwReg();
-      await reg.showNotification(n.title||"FS Talk",{body:n.body||"",icon:"icons/icon-192.png",badge:"icons/icon-192.png",
+      await reg.showNotification(n.title||"FS 포털",{body:n.body||"",icon:"icons/icon-192.png",badge:"icons/icon-192.png",
         tag:r?"room-"+r:"fstalk-admin",renotify:true,requireInteraction:adminNote||r==="notice",vibrate:r==="notice"?[200,100,200,100,500]:undefined,data:{url:location.pathname+(r?"#room-"+encodeURIComponent(r):"#admin")}});
     }catch(e){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));}
   });
@@ -4113,7 +4180,7 @@ let lastBadge=-1;
 function syncBadge(n,force){
   if(n===lastBadge&&!force)return;lastBadge=n;
   try{caches.open("fstalk-meta").then(c=>c.put("./badge",new Response(String(n)))).catch(()=>{});}catch(e){}   // 앱이 꺼져 있을 때 서비스 워커가 이어서 셈
-  document.title=n?"("+(n>99?"99+":n)+") FS Talk":"FS Talk";
+  document.title=n?"("+(n>99?"99+":n)+") FS 포털":"FS 포털";
   try{if("setAppBadge" in navigator){n?navigator.setAppBadge(n):navigator.clearAppBadge();}}catch(e){}
 }
 
@@ -4127,8 +4194,8 @@ const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function pinHash(pin,salt){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+"|"+pin+"|fstalk"));return b64(d);}
 async function bioAvailable(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
 async function bioRegister(){
-  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"FS Talk"},
-    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:(me&&me.name)||"FS Talk",displayName:(me&&me.name)||"FS Talk"},
+  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"FS 포털"},
+    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:(me&&me.name)||"FS 포털",displayName:(me&&me.name)||"FS 포털"},
     pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
     authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
   return b64(c.rawId);
@@ -4254,8 +4321,8 @@ function renderSettings(){
   setRow(c,"mail","메일",pf.email||"입력 안 함",()=>editMyProfile());
   // 알림
   c=setSec(wrap,"알림");
-  if(!pushSupported()||(isIOS&&!isStandalone()))setRow(c,"bellOff","이 기기에서는 알림을 받을 수 없어요",isIOS?"iPhone은 홈 화면에 설치한 FS Talk에서 알림을 켤 수 있어요":"알림을 지원하지 않는 브라우저예요");
-  else if(!pushOn())setRow(c,"bell","새 메시지 알림 받기",Notification.permission==="denied"?"알림이 차단돼 있어요 — 기기·브라우저 설정에서 FS Talk 알림을 허용하세요":"이 기기에서 알림을 켭니다",Notification.permission==="denied"?null:()=>enablePush().then(renderSettings));
+  if(!pushSupported()||(isIOS&&!isStandalone()))setRow(c,"bellOff","이 기기에서는 알림을 받을 수 없어요",isIOS?"iPhone은 홈 화면에 설치한 FS 포털에서 알림을 켤 수 있어요":"알림을 지원하지 않는 브라우저예요");
+  else if(!pushOn())setRow(c,"bell","새 메시지 알림 받기",Notification.permission==="denied"?"알림이 차단돼 있어요 — 기기·브라우저 설정에서 FS 포털 알림을 허용하세요":"이 기기에서 알림을 켭니다",Notification.permission==="denied"?null:()=>enablePush().then(renderSettings));
   else{
     const sw=el("button","switch"+(myMute._all?"":" on"));sw.setAttribute("role","switch");sw.setAttribute("aria-checked",myMute._all?"false":"true");sw.onclick=async e=>{e.stopPropagation();await setMute("_all",!myMute._all);renderSettings();};
     setRow(c,myMute._all?"bellOff":"bell","이 기기 알림",myMute._all?"모든 대화방 알림이 꺼져 있어요":"방별로 끄려면 대화방 ☰ 정보에서",null,sw);
@@ -4280,7 +4347,7 @@ function renderSettings(){
   setRow(c,"refresh","새 버전 확인","",async()=>{await checkUpdate(true);toast($("updBar").hidden?"최신 버전을 쓰고 있어요.":"새 버전이 있어요 — 위의 안내를 누르세요.");});
   if(!isStandalone()&&(isIOS||isAndroid||deferredInstall))setRow(c,"download","홈 화면에 설치하기","앱처럼 쓰고 알림도 받아요",()=>{go("");instOpen=true;try{localStorage.removeItem("fstalk-inst-hide");}catch(e){}renderInstall();});
   const ft=el("div","sfoot");const lg=el("img");lg.src=document.documentElement.dataset.theme==="dark"?"icons/sysmex-logo-white.png":"icons/sysmex-logo-blue.png";lg.alt="Sysmex";lg.width=111;lg.height=34;ft.appendChild(lg);
-  ft.appendChild(el("div",null,"FS Talk · Made by FSS Team"));wrap.appendChild(ft);
+  ft.appendChild(el("div",null,"FS 포털 · Made by FSS Team"));wrap.appendChild(ft);
 }
 
 /* ---------- 새 버전 안내 ---------- */
