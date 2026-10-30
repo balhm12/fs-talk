@@ -1159,6 +1159,21 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 .gdins{padding:10px 12px;border-radius:12px;background:#EAF2FB;margin-bottom:12px}.gdins b{display:block;color:#005BAC;font-size:14px}.gdins small{color:var(--sub);font-size:13px}
 html[data-theme=dark] .gdins{background:#16273A}
 .gdrow{display:flex;gap:8px}.gdrow .btn{flex:1;margin:0}
+
+/* C8 접근성·한 손 조작: 손가락으로 쓰는 기기는 누르는 곳 최소 40px, 보조 글자 대비 4.5:1 이상, 키보드 초점 표시 */
+:root{--sub:#5E6977}
+html[data-theme=dark]{--sub:#A3AEBD}
+:focus-visible{outline:2px solid #005BAC;outline-offset:2px;border-radius:6px}
+html[data-theme=dark] :focus-visible{outline-color:#5AA9F0}
+@media (pointer:coarse){
+  .hchip,.seg button,.hbi2,.hnl,.btn{min-height:40px}
+  .hmore,.schmap{display:inline-flex;align-items:center;min-height:40px;padding-inline:8px}
+  .pcard>.x,#pCard>.x{min-width:44px;min-height:44px;display:grid;place-items:center}
+  .hav,.mehead{min-width:40px;min-height:40px}
+  #inst .x,.npinx{min-width:40px;min-height:40px}
+}
+.kpt2 td.good,.kpt2 td small.up{color:#2E8B35}.kpt2 td.low,.kpt2 td small.down{color:#C9302C}
+html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{color:#6FD675}html[data-theme=dark] .kpt2 td.low,html[data-theme=dark] .kpt2 td small.down{color:#FF7A7A}
 </style>
 
 </head>
@@ -1367,7 +1382,7 @@ html[data-theme=dark] .gdins{background:#16273A}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.123";
+const APP_VERSION="2026-10-31.124";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
