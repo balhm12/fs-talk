@@ -275,6 +275,9 @@ html[data-theme=dark] .hbd{background:#16273A;color:#8CC4F5}
 .vocg{display:flex;gap:8px}
 .voct{flex:1;min-width:0;border-radius:12px;background:var(--soft2);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
 .voct small{font-size:12px;line-height:16px;height:16px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.voct b{font-size:22px;color:var(--blue);line-height:28px;font-family:Arial,sans-serif}.voct span{font-size:11.5px;color:var(--sub)}
+.stag{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;vertical-align:1px;background:#EEF2FF;color:#4F46E5}
+.stag.l{background:#FEE2E2;color:#B91C1C}.stag.d{background:#EDE9FE;color:#6D28D9}.stag.e{background:#CCFBF1;color:#0F766E}
+html[data-theme=dark] .stag{background:#262A4A;color:#A5B4FC}html[data-theme=dark] .stag.l{background:#4A1F1F;color:#FCA5A5}html[data-theme=dark] .stag.d{background:#33264A;color:#C4B5FD}html[data-theme=dark] .stag.e{background:#163A36;color:#5EEAD4}
 .hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
@@ -1058,7 +1061,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.87";
+const APP_VERSION="2026-10-30.88";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1719,7 +1722,7 @@ function schLoad(force){
     try{localStorage.setItem("fstalk-sch-cache",JSON.stringify({at:schAt,d:schData}));}catch(e){}
     return schData;
   })();
-  schP.then(()=>{schP=null;renderSch();},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
+  schP.then(()=>{schP=null;renderSch();if(listTab==="org"||view==="org")renderNav();},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
   return schP;
 }
 const schOff=d=>{const x=new Date(d+"T00:00:00").getDay();return x===0||x===6;};
@@ -1989,7 +1992,13 @@ function navFooter(nav){
   const f=el("div","navfoot");const i=el("img","brandlogo");i.alt="Sysmex";i.width=59;i.height=18;i.src=document.documentElement.dataset.theme==="dark"?"icons/sysmex-logo-white.png":"icons/sysmex-logo-blue.png";
   f.appendChild(i);f.appendChild(el("span",null,"FS Talk · Made by FSS Team"));nav.appendChild(f);
 }
+function schTodayOf(nm){                                 // 조직도: 오늘 근무일정(휴가·야간·당직·교육) 표시
+  if(!schData||schData.today!==ymd(new Date()))return [];const o=schData.w,out=[];
+  o.leave.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"l"]));o.night.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"n"]));
+  o.duty.filter(x=>x.nm===nm).forEach(x=>out.push([x.k,"d"]));o.edu.filter(x=>x.nm===nm).forEach(x=>out.push(["교육","e"]));return out;
+}
 function renderOrg(nav,q){
+  if(!schData&&!schP&&!schErr)schLoad();
   const list=rosterList().filter(p=>!q||p.name.includes(q)||p.team.toLowerCase().replace(/\s+/g,"").includes(q))
     .sort(byTeamLead);
   $("lTitle").textContent="";$("lTitle").appendChild(document.createTextNode("조직도"));$("lTitle").appendChild(el("small",null,rosterList().length+"명"));
@@ -2002,7 +2011,7 @@ function renderOrg(nav,q){
     const b=el("button","li");
     b.appendChild(personAv(p.name));
     const pf=profiles[personKey(p.team,p.name)]||{};
-    const mid=el("div","mid");const nmD=el("div","nm",p.name+(me&&me.name===p.name?" (나)":""));const tg=roleTag(p);if(tg)nmD.appendChild(tg);mid.appendChild(nmD);mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")+(pf.phone?" · "+pf.phone:"")));
+    const mid=el("div","mid");const nmD=el("div","nm",p.name+(me&&me.name===p.name?" (나)":""));const tg=roleTag(p);if(tg)nmD.appendChild(tg);schTodayOf(p.name).forEach(x=>nmD.appendChild(el("span","stag "+x[1],x[0])));mid.appendChild(nmD);mid.appendChild(el("div","pv",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")+(pf.phone?" · "+pf.phone:"")));
     b.appendChild(mid);
     const target=Object.keys(ROOM_SCOPE).find(k=>{const sc=ROOM_SCOPE[k];return sc[0]===p.team&&sc[1]&&sc[1]===p.office;})||Object.keys(ROOM_SCOPE).find(k=>ROOM_SCOPE[k][0]===p.team&&!ROOM_SCOPE[k][1]);
     b.onclick=()=>openProfile(p);
