@@ -231,8 +231,9 @@ html[data-theme=dark] .bcard.miss{background:#2E2617}
 .hbtns.sm{margin-left:auto;flex-wrap:nowrap}.hbtns.sm .hbtn{flex:0 0 auto;height:34px;padding:0 12px;font-size:13px;border-radius:10px}
 .hsch{display:flex;flex-wrap:wrap;gap:12px 24px}
 .schsec{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:6px}
-.schsec h3{margin:0 0 2px;font-size:13px;color:var(--sub);font-weight:700}
-.schev{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:10px;background:var(--soft2)}
+.schsec h3{margin:0 0 2px;font-size:13px;color:var(--sub);font-weight:700}.schsec h3 small{font-weight:400;font-size:11.5px}
+.schev{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:10px;background:var(--soft2);border:0;width:100%;text-align:left;color:inherit;font:inherit}
+button.schev:hover{box-shadow:inset 0 0 0 1px var(--blue)}
 .schev.now{background:var(--sel2);box-shadow:inset 3px 0 0 var(--blue)}
 .schd{flex:0 0 64px;white-space:nowrap;font-size:12.5px;font-weight:700;color:var(--strong);padding-top:2px}
 .schc{flex:0 0 auto;font-size:11.5px;font-weight:700;color:#fff;background:var(--c);border-radius:6px;padding:2px 6px;margin-top:1px}
@@ -1062,7 +1063,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.90";
+const APP_VERSION="2026-10-30.91";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1754,9 +1755,10 @@ function renderSch(){
   if(my.length){const m=el("div","schme");m.appendChild(icEl("user","",16));m.appendChild(el("b",null,"내 이번 주"));const v=el("span");
     my.slice(0,6).forEach((x,i)=>{if(i)v.appendChild(document.createTextNode(" · "));v.appendChild(el(x.t?"strong":"span",null,x.w+" "+x.k));});if(my.length>6)v.appendChild(document.createTextNode(" 외 "+(my.length-6)+"건"));m.appendChild(v);box.appendChild(m);}
   // 설치·이전·평가 (7일)
-  const sec=el("div","schsec");sec.appendChild(el("h3",null,"설치·이전·평가 · 7일"));
+  const sec=el("div","schsec");const h3=el("h3",null,"설치·이전·평가 · 7일");h3.appendChild(el("small",null," · 누르면 그 병원 대화"));sec.appendChild(h3);
   if(!D.ev.length)sec.appendChild(el("div","schnone","이번 주 일정이 없습니다."));
-  const MAX=6;D.ev.slice(0,MAX).forEach(e=>{const r=el("div","schev"+(e.start<=D.today?" now":""));const dl=schDateLbl(e,D.today);
+  const MAX=6;D.ev.slice(0,MAX).forEach(e=>{const r=el("button","schev"+(e.start<=D.today?" now":""));
+    r.title="「"+String(e.title||"").replace(/\(.*?\)/g,"").trim()+"」 관련 대화 찾기";r.onclick=()=>{const q=String(e.title||"").replace(/\(.*?\)/g,"").trim();if(!q)return;$("q").value=q;go("search");};const dl=schDateLbl(e,D.today);
     r.appendChild(el("span","schd",dl.lb));const c=SCH_CAT[e.category]||[e.category||"일정","#9E9E9E"];const tg=el("span","schc",c[0]);tg.style.setProperty("--c",c[1]);r.appendChild(tg);
     const t=el("span","scht");t.appendChild(el("b",null,String(e.title||"")));const sub=[e.device,e.team,e.assignee].filter(Boolean).join(" · ");if(sub)t.appendChild(el("small",null,sub));
     if((e.end||e.start)>e.start)t.appendChild(el("small","schr","~"+(+String(e.end).slice(5,7))+"/"+(+String(e.end).slice(8,10))));r.appendChild(t);sec.appendChild(r);});
