@@ -1130,6 +1130,20 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 .kpt2 tr.mine td.tn{color:#005BAC;font-weight:700}
 .kpt2 td.best{font-weight:800;color:#005BAC}.kpt2 td.good{color:#3FBA46}.kpt2 td.low{color:#E7413E}
 .kpt2 td small{font-size:.78em;font-weight:600}.kpt2 td small.up{color:#3FBA46}.kpt2 td small.down{color:#E7413E}
+
+/* 대화 목록·조직도 정리 (116) */
+.mlinks{display:none!important}
+.obpg{grid-template-columns:minmax(0,1fr)!important;gap:2px}
+.obp{display:flex;align-items:center;gap:6px;padding:2px 4px 2px 0;border-radius:12px}
+.obp.lead{background:var(--soft2);padding:2px 4px 2px 0}.obp.lead .av{width:36px;height:36px;font-size:12px}
+.obpb{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:8px 6px;border-radius:10px;color:var(--text);cursor:pointer;font:inherit}
+.obpb:hover{background:var(--sel2)}
+.obpb .obpm{display:flex;flex-direction:column;min-width:0;gap:2px}.obpb .obpm small{color:var(--sub);font-size:12px}
+.obpa{display:flex;gap:4px;flex:0 0 auto}
+.obpi{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#005BAC;display:grid;place-items:center;cursor:pointer;text-decoration:none}
+.obpi:hover{background:#EAF2FB}
+.obof{margin-top:6px}
+@media (min-width:821px){.obgrid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}}
 </style>
 
 </head>
@@ -1336,7 +1350,7 @@ html[data-fs=l] .pov{zoom:1.08}html[data-fs=xl] .pov{zoom:1.17}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.115";
+const APP_VERSION="2026-10-30.116";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1817,9 +1831,11 @@ function renderNav(){
       ROOMS.concat(dmRooms).filter(r=>r.name.replace(/\s+/g,"").toLowerCase().includes(q)).forEach(r=>nav.appendChild(roomBtn(r,false)));
       if(!nav.children.length)nav.appendChild(el("div","more","찾는 대화방이 없습니다."));
     }else{
+      const mine=me?ROOMS.filter(r=>r.grp==="팀"&&ROOM_SCOPE[r.id]&&ROOM_SCOPE[r.id][0]===me.team&&(!ROOM_SCOPE[r.id][1]||ROOM_SCOPE[r.id][1]===me.office)):[];
       const groups=[["fav","★ 즐겨찾기",ROOMS.concat(dmRooms).filter(r=>favs[r.id])],
+        ["mine","우리 팀",mine.filter(r=>!favs[r.id])],
         ["all","전체",ROOMS.filter(r=>r.grp==="전체"&&!favs[r.id])],
-        ["team","팀·사무소",ROOMS.filter(r=>r.grp==="팀"&&!favs[r.id])],
+        ["team",mine.length?"다른 팀·사무소":"팀·사무소",ROOMS.filter(r=>r.grp==="팀"&&!favs[r.id]&&!mine.includes(r))],
         ["dm","1:1·그룹 대화",dmRooms.filter(r=>!favs[r.id])]];
       noticeCards(nav);
       groups.forEach(([k,label,list])=>{
@@ -1831,7 +1847,7 @@ function renderNav(){
         if(fold[k])return;
         if(k==="dm"){const nb=el("button","newroom","＋ 새 그룹 대화방 만들기");nb.onclick=()=>openGroupCreate();nav.appendChild(nb);}
         if(k==="dm"&&!list.length){nav.appendChild(el("div","dmhint","1:1 대화는 조직도에서 사람을 누르고 「1:1 대화」를 고르면 생깁니다."));return;}
-        list.forEach(r=>nav.appendChild(roomBtn(r,k==="team"&&!!r.sub)));
+        list.forEach(r=>nav.appendChild(roomBtn(r,(k==="team"||k==="mine")&&!!r.sub)));
       });
     }
   }
@@ -2822,7 +2838,7 @@ function noticeCards(nav){
     b.onclick=()=>{if(byId.get(np.id))jumpTo(np.id);else go("room-notice");};c.appendChild(b);
     const x=el("button","npinx","×");x.setAttribute("aria-label","접기");x.title="접기 (새 글이 고정되면 다시 보여요)";x.onclick=e=>{e.stopPropagation();try{localStorage.setItem("fstalk-npin-hide",np.id+"|"+np.ts);}catch(er){}renderNav();};c.appendChild(x);
     nav.appendChild(c);}
-  const pn=pendingNotices();
+  const pn=[];   // 확인 안 한 공지는 앱을 열 때 팝업·홈 브리핑·전체공지 숫자로 알려 주므로 목록 배너는 뺌(중복)
   if(pn.length){const na=el("button","nalert");na.appendChild(icEl("megaphone","",20));const t=el("span","nat");t.appendChild(el("b",null,"확인 안 한 공지 "+pn.length+"건"));t.appendChild(el("small",null,(pn[0].name||"")+": "+previewText(pn[0]).replace(/\s+/g," ").slice(0,40)));na.appendChild(t);na.appendChild(el("span","nago","확인 ›"));na.onclick=()=>{noticePrompted=true;showNoticePrompt();};nav.appendChild(na);}
 }
 function navFooter(nav){
@@ -3061,7 +3077,8 @@ function renderOrgBoard(){
   if(!schData&&!schP&&!schErr)schLoad();
   const keepFocus=document.activeElement&&document.activeElement.id==="obq";
   b.textContent="";
-  const all=rosterList(),teams=TEAM_ORDER.filter(t=>all.some(p=>p.team===t)).concat([...new Set(all.map(p=>p.team))].filter(t=>!TEAM_ORDER.includes(t)));
+  const all=rosterList(),teams0=TEAM_ORDER.filter(t=>all.some(p=>p.team===t)).concat([...new Set(all.map(p=>p.team))].filter(t=>!TEAM_ORDER.includes(t)));
+  const teams=me&&teams0.includes(me.team)?[me.team].concat(teams0.filter(t=>t!==me.team)):teams0;   // 우리 팀을 맨 앞에
   // 머리
   const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"조직도"));tt.appendChild(el("span",null,"FS Group · "+all.length+"명"));hd.appendChild(tt);
   const sf=el("div","obsearch");sf.appendChild(icEl("search","",18));const q=el("input");q.id="obq";q.type="search";q.placeholder="이름·팀·사무소 찾기";q.value=orgQ;q.oninput=()=>{orgQ=q.value.trim();renderOrgBoard();};sf.appendChild(q);hd.appendChild(sf);
@@ -3074,11 +3091,16 @@ function renderOrgBoard(){
     it("l","휴가",w.leave);it("n","야간·석간",w.night);it("d","당직",w.duty);it("e","교육",w.edu);if(sm.children.length){sm.insertBefore(el("span","obsl","오늘"),sm.firstChild);b.appendChild(sm);}}
   const qq=orgQ.toLowerCase().replace(/\s+/g,"");
   const hit=p=>!qq||(p.name+p.team+(p.office||"")+((profiles[personKey(p.team,p.name)]||{}).phone||"")).toLowerCase().replace(/\s+/g,"").includes(qq);
-  const person=(p,big)=>{const x=el("button","obp"+(big?" lead":"")+(me&&p.name===me.name&&p.team===me.team?" me":""));x.appendChild(personAv(p.name,big?null:"s"));
+  const person=(p,big)=>{const isMe=me&&p.name===me.name&&p.team===me.team;const row=el("div","obp"+(big?" lead":"")+(isMe?" me":""));const x=el("button","obpb");x.appendChild(personAv(p.name,"s"));
     const m=el("span","obpm");const nm=el("b",null,p.name);const tg=roleTag(p);if(tg)nm.appendChild(tg);m.appendChild(nm);
     const pf=profiles[personKey(p.team,p.name)]||{};const sub=[p.office?p.office:"",pf.phone||""].filter(Boolean).join(" · ");if(sub)m.appendChild(el("small",null,sub));
     const st=schTodayOf(p.name);if(st.length){const sw=el("span","obst");st.forEach(v=>sw.appendChild(el("span","stag "+v[1],v[0])));m.appendChild(sw);}
-    x.appendChild(m);x.onclick=()=>openProfile(p);return x;};
+    x.appendChild(m);x.onclick=()=>openProfile(p);row.appendChild(x);
+    // 현장에서 바로 연락: 전화·1:1 (프로필을 열지 않고)
+    const acts=el("span","obpa");
+    if(pf.phone){const a=el("a","obpi");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");a.title=p.name+"님에게 전화";a.setAttribute("aria-label",p.name+"님에게 전화");a.appendChild(icEl("phone","",17));acts.appendChild(a);}
+    if(!isMe){const c=el("button","obpi");c.title=p.name+"님과 1:1 대화";c.setAttribute("aria-label",p.name+"님과 1:1 대화");c.appendChild(icEl("chat","",17));c.onclick=()=>openDm(p);acts.appendChild(c);}
+    row.appendChild(acts);return row;};
   const shown=teams.filter(t=>!orgTeam||t===orgTeam);let any=false;
   if(orgView==="list"){const L=el("div","oblist");shown.forEach(t=>{const ps=all.filter(p=>p.team===t&&hit(p)).sort(byTeamLead);if(!ps.length)return;any=true;
       L.appendChild(el("div","lgrp",teamLabel(t)+" · "+ps.length+"명"));ps.forEach(p=>L.appendChild(person(p)));});b.appendChild(L);}
