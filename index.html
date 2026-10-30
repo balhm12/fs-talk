@@ -261,6 +261,12 @@ html[data-theme=dark] .hbd{background:#16273A;color:#8CC4F5}
 .hcard .hbadd{align-self:flex-start;width:auto;margin:2px 0 0;padding:6px 14px;font-size:13px}
 .hchip.on{background:#005BAC;color:#fff;border-color:#005BAC}
 #extBox .schev{margin:4px 0}
+.schscope{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}.schscope .hchip{height:30px;font-size:12.5px}
+.swlist{display:flex;flex-direction:column;gap:8px;margin:10px 0;max-height:min(62vh,560px);overflow:auto}
+.swday{border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:4px}
+.swday.off{background:var(--soft2)}.swday.today{border-color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+.swd{font-size:13px;font-weight:800;color:var(--strong)}.swday.off .swd{color:#E7413E}
+.bnote{display:flex;align-items:center;gap:8px;margin:4px 0 10px;font-size:14px;color:var(--text)}.bnote input{width:18px;height:18px}
 .hsilst{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mut,#9E9E9E)}.hsilst.ok{color:#2f8f36}.hsilst.off{color:#b87a00}.hsilst .btn{padding:4px 10px;font-size:12.5px;min-height:0}
 .hchip{height:34px;padding:0 12px;border-radius:17px;border:1px solid #B9D3EE;background:#EEF5FC;color:#005BAC;font-size:13px;font-weight:700}
 html[data-theme=dark] .hchip{background:#16273A;border-color:#2B4A6E;color:#8CC4F5}
@@ -1043,7 +1049,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-30.84";
+const APP_VERSION="2026-10-30.85";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1647,7 +1653,10 @@ let homeBuilt="";
 const SCH={db:"https://sysmex-system-schedule-default-rtdb.firebaseio.com",key:"AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8",tk:"fstalk-sch-auth",bk:"fstalk-sch-base"};
 const SCH_TEAMS=[["west","WEST"],["east","EAST"],["central","CENTRAL"],["south","SOUTH"],["fss","FSS"],["fsom","FSOM"]];
 const SCH_CAT={install:["설치","#005BAC"],relocation:["이전","#00B8EE"],evaluation:["평가","#3FBA46"],demo:["데모","#E69E0B"],education:["교육","#7E49DC"]};
-let schData=null,schAt=0,schP=null,schErr="";
+let schData=null,schAt=0,schP=null,schErr="",schStale=false;
+try{const c=JSON.parse(localStorage.getItem("fstalk-sch-cache")||"null");if(c&&c.d&&c.d.today===ymd(new Date())){schData=c.d;schAt=c.at;schStale=true;}}catch(e){}   // 지난번 받은 오늘 일정 — 바로 보여 주고 뒤에서 새로 받음
+const schTeamKey=t=>({"FS WEST":"west","FS EAST":"east","FS CENTRAL":"central","FS SOUTH":"south","FSS TEAM":"fss","FSOM TEAM":"fsom"})[String(t||"").toUpperCase()]||"";
+let schScope="all";try{schScope=localStorage.getItem("fstalk-sch-scope")||"all";}catch(e){}
 let schTokP=null;
 function schToken(){if(!schTokP)schTokP=schToken0().finally(()=>{schTokP=null;});return schTokP;}   // 동시에 여러 번 불려도 익명 계정은 하나만
 async function schToken0(){
@@ -1679,7 +1688,7 @@ const schKey=v=>String(v||"").split(":")[0].trim();
 function schAdd(d,n){const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);return ymd(x);}
 function schLoad(force){
   if(schP)return schP;
-  if(!force&&schData&&Date.now()-schAt<10*60000)return Promise.resolve(schData);
+  if(!force&&schData&&!schStale&&Date.now()-schAt<10*60000)return Promise.resolve(schData);
   schP=(async()=>{
     const today=ymd(new Date()),end=schAdd(today,6),tom=schAdd(today,1);
     const [base,custom,edited,deleted,...work]=await Promise.all([schBase(),schGet("schedule-overrides/custom"),schGet("schedule-overrides/edited"),schGet("schedule-overrides/deleted")]
@@ -1697,7 +1706,9 @@ function schLoad(force){
         if(lv)o.leave.push({nm,tl,k:lv});else if(sl.includes("교육"))o.edu.push({nm,tl,k:"교육"});});});return o;};
     const at=d=>work.map(w=>(w||{})[d]||{});
     const week=[];for(let i=0;i<7;i++){const d=schAdd(today,i);week.push({d,o:day(at(d))});}
-    schData={today,tom,ev,w:week[0].o,w2:week[1].o,week};schAt=Date.now();schErr="";return schData;
+    schData={today,tom,ev,w:week[0].o,w2:week[1].o,week};schAt=Date.now();schErr="";schStale=false;
+    try{localStorage.setItem("fstalk-sch-cache",JSON.stringify({at:schAt,d:schData}));}catch(e){}
+    return schData;
   })();
   schP.then(()=>{schP=null;renderSch();},e=>{schP=null;schErr=e.message||"연결 실패";renderSch();});
   return schP;
@@ -1714,7 +1725,14 @@ function renderSch(){
     if(schErr){const p=el("div","schmsg");p.appendChild(el("span",null,"일정을 불러오지 못했습니다 ("+schErr+")"));const rb=el("button","btn","다시 시도");rb.onclick=()=>{schErr="";schLoad(true);renderSch();};p.appendChild(rb);box.appendChild(p);}
     else{box.appendChild(el("div","schmsg","일정표에서 불러오는 중…"));schLoad();}
     return;}
-  const D=schData,mine=x=>me&&x.nm===me.name;
+  if(schStale&&!schP&&!schErr)schLoad();
+  const myTk=me?schTeamKey(me.team):"",tlOf=k=>(SCH_TEAMS.find(t=>t[0]===k)||[])[1];
+  const scoped=schScope==="team"&&myTk;
+  const inTeam=x=>!scoped||x.tl===tlOf(myTk);
+  const evIn=e=>!scoped||String(e.team||"").toLowerCase().replace(/\s+/g,"")==="fs"+myTk||(myTk==="fss"&&/fss/i.test(e.team||""));
+  const fo=o=>({night:o.night.filter(inTeam),leave:o.leave.filter(inTeam),duty:o.duty.filter(inTeam),edu:o.edu.filter(inTeam)});
+  const D=Object.assign({},schData,{ev:schData.ev.filter(evIn),w:fo(schData.w),w2:fo(schData.w2)}),mine=x=>me&&x.nm===me.name;
+  if(myTk){const sw=el("div","schscope");[["all","전체"],["team","우리 팀 ("+tlOf(myTk)+")"]].forEach(([k,l])=>{const b=el("button","hchip"+(schScope===k||(!scoped&&k==="all")?" on":""),l);b.onclick=()=>{schScope=k;try{localStorage.setItem("fstalk-sch-scope",k);}catch(e){}renderSch();};sw.appendChild(b);});box.appendChild(sw);}
   // 내 일정 한 줄
   const my=[];(D.week||[]).forEach(({d,o},i)=>{const w=i===0?"오늘":i===1?"내일":(+d.slice(5,7))+"/"+(+d.slice(8,10))+"("+"일월화수목금토"[new Date(d+"T00:00:00").getDay()]+")";
     ["night","duty","leave","edu"].forEach(k=>o[k].filter(mine).forEach(x=>my.push({w,k:x.k,t:i===0})));});
@@ -1739,10 +1757,32 @@ function renderSch(){
   if(!D.w.night.length&&!D.w.leave.length&&!D.w.duty.length&&!D.w.edu.length)w.appendChild(el("div","schnone","등록된 야간·휴가가 없습니다."));
   if(schOff(D.tom)&&D.w2.duty.length)line("내일 당직",D.w2.duty,"d");
   box.appendChild(w);
-  const ft=el("div","schft");ft.appendChild(el("span",null,"일정표 기준 · "+new Date(schAt).toTimeString().slice(0,5)+" 갱신"));
-  const rb=el("button","hmore","새로고침");rb.onclick=()=>{schLoad(true);};ft.appendChild(rb);box.appendChild(ft);
+  const ft=el("div","schft");ft.appendChild(el("span",null,(schStale?(schErr?"연결 안 됨 · 마지막 ":"갱신 중… · "):"일정표 기준 · ")+new Date(schAt).toTimeString().slice(0,5)+(schStale?" 기준":" 갱신")));
+  const wb=el("button","hmore","7일 근무 보기");wb.onclick=()=>openSchWeek();ft.appendChild(wb);
+  const rb=el("button","hmore","새로고침");rb.style.marginLeft="12px";rb.onclick=()=>{schLoad(true);};ft.appendChild(rb);box.appendChild(ft);
 }
 setInterval(()=>{if(view==="home"&&!document.hidden&&schData)schLoad();},5*60000);
+function openSchWeek(){
+  if(!schData||!schData.week)return;
+  const c=$("pCard");c.textContent="";c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"7일 근무 (야간·당직·휴가)"));
+  const myTk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===myTk)||[])[1];
+  let only=false;try{only=localStorage.getItem("fstalk-sch-scope")==="team";}catch(e){}
+  const draw=()=>{list.textContent="";
+    schData.week.forEach(({d,o},i)=>{const dd=new Date(d+"T00:00:00");const off=dd.getDay()===0||dd.getDay()===6;
+      const day=el("div","swday"+(off?" off":"")+(i===0?" today":""));day.appendChild(el("div","swd",(i===0?"오늘 ":i===1?"내일 ":"")+(dd.getMonth()+1)+"/"+dd.getDate()+" ("+"일월화수목금토"[dd.getDay()]+")"));
+      const f=a=>a.filter(v=>!only||v.tl===tl);
+      const rows=[["야간",f(o.night),"n"],["당직",f(o.duty),"d"],["휴가",f(o.leave),"l"],["교육",f(o.edu),"e"]].filter(r=>r[1].length);
+      if(!rows.length)day.appendChild(el("div","schnone","등록 없음"));
+      rows.forEach(([lab,arr,cls])=>{const r=el("div","schw "+cls);r.appendChild(el("span","schwl",lab));const v=el("span","schwv");
+        arr.forEach((p,j)=>{if(j)v.appendChild(document.createTextNode(", "));const n=el("span",me&&p.nm===me.name?"me":null,p.nm+(p.k!==lab?"("+p.k+")":""));n.title=p.tl;v.appendChild(n);if(!only){v.appendChild(el("i",null," "+p.tl));}});r.appendChild(v);day.appendChild(r);});
+      list.appendChild(day);});};
+  if(myTk){const sw=el("div","schscope");[[false,"전체"],[true,"우리 팀 ("+tl+")"]].forEach(([k,l])=>{const b=el("button","hchip"+(only===k?" on":""),l);b.onclick=()=>{only=k;sw.querySelectorAll(".hchip").forEach((z,i)=>z.classList.toggle("on",(i===1)===k));draw();};sw.appendChild(b);});c.appendChild(sw);}
+  const list=el("div","swlist");c.appendChild(list);draw();
+  const ob=el("button","btn","근무일정표 열기");ob.onclick=()=>openUrl(LINKS.work);c.appendChild(ob);
+  $("pOv").hidden=false;
+}
 /* ---------- 기술정보·동영상 교육: FSS(관리자)가 링크를 등록하고 모두가 봄 — talk/board/{tech|video}/{id} ---------- */
 const BOARD={tech:{title:"기술정보",ic:"doc",hint:"기술 회보(TB)·매뉴얼 개정·부품 변경 안내",empty:"아직 등록된 기술정보가 없습니다."},
   video:{title:"동영상 교육",ic:"video",hint:"장비별 교육 영상",empty:"아직 등록된 교육 영상이 없습니다."}};
@@ -1788,12 +1828,16 @@ function boardForm(k){
   const u=fld("링크 (https://…)",el("input"));u.type="url";u.placeholder="https://";
   const d=fld("장비",el("select"));[""].concat(BOARD_DEV).forEach(v=>{const o=el("option",null,v||"(선택 안 함)");o.value=v;d.appendChild(o);});
   const n=fld("짧은 설명 (선택)",el("input"));n.maxLength=120;n.placeholder=k==="tech"?"예: 해당 S/N, 적용일":"예: 12분, 신입 필수";
+  const nl=el("label","bnote");const nc=el("input");nc.type="checkbox";nc.checked=k==="tech";nl.appendChild(nc);nl.appendChild(el("span",null,"전체공지 방에도 올리기 (모두에게 알림)"));c.appendChild(nl);
   const ok=el("button","btn pri","등록");c.appendChild(ok);
   ok.onclick=()=>{const tv=t.value.trim(),uv=u.value.trim();
     if(!tv){toast("제목을 넣어 주세요.");t.focus();return;}
     if(!/^https:\/\/[^\s]+$/.test(uv)||uv.length>500){toast("https:// 로 시작하는 링크를 넣어 주세요.");u.focus();return;}
     const v={t:tv,u:uv,ts:SV,by:me.name};if(d.value)v.d=d.value;if(n.value.trim())v.n=n.value.trim().slice(0,120);
-    ok.disabled=true;R("board/"+k).push(v).then(()=>{toast("등록했습니다.");openBoard(k);}).catch(e=>{ok.disabled=false;toast("실패: "+e.message);});};
+    ok.disabled=true;R("board/"+k).push(v).then(async()=>{
+      if(nc.checked){const txt=(k==="tech"?"📄 [기술정보] ":"🎬 [동영상 교육] ")+(v.d?v.d+" · ":"")+tv+(v.n?"\n"+v.n:"")+"\n"+uv+"\n\n포털 첫 화면 「"+B.title+"」에서도 볼 수 있습니다.";
+        try{const ref=await R("msgs/notice").push({uid,name:me.name,text:txt.slice(0,4000),ts:SV});afterSend("notice",ref.key);}catch(e){toast("공지 올리기 실패: "+(e.code||e.message));}}
+      toast("등록했습니다.");openBoard(k);}).catch(e=>{ok.disabled=false;toast("실패: "+e.message);});};
   $("pOv").hidden=false;setTimeout(()=>t.focus(),50);
 }
 /* 통합 검색: 기술정보·교육·이번 주 일정에서도 찾기 */
