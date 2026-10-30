@@ -235,7 +235,8 @@ html[data-theme=dark] .bcard.miss{background:#2E2617}
 .schsec h3{margin:0 0 2px;font-size:13px;color:var(--sub);font-weight:700}.schsec h3 small{font-weight:400;font-size:11.5px}
 .schev{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:10px;background:var(--soft2);border:0;width:100%;text-align:left;color:inherit;font:inherit}
 button.schev:hover{box-shadow:inset 0 0 0 1px var(--blue)}
-.schev.now{background:var(--sel2);box-shadow:inset 3px 0 0 var(--blue)}
+.schev.now{background:var(--sel2);box-shadow:inset 3px 0 0 var(--blue)}.schev.mine{box-shadow:inset 3px 0 0 #E69E0B;background:#FFF8EA}html[data-theme=dark] .schev.mine{background:#2E2614}
+.schev.mine .scht b::after{content:"내 일정";margin-left:6px;font-size:10.5px;font-weight:800;color:#fff;background:#E69E0B;border-radius:6px;padding:1px 5px;vertical-align:1px}
 .schd{flex:0 0 64px;white-space:nowrap;font-size:12.5px;font-weight:700;color:var(--strong);padding-top:2px}
 .schc{flex:0 0 auto;font-size:11.5px;font-weight:700;color:#fff;background:var(--c);border-radius:6px;padding:2px 6px;margin-top:1px}
 .scht{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -264,6 +265,7 @@ html[data-theme=dark] .hbd{background:#16273A;color:#8CC4F5}
 .hcard .hbadd{align-self:flex-start;width:auto;margin:2px 0 0;padding:6px 14px;font-size:13px}
 .hchip.on{background:#005BAC;color:#fff;border-color:#005BAC}html[data-theme=dark] .hchip.on{background:#1E6FC0;color:#fff;border-color:#4C93DA}
 #extBox .schev{margin:4px 0}
+.hadd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:8px;border-top:1px dashed var(--line)}.hadd .btn{width:auto;margin:0;padding:7px 14px;font-size:13px}
 .schscope{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}.schscope .hchip{height:30px;font-size:12.5px}
 .swlist{display:flex;flex-direction:column;gap:8px;margin:10px 0;max-height:min(62vh,560px);overflow:auto}
 .swday{border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:4px}
@@ -1845,6 +1847,7 @@ function schLoad(force){
     const [base,custom,edited,deleted,...workS]=await Promise.all([schBase(),schGet("schedule-overrides/custom"),schGet("schedule-overrides/edited"),schGet("schedule-overrides/deleted")]
       .concat(SCH_TEAMS.map(([k])=>schGet("work-schedule/"+k,"&orderBy="+encodeURIComponent('"$key"')+"&startAt="+encodeURIComponent('"'+today+'"')+"&endAt="+encodeURIComponent('"'+end+'"')).then(v=>({v}),e=>({e})))));   // 팀마다 7일치 한 번에 — 한 팀이 실패해도 나머지는 보임
     const work=workS.map(x=>x.v||{}),workFail=SCH_TEAMS.filter((t,i)=>workS[i].e).map(t=>t[1]);
+    let troster={};try{troster=await schGet("work-schedule/teamRoster")||{};}catch(e){}
     const del=new Set(Array.isArray(deleted)?deleted:Object.keys(deleted||{}));const ed=edited||{};
     const all=base.filter(e=>e&&!del.has(e.id)).map(e=>ed[e.id]||e).concat(schVals(custom).filter(e=>!del.has(e.id)));
     const ev=all.filter(e=>e&&typeof e.start==="string"&&e.category!=="holiday"&&e.start<=end&&String(e.end||e.start)>=today)
@@ -1858,7 +1861,8 @@ function schLoad(force){
         if(lv)o.leave.push({nm,tl,k:lv});else if(sl.includes("교육"))o.edu.push({nm,tl,k:"교육"});});});return o;};
     const at=d=>work.map(w=>(w||{})[d]||{});
     const week=[];for(let i=0;i<7;i++){const d=schAdd(today,i);week.push({d,o:day(at(d))});}
-    schData={today,tom,ev,w:week[0].o,w2:week[1].o,week,workFail};schAt=Date.now();schErr="";schStale=false;schTrackMine();
+    const nick={};Object.keys(troster||{}).forEach(tk=>schVals(troster[tk]).forEach(m=>{if(m&&m.name)nick[m.name]={tk,nn:String(m.nickname||"").trim()};}));
+    schData={today,tom,ev,w:week[0].o,w2:week[1].o,week,workFail,nick};schAt=Date.now();schErr="";schStale=false;schTrackMine();
     try{localStorage.setItem("fstalk-sch-cache",JSON.stringify({at:schAt,d:schData}));}catch(e){}
     return schData;
   })();
@@ -1888,12 +1892,13 @@ function renderSch(){
   // 내 일정 한 줄
   const my=[];(D.week||[]).forEach(({d,o},i)=>{const w=i===0?"오늘":i===1?"내일":(+d.slice(5,7))+"/"+(+d.slice(8,10))+"("+"일월화수목금토"[new Date(d+"T00:00:00").getDay()]+")";
     ["night","duty","leave","edu"].forEach(k=>o[k].filter(mine).forEach(x=>my.push({w,k:x.k,t:i===0})));});
+  schData.ev.filter(schMineEv).forEach(e=>{const dl=schDateLbl(e,schData.today);my.push({w:dl.lb,k:(SCH_CAT[e.category]||[e.category])[0]+" "+String(e.title||"").slice(0,12),t:dl.now});});
   if(my.length){const m=el("div","schme");m.appendChild(icEl("user","",16));m.appendChild(el("b",null,"내 이번 주"));const v=el("span");
     my.slice(0,6).forEach((x,i)=>{if(i)v.appendChild(document.createTextNode(" · "));v.appendChild(el(x.t?"strong":"span",null,x.w+" "+x.k));});if(my.length>6)v.appendChild(document.createTextNode(" 외 "+(my.length-6)+"건"));m.appendChild(v);box.appendChild(m);}
   // 설치·이전·평가 (7일)
   const sec=el("div","schsec");const h3=el("h3",null,"설치·이전·평가 · 7일");h3.appendChild(el("small",null," · 누르면 그 병원 대화"));sec.appendChild(h3);
   if(!D.ev.length)sec.appendChild(el("div","schnone","이번 주 일정이 없습니다."));
-  const MAX=6;D.ev.slice(0,MAX).forEach(e=>{const r=el("button","schev"+(e.start<=D.today?" now":""));
+  const MAX=6;D.ev.slice(0,MAX).forEach(e=>{const r=el("button","schev"+(e.start<=D.today?" now":"")+(schMineEv(e)?" mine":""));
     r.title="「"+String(e.title||"").replace(/\(.*?\)/g,"").trim()+"」 관련 대화 찾기";r.onclick=()=>{const q=String(e.title||"").replace(/\(.*?\)/g,"").trim();if(!q)return;$("q").value=q;go("search");};const dl=schDateLbl(e,D.today);
     r.appendChild(el("span","schd",dl.lb));const c=SCH_CAT[e.category]||[e.category||"일정","#9E9E9E"];const tg=el("span","schc",c[0]);tg.style.setProperty("--c",c[1]);r.appendChild(tg);
     const t=el("span","scht");t.appendChild(el("b",null,String(e.title||"")));const sub=[e.device,e.team,e.assignee].filter(Boolean).join(" · ");if(sub)t.appendChild(el("small",null,sub));
@@ -2155,6 +2160,21 @@ function openNotiCenter(){
   draw();$("pOv").hidden=false;
 }
 
+/* 대화 속 병원 이름 → 이번 주 설치·이전·평가 일정 칩 (최근 3일 안에 쓴 글만) */
+const schNorm=t=>String(t||"").replace(/\(.*?\)/g,"").replace(/\s+/g,"").toLowerCase();
+function schChips(m){
+  if(!schData||!m.text||Date.now()-(m.ts||0)>3*864e5)return null;
+  const t=m.text.replace(/\s+/g,"").toLowerCase(),hit=[];
+  schData.ev.forEach(e=>{const n=schNorm(e.title);if(n.length<3||!/[가-힣]/.test(n))return;   // 「Hema」 같은 영문 약칭은 오탐이 많아 제외
+    const short=n.replace(/(대학교병원|대학병원|병원|의료원|의원|센터|재단|연구소)$/,"");
+    if(t.includes(n)||(short.length>=3&&t.includes(short)))hit.push(e);});
+  if(!hit.length)return null;
+  const w=el("div","silchips");hit.slice(0,2).forEach(e=>{const c=SCH_CAT[e.category]||[e.category||"일정"];const b=el("button","silchip sch");b.appendChild(icEl("calendar","",13));
+    const dl=schDateLbl(e,schData.today).lb+(String(e.end||e.start)>e.start?"~"+(+String(e.end).slice(5,7))+"/"+(+String(e.end).slice(8,10)):"");
+    b.appendChild(el("span",null,c[0]+" · "+String(e.title||"").slice(0,20)+" · "+dl+(e.device?" · "+String(e.device).slice(0,16):"")));b.title="설치일정 열기";
+    b.onclick=ev=>{ev.stopPropagation();openUrl(LINKS.install);};w.appendChild(b);});
+  return w;
+}
 function openSchWeek(){
   if(!schData||!schData.week)return;
   const c=$("pCard");c.textContent="";c.classList.add("wide");
@@ -2313,7 +2333,9 @@ function renderHome(){
   const s1=sec("work");const s1w=el("div","hrow2");s1.appendChild(s1w);
   const sc=hcard("오늘의 업무","calendar","sched");sc.id="hc-sched";
   const sr=el("div","hbtns sm");[["box","설치일정",LINKS.install],["calendar","근무일정",LINKS.work]].forEach(([i,t,u])=>{const x=el("button","hbtn");x.appendChild(icEl(i,"",16));x.appendChild(el("span",null,t));x.onclick=()=>openApp(u===LINKS.install?"install":"work");sr.appendChild(x);});
-  sc._head.appendChild(sr);const hs=el("div","hsch");hs.id="hsch";sc.appendChild(hs);s1w.appendChild(sc);
+  sc._head.appendChild(sr);const hs=el("div","hsch");hs.id="hsch";sc.appendChild(hs);
+  const ad=el("div","hadd");const a1=el("button","btn","+ 내 근무 등록");a1.onclick=()=>openWorkForm();const a2=el("button","btn","+ 설치·평가 일정 등록");a2.onclick=()=>openInstallForm();ad.appendChild(a1);ad.appendChild(a2);ad.appendChild(el("span","hsoon","대화창에서 「/휴가 11/3」「/설치 11/10 병원 장비」로도 등록"));sc.appendChild(ad);
+  s1w.appendChild(sc);
   const cm=hcard("업무 커뮤니케이션","chat","comm");hmore(cm,"대화 전체",()=>{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");});
   cm.appendChild(el("div","hcomm"));s1w.appendChild(cm);
   // 2. 기술지원
@@ -2381,6 +2403,84 @@ $("appBack").onclick=()=>{if(history.length>1)history.back();else go("home");};
 $("appReload").onclick=()=>{const f=$("appFrames").querySelector('iframe[data-k="'+appKey+'"]');if(f){try{f.contentWindow.location.reload();}catch(e){f.src=f.src;}}};
 $("appPop").onclick=()=>{const f=$("appFrames").querySelector('iframe[data-k="'+appKey+'"]');let u=(APPS[appKey]||{}).u;try{u=f.contentWindow.location.href;}catch(e){}openUrl(u);};
 document.querySelectorAll("[data-app]").forEach(a=>a.addEventListener("click",e=>{if(e.ctrlKey||e.metaKey||e.shiftKey)return;e.preventDefault();openApp(a.dataset.app);}));
+function schMineEv(e){if(!me||!schData)return false;const a=String(e.assignee||"");if(!a)return false;const nn=((schData.nick||{})[me.name]||{}).nn;
+  return a.includes(me.name)||(!!nn&&new RegExp("(^|[^A-Za-z])"+nn.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"([^A-Za-z]|$)","i").test(a));}
+/* ===== 일정 등록: 일정표와 같은 데이터·같은 형식으로, 바뀐 칸 하나만 씀 =====
+   근무: work-schedule/{팀}/{날짜}/{이름} — 본인 것만 (휴가·오전/오후휴가·교육·회의·내근·DP). 야간·당직은 연쇄 규칙이 있어 근무일정표에서.
+   설치: schedule-overrides/custom/user-{시각} — 일정표의 「일정 추가」와 같은 모양 */
+const WK_TYPES=[["휴가","휴가(전일)","all"],["오전휴가","오전 휴가","am"],["오후휴가","오후 휴가","pm"],["교육","교육","pick"],["회의","회의","pick"],["내근","내근","pick"],["DP","DP","all"]];
+const nowStampS=()=>{const d=new Date();return ymd(d)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
+async function schPut(path,val){const t=await schToken();const r=await fetch(SCH.db+"/"+path+".json?auth="+encodeURIComponent(t),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(val)});if(!r.ok)throw new Error("저장 실패 "+r.status);return true;}
+function schDates(a,b){const out=[];if(!a)return out;b=b&&b>=a?b:a;let d=a;for(let i=0;i<62&&d<=b;i++){out.push(d);d=schAdd(d,1);}return out;}
+function openWorkForm(pre){
+  pre=pre||{};const tk=me?schTeamKey(me.team):"";
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"내 근무 등록"));
+  if(!tk){c.appendChild(el("div","pkhint","근무일정표에 없는 팀이라 여기서 등록할 수 없습니다."));$("pOv").hidden=false;return;}
+  c.appendChild(el("div","pkhint","근무일정표(같은 데이터)에 "+me.name+"님 칸으로 바로 저장됩니다. 주말은 건너뜁니다. 야간·당직은 근무일정표에서 입력하세요."));
+  const fld=(lab,node)=>{const f=el("div","f");f.appendChild(el("label",null,lab));f.appendChild(node);c.appendChild(f);return node;};
+  const ty=fld("구분",el("select"));WK_TYPES.forEach(([k,l])=>{const o=el("option",null,l);o.value=k;ty.appendChild(o);});ty.value=pre.k||"휴가";
+  const d1=fld("시작일",el("input"));d1.type="date";d1.value=pre.d1||ymd(new Date());
+  const d2=fld("끝나는 날 (하루면 비워 두기)",el("input"));d2.type="date";d2.value=pre.d2||"";
+  const part=fld("시간",el("select"));[["all","종일"],["am","오전"],["pm","오후"]].forEach(([k,l])=>{const o=el("option",null,l);o.value=k;part.appendChild(o);});
+  const det=fld("내용 (선택 — 예: XN 교육)",el("input"));det.maxLength=40;det.value=pre.det||"";
+  const sync=()=>{const t=WK_TYPES.find(w=>w[0]===ty.value);part.parentNode.hidden=t[2]!=="pick";det.parentNode.hidden=!(ty.value==="교육"||ty.value==="회의");};ty.onchange=sync;sync();
+  const ok=el("button","btn pri","근무일정표에 저장");c.appendChild(ok);
+  ok.onclick=async()=>{const t=WK_TYPES.find(w=>w[0]===ty.value),grp=t[2]==="pick"?part.value:t[2];
+    const days=schDates(d1.value,d2.value).filter(d=>{const g=new Date(d+"T00:00:00").getDay();return g!==0&&g!==6;});
+    if(!days.length){toast("평일 날짜를 골라 주세요.");return;}
+    if(days.length>31){toast("한 번에 31일까지만 넣을 수 있어요.");return;}
+    const val=(ty.value==="교육"||ty.value==="회의")&&det.value.trim()?ty.value+": "+det.value.trim():ty.value;
+    const slots=grp==="all"?["am1","am2","pm1","pm2"]:grp==="am"?["am1","am2"]:["pm1","pm2"];
+    if(!confirm(me.name+"님 "+days[0]+(days.length>1?" ~ "+days[days.length-1]+" ("+days.length+"일)":"")+"\n"+val+" · "+(grp==="all"?"종일":grp==="am"?"오전":"오후")+"\n\n근무일정표에 저장할까요?"))return;
+    ok.disabled=true;ok.textContent="저장 중…";let n=0;
+    try{for(const d of days){const path="work-schedule/"+tk+"/"+d+"/"+encodeURIComponent(me.name);
+        const cur=await schGet("work-schedule/"+tk+"/"+d+"/"+encodeURIComponent(me.name))||{};const st=nowStampS();
+        const next=Object.assign({night:"",weekend:"",am1:"",am2:"",pm1:"",pm2:""},cur);const meta=Object.assign({},cur.meta||{});
+        slots.forEach(k=>{if(next[k]!==val){next[k]=val;meta[k]={by:me.name,at:st};}});next.meta=meta;next.by=me.name;next.at=st;
+        await schPut(path,next);n++;}
+      toast("근무일정표에 "+n+"일 저장했습니다.");closeProfile();schLoad(true);}
+    catch(e){toast((n?n+"일 저장 후 ":"")+"실패: "+e.message);ok.disabled=false;ok.textContent="근무일정표에 저장";}};
+  $("pOv").hidden=false;
+}
+function openInstallForm(pre){
+  pre=pre||{};const c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"설치·이전·평가 일정 등록"));
+  c.appendChild(el("div","pkhint","설치일정표(같은 데이터)에 「일정 추가」와 똑같이 저장됩니다. 고치거나 지우는 것은 설치일정표에서 합니다."));
+  const fld=(lab,node)=>{const f=el("div","f");f.appendChild(el("label",null,lab));f.appendChild(node);c.appendChild(f);return node;};
+  const cat=fld("구분",el("select"));[["install","설치"],["relocation","이전설치"],["evaluation","평가"]].forEach(([k,l])=>{const o=el("option",null,l);o.value=k;cat.appendChild(o);});cat.value=pre.cat||"install";
+  const ti=fld("병원(기관)",el("input"));ti.maxLength=60;ti.value=pre.title||"";ti.placeholder="예: 삼성서울병원";
+  const dv=fld("장비·내용",el("input"));dv.maxLength=60;dv.value=pre.device||"";dv.placeholder="예: XR-9100";
+  const tm=fld("팀",el("select"));["","FS East","FS South","FS Central","FS West","SA"].forEach(v=>{const o=el("option",null,v||"(선택 안 함)");o.value=v;tm.appendChild(o);});
+  const mt={"FS EAST":"FS East","FS WEST":"FS West","FS CENTRAL":"FS Central","FS SOUTH":"FS South"}[myTeamU()];if(mt)tm.value=mt;
+  const d1=fld("시작일",el("input"));d1.type="date";d1.value=pre.d1||ymd(new Date());
+  const d2=fld("끝나는 날 (하루면 비워 두기)",el("input"));d2.type="date";d2.value=pre.d2||"";
+  const as=fld("담당자 (선택)",el("input"));as.maxLength=60;as.value=pre.assignee||"";
+  const ok=el("button","btn pri","설치일정표에 등록");c.appendChild(ok);
+  ok.onclick=async()=>{const title=ti.value.trim();if(!title){toast("병원 이름을 넣어 주세요.");ti.focus();return;}
+    const start=d1.value,end=d2.value&&d2.value>=start?d2.value:start;if(!start){toast("날짜를 골라 주세요.");return;}
+    const now=new Date().toISOString(),id="user-"+Date.now();
+    const ev={id,category:cat.value,start,end,title,device:dv.value.trim()||null,team:tm.value||null,assignee:as.value.trim()||null,creator:me.name,createdAt:now,updatedAt:now};
+    if(!confirm((cat.options[cat.selectedIndex].text)+" · "+title+"\n"+start+(end!==start?" ~ "+end:"")+(ev.device?"\n"+ev.device:"")+"\n\n설치일정표에 등록할까요?"))return;
+    ok.disabled=true;ok.textContent="등록 중…";
+    try{await schPut("schedule-overrides/custom/"+id,ev);toast("설치일정표에 등록했습니다.");closeProfile();schLoad(true);}
+    catch(e){toast("실패: "+e.message);ok.disabled=false;ok.textContent="설치일정표에 등록";}};
+  $("pOv").hidden=false;
+}
+/* 대화에서: 「/휴가 11/3」「/교육 11/5 XN」「/설치 11/10~11/12 삼성서울병원 XR-9100」 → 등록 화면을 채워서 엶 */
+function schParseDates(t){const y=new Date().getFullYear(),pad=n=>String(n).padStart(2,"0");
+  const tm=/(오늘|내일|모레)/.exec(t);if(tm){const d=schAdd(ymd(new Date()),{오늘:0,내일:1,모레:2}[tm[1]]);return {d1:d,rest:t.replace(tm[0],"")};}
+  const m=/(\d{1,2})[\/.](\d{1,2})(?:\s*[~\-]\s*(?:(\d{1,2})[\/.])?(\d{1,2}))?/.exec(t);if(!m)return {rest:t};
+  const d1=y+"-"+pad(m[1])+"-"+pad(m[2]);let d2="";if(m[4])d2=y+"-"+pad(m[3]||m[1])+"-"+pad(m[4]);return {d1,d2,rest:t.replace(m[0],"")};}
+function slashSchedule(text){
+  const m=/^\/(휴가|오전휴가|오후휴가|교육|회의|내근|DP|설치|이전|평가)\b\s*(.*)$/.exec(String(text||"").trim());if(!m)return false;
+  const p=schParseDates(m[2]),rest=String(p.rest||"").trim();
+  if(["설치","이전","평가"].includes(m[1])){const w=rest.split(/\s+/).filter(Boolean);openInstallForm({cat:{설치:"install",이전:"relocation",평가:"evaluation"}[m[1]],d1:p.d1,d2:p.d2,title:w[0]||"",device:w.slice(1).join(" ")});}
+  else openWorkForm({k:m[1],d1:p.d1,d2:p.d2,det:rest});
+  return true;
+}
 function schScoped(){                                     // 역할 기준으로 거른 일정 (직원·팀장 = 우리 팀, 그룹장 = 전체)
   if(!schData)return null;const tk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===tk)||[])[1];
   const team=schScopeNow()==="team"&&!!tk;const inT=x=>!team||x.tl===tl;
@@ -3278,6 +3378,7 @@ input.addEventListener("paste",e=>{const f=e.clipboardData&&e.clipboardData.file
 $("composer").addEventListener("submit",async e=>{
   if(isLocked()){e.preventDefault();return;}
   e.preventDefault();const t=input.value.trim();if(!t)return;
+  if(!editing&&slashSchedule(t)){input.value="";syncSend();return;}   // /휴가 /교육 /설치 … → 일정 등록 화면
   if(t.length>4000){toast("메시지가 너무 깁니다 (4,000자 이하).");return;}
   if(editing){
     const m=editing;if(t===m.text){cancelCompose();return;}
