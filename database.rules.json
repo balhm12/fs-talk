@@ -438,6 +438,18 @@
             },
             "$other": {
               ".validate": false
+            },
+            "c": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "rv": {
+              ".validate": "newData.isString() && newData.val().length <= 30"
+            },
+            "ru": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "rby": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
             }
           }
         }
