@@ -55,8 +55,14 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   // 앱 화면: 항상 최신을 먼저, 안 되면 저장본
   if (req.mode === "navigate" && url.origin === location.origin) {
-    e.respondWith(fetch(req).then(r => { if (r.ok && r.type === "basic" && !r.redirected) { const copy = r.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); } return r; })   // 오류 화면·와이파이 로그인 화면은 저장하지 않음
-      .catch(() => caches.match("./index.html")));
+    // 최신을 먼저 받되, 3초 안에 안 오면(느린 데이터) 저장본으로 바로 열고 새 버전은 뒤에서 저장 → 다음에 열 때 반영(앱의 「새 버전」 안내도 그대로)
+    const net = fetch(req).then(r => { if (r.ok && r.type === "basic" && !r.redirected) { const copy = r.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); } return r; });   // 오류 화면·와이파이 로그인 화면은 저장하지 않음
+    e.waitUntil(net.catch(() => {}));
+    e.respondWith(new Promise(res => {
+      let done = false; const fin = r => { if (!done && r) { done = true; res(r); } };
+      const t = setTimeout(() => caches.match("./index.html").then(fin), 3000);
+      net.then(r => { clearTimeout(t); fin(r); }).catch(() => { clearTimeout(t); caches.match("./index.html").then(h => fin(h || Response.error())); });
+    }));
     return;
   }
   // 실마리 데이터(암호화 상태 그대로): 항상 최신을 먼저, 전파가 약하면 마지막 받은 것 — 병원 안에서도 최근 본 장비·에러를 볼 수 있게
