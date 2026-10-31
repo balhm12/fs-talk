@@ -1347,6 +1347,19 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 .kptw{position:relative;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}
 .kptw.end{-webkit-mask-image:none;mask-image:none}
 .kptw table th:first-child,.kptw table td:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
+
+/* 휴대폰 홈 기본 배치 = 오늘 중심(사용자 결정 10-31): 대화·기술 카드는 각 탭에, 만족도·KPI는 한 줄 요약 → 「자세히」로 펼침 */
+.svcmini{display:none}
+@media (max-width:820px){
+  .hdash:not(.custom) [data-hk=comm],.hdash:not(.custom) .hsec.tech{display:none!important}
+  .hdash:not(.custom) .hsec.work .hrow2{grid-template-columns:1fr}
+  .hdash:not(.custom) .svcmini{display:flex;width:100%;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 12px;font:inherit;color:var(--text);cursor:pointer;text-align:left;box-shadow:var(--sh-1)}
+  .hdash:not(.custom) .hsec.svc:not(.open) #svcFull{display:none}
+  .hdash:not(.custom) .hsec.svc.open .svcmini{margin-bottom:12px}
+  .smi{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px}.smi small{font-size:11.5px;color:var(--sub);white-space:nowrap}.smi b{font-size:16px;color:var(--strong);white-space:nowrap}
+  .smi.ok b{color:#2E8B35}.smi.bad b{color:#C8312E}html[data-theme=dark] .smi.ok b{color:#7FD487}html[data-theme=dark] .smi.bad b{color:#FF8A86}
+  .smore{flex:none;font-size:12.5px;color:var(--blue);font-weight:600;padding-left:4px}html[data-theme=dark] .smore{color:#9CCBFF}
+}
 </style>
 
 </head>
@@ -1569,7 +1582,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.143";
+const APP_VERSION="2026-10-31.144";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2392,8 +2405,24 @@ function vocSummary(){
 const vocLow=r=>Math.min(+r.q1||5,+r.q2||5,+r.q3||5)<=3;
 const vocKey=r=>{let h=2166136261;const s=[r.fsr,r.org,r.ts].join("|");for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return "v"+(h>>>0).toString(36);};
 let vocFu={};
+
+/* 휴대폰 홈(기본 배치): 오늘 중심 — 만족도·KPI는 숫자 한 줄 요약, 누르면 자세히(펼침). 대화·기술 카드는 각 탭에 있으므로 홈에서 뺌(「홈 화면 순서·표시」로 다시 켤 수 있음) */
+function renderSvcMini(){
+  const b=document.getElementById("svcMini");if(!b)return;b.textContent="";
+  const f1=v=>v==null||isNaN(v)?"–":(+v).toFixed(1),f2=v=>v==null||isNaN(v)?"–":(+v).toFixed(2);
+  const item=(lab,val,cls)=>{const d=el("span","smi"+(cls?" "+cls:""));d.appendChild(el("small",null,lab));d.appendChild(el("b",null,val));b.appendChild(d);};
+  const vs=vocSummary();
+  if(vs){const tm=me?String(me.team||"").toUpperCase():"",TR=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm),field=typeof myField==="function"?myField():true;
+    item(vs.mlabel+" 만족도",f2(field&&TR.length&&myRole()!=="group"?vs.avgOf(TR):vs.avg));}
+  else item("만족도","–");
+  const K=kpiSvc&&kpiSvc.cur,T=(kpiSvc&&kpiSvc.tg)||{};
+  item("FTFR",K?f1(K.ftfr)+"%":"–",K&&K.ftfr!=null&&T.ftfr?(K.ftfr>=T.ftfr?"ok":"bad"):"");
+  item("재방문율",K?f1(K.rev)+"%":"–",K&&K.rev!=null&&T.rev?(K.rev<=T.rev?"ok":"bad"):"");
+  item("MTTR",K?f1(K.mttr)+"분":"–",K&&K.mttr!=null&&T.mttr?(K.mttr<=T.mttr?"ok":"bad"):"");
+  const open=b.parentNode&&b.parentNode.classList.contains("open");b.appendChild(el("span","smore",open?"접기 ▴":"자세히 ▾"));
+}
 function renderVoc(){
-  const box=document.getElementById("hvoc");if(!box)return;box.textContent="";
+  setTimeout(renderSvcMini,0);const box=document.getElementById("hvoc");if(!box)return;box.textContent="";
   if(!vocData){if(vocErr){const m=el("div","schmsg","만족도를 불러오지 못했습니다");const rb=el("button","btn","다시 시도");rb.onclick=()=>{vocErr="";vocLoad(true);renderVoc();};m.appendChild(rb);box.appendChild(m);}else{box.appendChild(skel(3,"tiles"));vocLoad();}return;}
   if(vocStale&&!vocP&&!vocErr)vocLoad();
   if(vocStale&&vocErr)box.appendChild(el("div","offl","연결 안 됨 · "+fmtTime(vocAt)+" 받은 만족도"));
@@ -2495,7 +2524,7 @@ async function kpiPublish(manual){
   finally{renderKpi();}
 }
 function renderKpi(){
-  const box=document.getElementById("hkpi");if(!box)return;box.textContent="";
+  setTimeout(renderSvcMini,0);const box=document.getElementById("hkpi");if(!box)return;box.textContent="";
   const f1=v=>v==null||isNaN(v)?"–":(+v).toFixed(1),S=kpiSvc;
   if(S&&S.cur){box.appendChild(el("div","vocm",S.label+" · FSG 전체 · "+String(S.plabel||"")+" 대비"+(S.prov?" · 최근 14일 잠정":"")));
     const g=el("div","kpig");const t=(lab,v,u,goal,good,prev,better)=>{const c=el("div","kpit"+(good==null?"":good?" good":" bad"));c.appendChild(el("small",null,lab));
@@ -2851,7 +2880,10 @@ function renderHome(){
   ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
   renderBoardCards();
   // 3. 서비스 현황
-  const s3=sec("svc","서비스 현황");const s3w=el("div","hrow2 even");s3.appendChild(s3w);
+  const s3=sec("svc","서비스 현황");const smi=el("button","svcmini");smi.id="svcMini";smi.setAttribute("aria-expanded","false");s3.appendChild(smi);
+  const s3w=el("div","hrow2 even");s3w.id="svcFull";s3.appendChild(s3w);
+  smi.onclick=()=>{const o=s3.classList.toggle("open");smi.setAttribute("aria-expanded",o?"true":"false");try{localStorage.setItem("fstalk-svcopen",o?"1":"");}catch(e){}if(o){renderVoc();renderKpi();}renderSvcMini();};
+  try{if(localStorage.getItem("fstalk-svcopen"))s3.classList.add("open");}catch(e){}
   const vc=hcard("고객 만족도","star","voc");hmore(vc,"대시보드",()=>openApp("voc"));const hv=el("div","hvoc");hv.id="hvoc";vc.appendChild(hv);vc.dataset.hk="voc";s3w.appendChild(vc);
   const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";s3w.appendChild(kc);
   // 4. 바로가기
@@ -3165,7 +3197,7 @@ let myLayout=null;
 const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
 const HCARD_DEF=Object.keys(HCARDS);
 function homeLayout(){const v=String(myLayout||"");const [o,h]=v.split("|");const order=(o||"").split(",").filter(k=>HCARDS[k]);HCARD_DEF.forEach(k=>{if(!order.includes(k))order.push(k);});
-  return {order,hidden:(h||"").split(",").filter(k=>HCARDS[k]),custom:!!myLayout};}
+  return {order,hidden:myLayout?(h||"").split(",").filter(k=>HCARDS[k]):(isM()?["comm","sil","tech","video"]:[]),custom:!!myLayout};}   // 휴대폰 기본: 대화·기술 카드는 각 탭에
 function applyHomeLayout(grid){
   const L=homeLayout();if(!L.custom)return;   // 바꾼 적 없으면 기본 배치(줄 단위 디자인) 그대로
   const cards={};grid.querySelectorAll("[data-hk]").forEach(c=>{cards[c.dataset.hk]=c;});
@@ -3308,11 +3340,11 @@ async function renderUsage(box){
 }
 /* ===== 처음 쓰는 사람 안내(1분 둘러보기) + 새 기능 안내(묶음마다 한 번) =====
    처음 = 이 기기에서 안내를 본 적 없음 → 둘러보기 / 이미 쓰던 사람 = 새 묶음(GUIDE_NEW.k)이 바뀌었을 때만 새 기능 안내. 메뉴 「사용 안내」로 언제든 다시 봄 */
-const GUIDE_NEW={k:"2026-10-31b",t:"새로 바뀐 것",items:[
-  ["menu","「메뉴」 탭이 한 화면으로","내 정보, 자주 쓰는 것, 업무 도구(설치·근무일정·실마리…)가 아이콘으로 모여 있어요."],
-  ["doc","기술 화면 검색창이 맨 위로","분류·장비 버튼은 옆으로 밀어서 골라요."],
-  ["home","처음 시작하기","홈에서 사진·연락처 넣기, 알림 켜기를 하나씩 체크할 수 있어요. 다 하면 사라져요."],
-  ["info","30초 둘러보기","메뉴 → 「사용 안내」에서 화면을 하나씩 짚어 주는 안내를 다시 볼 수 있어요."]]};
+const GUIDE_NEW={k:"2026-10-31c",t:"새로 바뀐 것",items:[
+  ["home","휴대폰 홈이 짧아졌어요","오늘 할 일 중심으로 정리했어요. 최근 대화는 「대화」 탭, 실마리·기술정보·동영상은 「기술」 탭에 있어요. 다시 홈에 두려면 메뉴 → 홈 화면 순서·표시."],
+  ["chart","만족도·KPI는 한 줄 요약","홈 아래 숫자 한 줄을 누르면 자세히 펼쳐져요."],
+  ["menu","옆으로 밀어 탭 넘기기가 부드러워졌어요","옆 화면이 손가락을 따라 같이 들어와요. 대화 목록·대화방에서도 돼요."],
+  ["users","「메뉴」 탭이 한 화면으로","내 정보, 자주 쓰는 것, 업무 도구가 아이콘으로 모여 있어요."]]};
 const GUIDE_TOUR=[
   ["home","홈","오늘 내 일정·근무, 우리 팀 설치, 확인할 공지가 한눈에 보여요. 아래로 당기면 새로 불러와요."],
   ["users","조직도","팀·사무소별 사람과 오늘 근무(휴가·야간·교육). 이름 옆 버튼으로 바로 전화·1:1 대화."],
