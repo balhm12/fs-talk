@@ -1582,7 +1582,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.144";
+const APP_VERSION="2026-10-31.145";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2218,7 +2218,18 @@ async function openBulkPhotos(files){
    지금 있는 기능·링크를 한 화면에: 통합 검색(대화+실마리) · 공지 · 일정표 · 실마리 · 전국시스템 · 최근 대화 · 바로가기
    아직 자료가 없는 칸(기술정보·동영상 교육)은 「준비 중」으로 자리만 */
 const LINKS={install:"https://balhm12.github.io/Sysmex-schedule/index.html",work:"https://balhm12.github.io/Sysmex-schedule/work-schedule.html",silmari:"https://balhm12.github.io/sysmex-ts/",system:"https://sysmex-system-configuration.web.app/",voc:"https://balhm12.github.io/Sysmex-schedule/voc-dashboard.html",kpi:"https://balhm12.github.io/Sysmex-schedule/fsg-kpi.html"};
-const openUrl=u=>window.open(u,"_blank","noopener");
+/* 새 창 열기: 아이폰 홈 화면 앱에서는 window.open(…,"noopener")이 아무 반응 없이 끝나는 경우가 있어 링크를 만들어 누르는 방식으로 */
+function openUrl(u){try{const a=document.createElement("a");a.href=u;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),0);}catch(e){try{window.open(u,"_blank");}catch(e2){location.href=u;}}}
+/* 길찾기: 휴대폰은 네이버 지도 앱을 먼저 열고(설치돼 있으면), 1.5초 안에 앱으로 안 넘어가면 웹 지도로. 앱이 없던 기기는 다음부터 바로 웹으로 */
+function openMap(q){q=String(q||"").replace(/\(.*?\)/g,"").trim();if(!q)return;track("map");
+  const web=isM()?"https://m.map.naver.com/search2/search.naver?query="+encodeURIComponent(q):"https://map.naver.com/p/search/"+encodeURIComponent(q);
+  const app="nmap://search?query="+encodeURIComponent(q)+"&appname="+encodeURIComponent(location.origin+location.pathname);
+  let noApp=false;try{noApp=!!localStorage.getItem("fstalk-nomap");}catch(e){}
+  if(isAndroid){location.href="intent://search?query="+encodeURIComponent(q)+"&appname="+encodeURIComponent(location.origin)+"#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;S.browser_fallback_url="+encodeURIComponent(web)+";end";return;}
+  if(isIOS&&!noApp){let left=false;const onHide=()=>{left=true;};document.addEventListener("visibilitychange",onHide,{once:true});window.addEventListener("pagehide",onHide,{once:true});
+    location.href=app;
+    setTimeout(()=>{if(left||document.hidden)return;try{localStorage.setItem("fstalk-nomap","1");}catch(e){}openUrl(web);},1500);return;}
+  openUrl(web);}
 let homeBuilt="";
 /* ---------- 오늘 일정: 설치일정·근무일정을 「읽기만」 (쓰기 경로 없음) ----------
    두 일정표는 같은 Firebase(sysmex-system-schedule)를 익명 인증으로 읽는다. 공개 API 키·주소는 그 저장소에 이미 공개된 값.
@@ -2330,7 +2341,7 @@ function renderSch(){
     const t=el("span","scht");t.appendChild(el("b",null,String(e.title||"")));const sub=[e.device,e.team,e.assignee].filter(Boolean).join(" · ");if(sub)t.appendChild(el("small",null,sub));
     if((e.end||e.start)>e.start)t.appendChild(el("small","schr","~"+(+String(e.end).slice(5,7))+"/"+(+String(e.end).slice(8,10))));r.appendChild(t);
     const mp=el("span","schmap");mp.setAttribute("role","button");mp.tabIndex=0;mp.title=String(e.title||"")+" 길찾기 (네이버 지도)";mp.setAttribute("aria-label",mp.title);mp.appendChild(icEl("globe","",15));mp.appendChild(el("span",null,"길찾기"));
-    const go2=ev=>{ev.stopPropagation();openUrl("https://map.naver.com/p/search/"+encodeURIComponent(String(e.title||"").replace(/\(.*?\)/g,"").trim()));};mp.onclick=go2;mp.onkeydown=ev=>{if(ev.key==="Enter")go2(ev);};r.appendChild(mp);
+    const go2=ev=>{ev.stopPropagation();openMap(e.title);};mp.onclick=go2;mp.onkeydown=ev=>{if(ev.key==="Enter")go2(ev);};r.appendChild(mp);
     sec.appendChild(r);});
   if(D.ev.length>MAX){const mb=el("button","sillink","+"+(D.ev.length-MAX)+"건 더 — 설치일정 열기 ›");mb.onclick=()=>openApp("install");sec.appendChild(mb);}
   box.appendChild(sec);
@@ -3317,7 +3328,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={map:"길찾기",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
