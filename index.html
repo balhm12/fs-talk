@@ -1402,7 +1402,7 @@ html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{colo
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.138";
+const APP_VERSION="2026-10-31.139";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1565,7 +1565,7 @@ auth.onAuthStateChanged(u=>{
   if(!u){auth.signInAnonymously().catch(e=>{$("loadMsg").textContent="로그인 실패: "+(e.code||e.message)+" — 새로고침해 주세요.";});return;}
   uid=u.uid;$("myUid").textContent="기기 ID: "+uid;
   watchRoster();
-  R("admins/"+uid).on("value",s=>{isAdmin=s.val()===true;applyMe();renderBoardCards();if(view==="home")renderHome();if(started)renderNav();if(isAdmin&&started)watchUsers();});
+  R("admins/"+uid).on("value",s=>{isAdmin=s.val()===true;if(!isAdmin)adminSync();applyMe();renderBoardCards();if(view==="home")renderHome();if(started)renderNav();if(isAdmin&&started)watchUsers();});
   R("users/"+uid).on("value",s=>{meLoaded=true;me=s.val();applyMe();},err=>{$("loadMsg").textContent="데이터베이스 연결 실패("+(err&&err.code||"")+"). 관리자에게 알려 주세요.";show("gLoad",true);});
 });
 let meLoaded=false;
@@ -4472,8 +4472,19 @@ function watchUsers(){
   R("users").on("value",s=>{users=s.val()||{};pendingCount=Object.values(users).filter(u=>u&&u.status==="pending").length;if(view==="admin")renderAdmin();renderNav();},
     e=>{usersWatched=false;toast("사용자 목록을 읽지 못했습니다: "+(e.code||""));});
 }
+/* 관리자는 사람 기준: 이 기기가 관리자가 아니어도 같은 사람의 다른 기기가 관리자면 서버가 이 기기도 관리자로 맞춤(하루 한 번 확인) */
+let adminSyncDone=false;
+async function adminSync(){
+  if(adminSyncDone||isAdmin||!NOTIFY_URL)return;
+  if(!me||me.status!=="approved"||!auth.currentUser){adminSync.n=(adminSync.n||0)+1;if(adminSync.n<10)setTimeout(adminSync,3000);return;}   // 내 정보가 아직이면 잠시 뒤
+  adminSyncDone=true;
+  try{const k="fstalk-adminsync",t=+localStorage.getItem(k)||0;if(Date.now()-t<3600e3)return;localStorage.setItem(k,String(Date.now()));}catch(e){}
+  try{const idToken=await auth.currentUser.getIdToken();await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"adminsync",idToken})});}catch(e){}
+}
 async function setAdmin(id,on){
-  try{if(on)await R("admins/"+id).set(true);else await R("admins/"+id).remove();toast(on?"관리자로 지정했습니다.":"관리자 지정을 해제했습니다.");}
+  // 같은 사람(이름·팀)의 모든 기기에 함께 적용
+  const u=users[id]||{},ids=Object.keys(users).filter(k=>users[k]&&users[k].name===u.name&&users[k].team===u.team&&(users[k].status==="approved"||k===id));
+  try{for(const k of ids){if(k===uid)continue;if(on)await R("admins/"+k).set(true);else await R("admins/"+k).remove();}toast(on?"관리자로 지정했습니다.":"관리자 지정을 해제했습니다.");}
   catch(e){toast("변경 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 async function setStatus(id,status){

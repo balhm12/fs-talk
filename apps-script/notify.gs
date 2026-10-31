@@ -29,6 +29,7 @@ function doPost(e){
     if(req.type === 'remind') return out_(remind_(req));
     if(req.type === 'voice') return out_(voice_(req));
     if(req.type === 'link') return out_(link_(req));
+    if(req.type === 'adminsync') return out_(adminSync_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -99,7 +100,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v19';
+const NOTIFY_VER = 'v20';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -113,6 +114,19 @@ function mentions_(text, users){
 /* ---------- 기기 연결: 쓰던 기기에서 만든 6자리 코드로, 새 브라우저·앱을 같은 사람으로 바로 승인 ----------
  * (카톡 링크로 열린 브라우저·사파리·새 PC처럼 저장 공간이 다른 곳에서 다시 등록·승인받지 않게)
  * 코드는 talk/linkcodes/{코드} = {p:팀_이름, uid:만든 기기, exp:만료시각} — 5분, 한 번만 */
+/* v20: 관리자 = 사람 기준. 같은 이름·팀의 다른 기기가 관리자면 이 기기도 관리자로(사파리↔홈 화면 앱, 새 휴대폰·PC 등 접속 방법과 무관) */
+function adminSync_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const u = db_('talk/users/'+uid);
+  if(!u || u.status !== 'approved') return {ok:true,admin:false,ver:NOTIFY_VER};
+  if(db_('talk/admins/'+uid) === true) return {ok:true,admin:true,ver:NOTIFY_VER};
+  const admins = db_('talk/admins') || {}, users = db_('talk/users') || {};
+  const same = Object.keys(admins).some(function(id){ const x = users[id]; return admins[id] === true && x && x.status === 'approved' && x.team === u.team && x.name === u.name; });
+  if(!same) return {ok:true,admin:false,ver:NOTIFY_VER};
+  dbPut_('talk/admins/'+uid, true);
+  return {ok:true,admin:true,granted:true,ver:NOTIFY_VER};
+}
 function link_(req){
   const uid = verifyUser_(String(req.idToken||''));
   if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
@@ -132,6 +146,7 @@ function link_(req){
   const rec = {name:src.name, team:src.team, status:'approved', createdAt:now, approvedAt:now, ua:String(req.ua||'').slice(0,200)};
   if(src.office) rec.office = src.office;
   dbPut_('talk/users/'+uid, rec);
+  if(db_('talk/admins/'+String(lc.uid||'')) === true) dbPut_('talk/admins/'+uid, true);   // v20: 관리자 기기에서 만든 코드면 새 기기도 관리자
   dbDelete_('talk/linkcodes/'+code);   // 한 번 쓰면 끝
   return {ok:true,name:src.name,team:src.team,ver:NOTIFY_VER};
 }
