@@ -1330,6 +1330,23 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
   html[data-theme=dark] .tabbar button.on .ri{background:#1D3550}
   .tabbar button .dot{top:0!important;right:calc(50% - 30px)!important}
 }
+
+/* 탭 밀기 v3: 세로 스크롤 영역은 세로만 브라우저가, 가로는 앱이 처리 / 밀 때 글자 선택·길게 누르기 메뉴 막기 */
+@media (max-width:820px){
+  #nav,#msgs,#homeView .home,#orgView .home,#techView .home,#side{touch-action:pan-y}
+  .main.swhost>*:not(.swpeek){display:none!important}
+  .view.swpeek{display:flex!important;flex-direction:column;position:absolute;top:0;width:100%;height:100%}
+}
+.home>*{flex-shrink:0}   /* 세로 스크롤 화면 안의 카드·칩 줄이 높이가 줄어 잘리지 않게 */
+@media (max-width:820px){
+  body.swiping,body.swiping *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+}
+
+.schg{display:block}.schg+.schg{margin-top:2px}
+/* KPI 비교 표: 옆으로 더 있다는 표시(오른쪽 흐림) + 첫 열 고정 */
+.kptw{position:relative;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}
+.kptw.end{-webkit-mask-image:none;mask-image:none}
+.kptw table th:first-child,.kptw table td:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
 </style>
 
 </head>
@@ -1552,7 +1569,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.142";
+const APP_VERSION="2026-10-31.143";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2024,7 +2041,7 @@ const isImgF=f=>/^image\//.test(f&&f.mime||"");
 function previewText(m){if(m.text)return m.text;if(m.file)return isImgF(m.file)?"사진":"파일: "+m.file.name;return "";}
 const msgText=m=>m.text+(m.file?" "+m.file.name:"");
 function fmtTime(ts){const d=new Date(ts),t=new Date();if(ymd(d)===ymd(t))return hm(d);const y=new Date(t);y.setDate(t.getDate()-1);if(ymd(d)===ymd(y))return "어제";return (d.getMonth()+1)+"월 "+d.getDate()+"일";}
-let navStats=null;
+let navStats=null,swNavForce=false;
 function buildNavStats(){
   const st={last:{},unr:{},ment:{}};
   const bump=(id,m,u,mm)=>{st.last[id]=m;if(u){st.unr[id]=(st.unr[id]||0)+1;if(mm)st.ment[id]=true;}};
@@ -2037,7 +2054,7 @@ function buildNavStats(){
 }
 function renderNav(){
   navStats=buildNavStats();
-  const sideHidden=isM()?!(view==="chat"&&mList):["home","app","org","tech","team","menu"].includes(view);   // 대화 목록이 안 보이는 화면에서는 목록을 다시 그리지 않음(보일 때 showView가 다시 부름)
+  const sideHidden=!swNavForce&&(isM()?!(view==="chat"&&mList):["home","app","org","tech","team","menu"].includes(view));   // 대화 목록이 안 보이는 화면에서는 목록을 다시 그리지 않음(보일 때 showView가 다시 부름)
   const nav=$("nav");if(!sideHidden){nav.textContent="";
   const q=$("lq").value.replace(/\s+/g,"").toLowerCase();
   if(listTab==="org"){renderOrg(nav,q);}
@@ -2308,7 +2325,8 @@ function renderSch(){
   const w=el("div","schsec");w.appendChild(el("h3",null,"오늘 근무"));
   const line=(lab,arr,cls)=>{if(!arr.length)return;const r=el("div","schw "+(cls||""));r.appendChild(el("span","schwl",lab));const v=el("span","schwv");
     const g={};arr.forEach(x=>{(g[x.k]=g[x.k]||[]).push(x);});
-    Object.keys(g).forEach((k,i)=>{if(i)v.appendChild(document.createTextNode("  "));if(Object.keys(g).length>1||k!==lab)v.appendChild(el("i",null,k+" "));g[k].forEach((x,j)=>{if(j)v.appendChild(document.createTextNode(", "));const n=el("span",mine(x)?"me":null,x.nm);n.title=x.tl;v.appendChild(n);});});
+    const multi=Object.keys(g).length>1;   // 종류가 여럿이면(당직·전화대기·대전당직…) 종류마다 한 줄 — 한 줄에 다 붙으면 읽기 어려움
+    Object.keys(g).forEach((k,i)=>{const gv=multi?el("span","schg"):v;if(multi)v.appendChild(gv);if(multi||k!==lab)gv.appendChild(el("i",null,k+" "));g[k].forEach((x,j)=>{if(j)gv.appendChild(document.createTextNode(", "));const n=el("span",mine(x)?"me":null,x.nm);n.title=x.tl;gv.appendChild(n);});});
     r.appendChild(v);w.appendChild(r);};
   line("야간",D.w.night,"n");if(schOff(D.today)||D.w.duty.length)line("당직",D.w.duty,"d");line("휴가",D.w.leave,"l");line("교육",D.w.edu,"e");line("회의·내근·DP",D.w.plan||[],"p");
   if(!D.w.night.length&&!D.w.leave.length&&!D.w.duty.length&&!D.w.edu.length&&!(D.w.plan||[]).length)w.appendChild(el("div","schnone","등록된 야간·휴가가 없습니다."));
@@ -2508,7 +2526,7 @@ function renderKpi(){
       [["office","사무소별"],["team","팀별"]].forEach(([k,l])=>{const b=el("button",kv===k?"on":"",l);b.onclick=()=>{try{localStorage.setItem("fstalk-kpiunit",k);}catch(e){}renderKpi();};sg.appendChild(b);});
       hh.appendChild(sg);box.appendChild(hh);
       const VR=kv==="team"?TS.filter(r=>!r.p):TS.filter(r=>!TS.some(x=>x.p===r.k));
-      const wrap=el("div","kptw");const tb=el("table","kpt kpt2");const hr=el("tr");
+      const wrap=el("div","kptw");setTimeout(()=>kptwSync(wrap),0);const tb=el("table","kpt kpt2");const hr=el("tr");
       [[kv==="team"?"팀":"사무소",""],["인원","비교 인원"],["1인당 점수","KPI 종합 점수 ÷ 비교 인원"],["보정 지수","직급 보정 지수 — 같은 직급 FSG 중앙값 = 100"],["1인당 건수",""],["재방문율",""],["FTFR",""],["MTTR",""]].forEach(h=>{const th=el("th",null,h[0]);if(h[1])th.title=h[1];hr.appendChild(th);});tb.appendChild(hr);
       const best=f=>{const v=VR.filter(r=>r[f]!=null).map(r=>r[f]);return v.length?Math.max(...v):null;};const bS=best("sc"),bG=best("gi");
       const myU=myTeamU();
@@ -2788,7 +2806,7 @@ function renderHome(){
   const ht=el("div","hht");ht.appendChild(el("p","hdate",d.getFullYear()+"년 "+(d.getMonth()+1)+"월 "+d.getDate()+"일 "+"일월화수목금토"[d.getDay()]+"요일"));ht.appendChild(el("h1",null,"안녕하세요, "+me.name+"님"));hd.appendChild(ht);
   const f=el("form","hsearch");f.setAttribute("role","search");f.appendChild(icEl("search","",20));
   const lb=el("label","vh","통합 검색");lb.htmlFor="hq";f.appendChild(lb);
-  const q=el("input");q.id="hq";q.type="search";q.placeholder="장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
+  const q=el("input");q.id="hq";q.type="search";q.placeholder=isM()?"장비·에러코드·부품번호·사람":"장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
   f.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";f.appendChild(sb);
   f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");$("q").value=v;go("search");};
@@ -3139,6 +3157,9 @@ function renderMenuPage(){
   b.appendChild(L);
   b.appendChild(el("div","mnver","FS 포털 · "+APP_VERSION));
 }
+function kptwSync(w){if(w&&w.isConnected)w.classList.toggle("end",w.scrollLeft+w.clientWidth>=w.scrollWidth-4);}
+document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("kptw"))kptwSync(t);},true);
+window.addEventListener("resize",()=>document.querySelectorAll(".kptw").forEach(kptwSync));
 /* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
 let myLayout=null;
 const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
@@ -3277,7 +3298,7 @@ async function renderUsage(box){
   const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(ymd(d));}
   let v={};try{v=(await R("usage").once("value")).val()||{};}catch(e){box.appendChild(el("div","nthint","읽지 못했습니다: "+(e.code||e.message)+" (DB 규칙 배포 확인)"));return;}
   const sum=(f,ds)=>ds.reduce((a,d)=>a+(((v[d]||{})[f])||0),0),last7=days.slice(-7),prev7=days.slice(0,7);
-  const wrap=el("div","kptw");const t=el("table","kpt kpt2 usg");const hr=el("tr");["기능","오늘","최근 7일","그 전 7일","14일 추이"].forEach(h=>hr.appendChild(el("th",null,h)));t.appendChild(hr);
+  const wrap=el("div","kptw");setTimeout(()=>kptwSync(wrap),0);const t=el("table","kpt kpt2 usg");const hr=el("tr");["기능","오늘","최근 7일","그 전 7일","14일 추이"].forEach(h=>hr.appendChild(el("th",null,h)));t.appendChild(hr);
   Object.keys(TRK).map(f=>[f,sum(f,last7),sum(f,prev7)]).sort((a,b)=>b[1]-a[1]).forEach(([f,a,b])=>{const tr=el("tr");tr.appendChild(el("td","tn",TRK[f]));
     tr.appendChild(el("td",null,String(((v[days[13]]||{})[f])||0)));const c=el("td",null,String(a));if(b&&a!==b)c.appendChild(el("small",a>b?"up":"down",(a>b?" ▲":" ▼")+Math.abs(a-b)));tr.appendChild(c);tr.appendChild(el("td",null,String(b)));
     const sp=el("td");const mx=Math.max(1,...days.map(d=>((v[d]||{})[f])||0));const bars=el("span","usp");days.forEach(d=>{const i=el("i");i.style.height=Math.max(2,(((v[d]||{})[f])||0)/mx*22)+"px";i.title=d+" · "+(((v[d]||{})[f])||0);bars.appendChild(i);});sp.appendChild(bars);tr.appendChild(sp);
@@ -3368,53 +3389,87 @@ function guideAuto(){   // 앱을 열고 다른 팝업(공지 확인 등)이 닫
 /* ===== 휴대폰: 좌우로 밀어 아래 탭 이동 (홈 ↔ 대화 ↔ 조직도 ↔ 검색 ↔ 저장 ↔ 관리) — 손가락을 따라 화면이 움직임 =====
    지금 탭은 주소(#)가 아니라 실제 보이는 화면(view·mList)으로 판단한다(첫 화면은 주소가 비어 있어 순서가 어긋났음).
    대화방 안·팝업·입력칸·가로로 스크롤되는 줄(칩·표)·화면 가장자리(아이폰 뒤로 가기)에서는 동작하지 않는다. */
-(function(){const TABS=[["home","tHome"],["org","tOrg"],["","tChat"],["tech","tTech"]];
-  const TNAME={home:["home","홈"],org:["users","조직도"],"":["chat","대화"],tech:["doc","기술정보"]};
-  let sx=0,sy=0,dx=0,arm=false,lock=false,tg=null,nb=null,gh=null,ghDir=0,W=0,raf=0,smp=[],busy=false;
-  const curKey=()=>view==="home"?"home":(view==="chat"&&mList&&!room)||(view==="chat"&&isM()&&mList)?"":["org","tech"].includes(view)?view:null;
+(function(){
+  /* ── 탭 밀기 v3 ──────────────────────────────────────────────
+     · 실제 옆 화면을 손가락 옆에 붙여 같이 움직임(가짜 미리보기 없음) → 놓으면 그 화면이 그대로 자리 잡음(바뀌는 순간 없음)
+     · 세로 스크롤 영역에 touch-action:pan-y → 브라우저는 세로만, 가로는 이 코드가 처리(아이폰 대화 목록에서 안 밀리던 원인)
+     · 넘김 판단 = 거리(화면 33%) 또는 손 속도(0.4px/ms 이상, 40px 이상) — 마지막에 반대로 튕기면 취소
+     · 마무리 시간 = 손 속도에 맞춘 감속(180~340ms), 애니메이션 중 다시 만지면 즉시 마무리하고 새로 시작
+     · 탭 이동은 기록을 쌓지 않음(replaceState) */
+  const TABS=[["home","tHome"],["org","tOrg"],["","tChat"],["tech","tTech"]];
+  const EDGE=20,LOCK=8,EASE="cubic-bezier(.2,.8,.2,1)";
+  let S=null,busy=null;   // S = 지금 밀고 있는 상태, busy = 끝나기를 기다리는 마무리 함수
+  const curKey=()=>view==="home"?"home":(view==="chat"&&isM()&&mList)?"":["org","tech"].includes(view)?view:null;
   const vis=()=>TABS.filter(x=>{const b=$(x[1]);return b&&!b.hidden&&getComputedStyle(b).display!=="none";});
-  const target=()=>(view==="chat"&&mList)?$("side"):document.querySelector("#app .main");
-  const xscroll=n=>{for(;n&&n!==document.body;n=n.parentElement){if(n.matches&&n.matches("input,textarea,select,video,iframe,[contenteditable],.tabbar,.kptw,.tpw"))return true;
+  const xscroll=n=>{for(;n&&n!==document.body;n=n.parentElement){if(n.matches&&n.matches("input,textarea,select,video,iframe,[contenteditable],.tabbar,.kptw,.tpw,.crop"))return true;
     if(n.scrollWidth>n.clientWidth+4){const o=getComputedStyle(n).overflowX;if(o==="auto"||o==="scroll")return true;}}return false;};
-  const EASE="cubic-bezier(.22,.9,.3,1)";
-  const tf=(el,x,ms)=>{if(!el)return;el.style.transition=ms?"transform "+ms+"ms "+EASE:"none";el.style.transform=x?"translate3d("+x+"px,0,0)":"translate3d(0,0,0)";};
-  const clear=el=>{if(!el)return;el.style.transition="";el.style.transform="";el.style.willChange="";el.style.boxShadow="";};
-  /* 옆 화면 미리보기: 손가락을 따라 다음 탭이 옆에서 같이 들어옴(실제 화면은 놓은 뒤 그 자리에 그려짐) */
-  const ghost=(n,dir)=>{if(gh&&ghDir===dir)return;if(gh)gh.remove();ghDir=dir;
-    const r=tg.getBoundingClientRect();gh=el("div","swgh");gh.style.left=r.left+"px";gh.style.top=r.top+"px";gh.style.width=r.width+"px";const tb=$("tabbar"),tbt=tb&&tb.offsetParent!==null?tb.getBoundingClientRect().top:r.bottom;gh.style.height=(Math.min(r.bottom,tbt)-r.top)+"px";
-    const [ic,t]=n[0]==="__list"?["chat","대화"]:(TNAME[n[0]]||["home",""]);const h=el("div","swgh-h");h.appendChild(icEl(ic,"",26));h.appendChild(el("b",null,t));gh.appendChild(h);
-    for(let i=0;i<5;i++){const b=el("div","swgh-b");b.style.height=(i===0?64:i===1?120:90)+"px";gh.appendChild(b);}
-    document.body.appendChild(gh);tf(gh,dir*W);};
-  const paint=()=>{raf=0;if(!lock||!tg)return;const n=dx<0?nb.next:nb.prev;
-    const x=n?dx:dx/3;                                       // 끝 탭: 고무줄
-    tf(tg,x);if(n){ghost(n,dx<0?1:-1);tf(gh,x+(dx<0?W:-W));}else if(gh){gh.remove();gh=null;ghDir=0;}};
-  document.addEventListener("touchstart",e=>{arm=false;lock=false;if(busy||!isM()||e.touches.length!==1)return;const t=e.touches[0];
-    if(t.clientX<24||t.clientX>innerWidth-24)return;if(!$("pOv").hidden||!$("actOv").hidden||$("coach"))return;
-    if(view==="chat"&&room&&!mList){if(xscroll(e.target))return;nb={prev:["__list","tChat"],next:null};}   // 대화방 안: 오른쪽으로 밀면 대화 목록으로(메신저 「뒤로」)
+  const tf=(el,x,ms)=>{if(!el)return;el.style.transition=ms?"transform "+ms+"ms "+EASE:"none";el.style.transform="translate3d("+Math.round(x*10)/10+"px,0,0)";};
+  const area=()=>{const tb=$("tabbar");const b=tb&&getComputedStyle(tb).display!=="none"?tb.getBoundingClientRect().top:innerHeight;return {W:innerWidth,H:b};};
+  const fixIt=(el,A,x)=>{Object.assign(el.style,{display:"flex",position:"fixed",top:"0",left:"0",width:A.W+"px",height:A.H+"px",zIndex:"5",willChange:"transform"});tf(el,x);};
+  const SEC={home:["homeView","homeBody",()=>renderHome()],org:["orgView","orgBody",()=>renderOrgBoard()],tech:["techView","techBody",()=>renderTechPage()]};
+  // 옆 화면 붙이기: side = +1(오른쪽)·-1(왼쪽)
+  function peek(key,side){
+    const A=S.A;
+    if(key===""||key==="__list"){const sd=$("side");try{swNavForce=true;renderNav();}finally{swNavForce=false;}fixIt(sd,A,side*A.W+S.x);return {el:sd,fixed:true};}
+    const [vid,bid,rf]=SEC[key];const sec=$(vid);if(!$(bid).children.length){try{rf();}catch(e){}}
+    if(S.curSide){const mn=document.querySelector("#app .main");mn.classList.add("swhost");fixIt(mn,A,side*A.W+S.x);sec.classList.add("swpeek");sec.style.left="0";return {el:mn,fixed:true,sec};}
+    sec.classList.add("swpeek");sec.style.left=(side*100)+"%";return {el:null,fixed:false,sec};}
+  function unpeek(P){if(!P)return;if(P.sec){P.sec.classList.remove("swpeek");P.sec.style.left="";}
+    if(P.el){P.el.classList.remove("swhost");["display","position","top","left","width","height","zIndex","willChange","transition","transform"].forEach(k=>P.el.style[k]="");}}
+  function paint(){if(!S)return;S.raf=0;const s=S.x<0?1:-1,n=s>0?S.nb.next:S.nb.prev;
+    if(n){if(!S.P||S.Pside!==s){unpeek(S.P);S.P=peek(n[0],s);S.Pside=s;}tf(S.cur,S.x);if(S.P.fixed)tf(S.P.el,S.x+s*S.A.W);}
+    else{if(S.P){unpeek(S.P);S.P=null;S.Pside=0;}tf(S.cur,S.x/3);}}            // 끝 탭: 고무줄
+  function navTo(key){
+    if(key==="__list"){go("");return;}                                        // 대화방 → 목록은 「뒤로」와 같게
+    if(key===""){listTab="rooms";$("lq").value="";}
+    try{history.replaceState(null,"",key?"#"+key:location.pathname+location.search);}catch(e){location.hash=key;}
+    route();}
+  document.addEventListener("touchstart",e=>{
+    if(busy)busy();                                                           // 앞 애니메이션은 즉시 마무리
+    S=null;if(!isM()||e.touches.length!==1)return;const t=e.touches[0];
+    if(t.clientX<EDGE||t.clientX>innerWidth-EDGE)return;                      // 가장자리 = 아이폰 뒤로 가기 몸짓
+    if(!$("pOv").hidden||!$("actOv").hidden||$("coach")||(window.getSelection&&String(getSelection()).length))return;
+    let nb,cur,curSide=false;
+    if(view==="chat"&&room&&!mList){if(xscroll(e.target))return;nb={prev:["__list","tChat"],next:null};cur=document.querySelector("#app .main");}
     else{const k=curKey();if(k==null||xscroll(e.target))return;const V=vis(),i=V.findIndex(x=>x[0]===k);if(i<0)return;
-    nb={prev:V[i-1]||null,next:V[i+1]||null};}sx=t.clientX;sy=t.clientY;dx=0;smp=[[Date.now(),sx]];arm=true;},{passive:true});
-  document.addEventListener("touchmove",e=>{if(!arm)return;const t=e.touches[0];const ndx=t.clientX-sx,dy=t.clientY-sy;
-    if(!lock){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(ndx)){arm=false;return;}
-      if(Math.abs(ndx)>10&&Math.abs(ndx)>Math.abs(dy)*1.2){lock=true;tg=target();W=tg?tg.getBoundingClientRect().width:innerWidth;sx=t.clientX-(ndx>0?1:-1);  // 잠기는 순간 튀지 않게 기준점 이동
-        if(tg){tg.style.willChange="transform";tg.style.boxShadow="0 0 24px rgba(16,24,40,.12)";}}else return;}
-    e.preventDefault();dx=t.clientX-sx;const now=Date.now();smp.push([now,t.clientX]);while(smp.length>2&&now-smp[0][0]>90)smp.shift();
-    if(!raf)raf=requestAnimationFrame(paint);},{passive:false});
-  const end=()=>{if(!arm)return;arm=false;if(!lock)return;lock=false;if(raf){cancelAnimationFrame(raf);raf=0;}const el=tg;tg=null;const g=gh;gh=null;ghDir=0;
-    const a=smp[0],b=smp[smp.length-1],v=(b&&a&&b[0]>a[0])?(b[1]-a[1])/(b[0]-a[0]):0;   // 마지막 90ms 속도(px/ms)
-    const n=dx<0?nb.next:nb.prev,dir=dx<0?-1:1;
-    const go2=n&&(Math.abs(dx)>W*.3||(Math.abs(v)>.35&&Math.sign(v)===dir));
-    if(!go2){const ms=Math.round(Math.min(320,Math.max(200,Math.abs(dx)*.9)));tf(el,0,ms);if(g)tf(g,dx<0?W:-W,ms);
-      setTimeout(()=>{clear(el);if(g)g.remove();},ms+20);return;}
-    busy=true;const rest=W-Math.abs(dx),ms=Math.round(Math.min(300,Math.max(170,rest/Math.max(Math.abs(v),1.1))));   // 남은 거리·손 속도에 맞춰
-    tf(el,dir*W,ms);if(g)tf(g,0,ms);
-    setTimeout(()=>{
-      if(el)el.style.visibility="hidden";
-      if(n[0]==="__list"){go("");}else{if(n[0]===""){listTab="rooms";$("lq").value="";}go(n[0]);}
-      try{navigator.vibrate&&navigator.vibrate(6);}catch(er){}
-      requestAnimationFrame(()=>{clear(el);if(el)el.style.visibility="";
-        requestAnimationFrame(()=>{if(g){g.style.transition="opacity .16s ease";g.style.opacity="0";setTimeout(()=>g.remove(),180);}busy=false;});});
-    },ms);};
-  document.addEventListener("touchend",end,{passive:true});document.addEventListener("touchcancel",end,{passive:true});})();
+      nb={prev:V[i-1]||null,next:V[i+1]||null};curSide=k==="";cur=curSide?$("side"):document.querySelector("#app .main");}
+    S={x0:t.clientX,y0:t.clientY,x:0,lock:0,nb,cur,curSide,smp:[[e.timeStamp||Date.now(),t.clientX]],P:null,Pside:0,raf:0,tg:e.target};bindT(e.target);},{passive:true});
+  /* 손가락 아래 요소가 다시 그려져 빠지면(연속 밀기 때 화면이 새로 그려짐) 이후 터치 이벤트가 document까지 안 올라옴 → 처음 만진 요소에도 직접 붙여 둠 */
+  const once=f=>e=>{if(e.__sw)return;e.__sw=1;f(e);};
+  const onMove=once(e=>move(e)),onEnd=once(()=>end());
+  const bindT=tg=>{if(!tg||!tg.addEventListener)return;tg.addEventListener("touchmove",onMove,{passive:false});tg.addEventListener("touchend",onEnd,{passive:true});tg.addEventListener("touchcancel",onEnd,{passive:true});};
+  const unbindT=tg=>{if(!tg||!tg.removeEventListener)return;tg.removeEventListener("touchmove",onMove);tg.removeEventListener("touchend",onEnd);tg.removeEventListener("touchcancel",onEnd);};
+  document.addEventListener("touchmove",onMove,{passive:false});
+  function move(e){if(!S)return;const t=e.touches[0];const dx=t.clientX-S.x0,dy=t.clientY-S.y0;
+    if(!S.lock){
+      if(Math.abs(dy)>LOCK&&Math.abs(dy)>=Math.abs(dx)){S=null;return;}     // 세로 스크롤이 먼저
+      if(Math.abs(dx)<LOCK||Math.abs(dx)<Math.abs(dy)*1.4)return;
+      if(!e.cancelable){S=null;return;}                                      // 이미 브라우저가 스크롤 중
+      S.lock=1;S.x0=t.clientX-(dx>0?1:-1);S.A=area();S.cur.style.willChange="transform";
+      if(!S.curSide)S.cur.style.position="relative";document.body.classList.add("swiping");}
+    e.preventDefault();S.x=t.clientX-S.x0;const now=e.timeStamp||Date.now();S.smp.push([now,t.clientX]);while(S.smp.length>2&&now-S.smp[0][0]>100)S.smp.shift();
+    if(!S.raf)S.raf=requestAnimationFrame(paint);}
+  function end(){if(!S)return;const st=S;unbindT(st.tg);if(!st.lock){S=null;return;}if(st.raf){cancelAnimationFrame(st.raf);st.raf=0;}paint();
+    document.body.classList.remove("swiping");
+    const a=st.smp[0],b=st.smp[st.smp.length-1],v=(b&&a&&b[0]>a[0])?(b[1]-a[1])/(b[0]-a[0]):0;   // 마지막 100ms 손 속도(px/ms)
+    const s=st.x<0?1:-1,n=s>0?st.nb.next:st.nb.prev,W=st.A.W,ad=Math.abs(st.x);
+    const back=Math.sign(v)===-Math.sign(st.x)&&Math.abs(v)>.25;            // 놓기 직전 반대로 튕김 = 취소
+    const go2=n&&st.P&&!back&&(ad>W*.33||(Math.abs(v)>.4&&ad>40));
+    let fin=null,timer=0;
+    const done=()=>{if(!fin)return;const f=fin;fin=null;clearTimeout(timer);busy=null;f();S=null;};
+    if(go2){const rest=W-ad,ms=Math.round(Math.min(340,Math.max(180,4*rest/Math.max(Math.abs(v),.5))));
+      // 아래 탭 표시는 바로 옮김(눈으로 먼저 확인)
+      vis().forEach(x=>{const bt=$(x[1]);if(bt)bt.classList.toggle("on",x[0]===n[0]||(n[0]==="__list"&&x[0]===""));});
+      tf(st.cur,-s*W,ms);if(st.P.fixed)tf(st.P.el,0,ms);
+      fin=()=>{navTo(n[0]);unpeek(st.P);clearCurOf(st);try{navigator.vibrate&&navigator.vibrate(6);}catch(er){}};
+      timer=setTimeout(done,ms+40);}
+    else{const ms=Math.round(Math.min(300,Math.max(180,4*ad/Math.max(Math.abs(v),.5))));
+      tf(st.cur,0,ms);if(st.P&&st.P.fixed)tf(st.P.el,s*W,ms);
+      fin=()=>{unpeek(st.P);clearCurOf(st);};timer=setTimeout(done,ms+40);}
+    busy=done;}
+  function clearCurOf(st){const c=st.cur;c.style.transition="";c.style.transform="";c.style.willChange="";if(!st.curSide)c.style.position="";}
+  document.addEventListener("touchend",onEnd,{passive:true});document.addEventListener("touchcancel",onEnd,{passive:true});
+})();
 /* ===== 휴대폰: 홈을 아래로 당겨서 새로고침 (일정·만족도·KPI·게시판 다시 받기) ===== */
 (function(){let y0=null,dy=0,ind=null;const H=()=>document.querySelector("#homeView .home");
   document.addEventListener("touchstart",e=>{const h=H();if(view!=="home"||!h||h.scrollTop>0||!e.touches[0]||!h.contains(e.target))return;y0=e.touches[0].clientY;dy=0;},{passive:true});
