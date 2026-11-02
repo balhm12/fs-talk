@@ -1374,6 +1374,8 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 .postlh{margin:16px 0 6px;font-size:13px;color:var(--sub)}.postrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}.postrow span{flex:1}
 .sillink.bad{color:#C8312E}
 
+.nphead.post{color:#005BAC}html[data-theme=dark] .nphead.post{color:#9CCBFF}
+.postpt{font-size:15px;font-weight:700;color:var(--strong);margin:2px 0 10px;text-align:left}
 .npimg{display:block;width:100%;max-height:46vh;object-fit:contain;object-position:top;background:#fff;border:1px solid var(--line);border-radius:10px;cursor:zoom-in;margin-bottom:4px}
 .nphint{font-size:12px;color:var(--sub);text-align:center;margin-bottom:8px}
 .vmid.pzoom{overflow:auto;-webkit-overflow-scrolling:touch}.vmid.pzoom .vimg{cursor:zoom-in}
@@ -1602,7 +1604,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.147";
+const APP_VERSION="2026-11-03.148";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1924,7 +1926,7 @@ $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("
 let started=false,renderQ=false;
 function start(){
   if(started){renderNav();return;}
-  started=true;setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
+  started=true;setTimeout(posterAuto,3000);setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();renderNav();},()=>{});
   myKey=personKey(me.team,me.name);
   R("joined/"+myKey).set(true).catch(()=>{});
@@ -3533,10 +3535,28 @@ function openCoach(){track("guide");
   }
   window.addEventListener("resize",draw);document.addEventListener("keydown",key);draw();
 }
+
+/* 접속 시 새 게시물 팝업: 공지 확인 팝업이 끝난 뒤, 사용 안내보다 먼저, 게시물마다 한 번(게시 30일 이내) */
+function posterDue(){const P=latestPoster();return P&&!posterSeen(P)&&(!P.at||Date.now()-P.at<30*864e5)?P:null;}
+function posterAuto(){
+  let n=0;const t=setInterval(()=>{n++;if(n>60){clearInterval(t);return;}
+    if(!started||!me||me.status!=="approved"||!$("pOv").hidden||!$("vOv").hidden||!$("lockOv").hidden||$("coach")||(!noticePrompted&&pendingNotices().length))return;
+    clearInterval(t);const P=posterDue();if(!P)return;
+    const c=$("pCard");c.textContent="";c.classList.remove("wide","drawer","cmdk");
+    const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+    const h=el("div","nphead post");h.appendChild(icEl("star","",22));h.appendChild(el("span",null,"새 게시물"));c.appendChild(h);
+    c.appendChild(el("div","postpt",P.title));
+    const im=el("img","npimg");im.alt=P.title;im.referrerPolicy="no-referrer";im.src=driveThumb(P.id,800);im.onclick=()=>{closeProfile();openPosterViewer(P);};
+    im.onerror=()=>{im.remove();};c.appendChild(im);c.appendChild(el("div","nphint","사진을 누르면 크게 볼 수 있어요"));
+    const ok=el("button","btn pri","크게 보기");ok.onclick=()=>{closeProfile();openPosterViewer(P);};c.appendChild(ok);
+    const later=el("button","nplater","닫기 (홈 「서비스 현황」에서 다시 볼 수 있어요)");later.onclick=closeProfile;c.appendChild(later);
+    try{localStorage.setItem("fstalk-poster",P.k);}catch(e){}track("poster_pop");
+    $("pOv").hidden=false;},1000);
+}
 function guideAuto(){   // 앱을 열고 다른 팝업(공지 확인 등)이 닫힌 뒤 한 번
   const g=guideSeen();if(g===GUIDE_NEW.k||g==="x")return;
   let n=0;const t=setInterval(()=>{n++;if(n>40){clearInterval(t);return;}
-    if(!started||!me||me.status!=="approved"||!$("pOv").hidden||!$("lockOv").hidden||(!noticePrompted&&pendingNotices().length))return;clearInterval(t);   // 공지 확인이 먼저
+    if(!started||!me||me.status!=="approved"||!$("pOv").hidden||!$("lockOv").hidden||(!noticePrompted&&pendingNotices().length)||posterDue())return;clearInterval(t);   // 공지 확인·새 게시물이 먼저
     let old=false;try{old=Object.keys(localStorage).some(k=>/^fstalk-(fold|tip-lp|silhist|theme|orgview|fs|inst-hide|npin-hide|kpi-pub|lock)$/.test(k));}catch(e){}   // 이미 쓰던 기기면 둘러보기 대신 새 기능만
     if(g||old)openGuide("new");else openCoach();},3000);
 }
@@ -4343,6 +4363,7 @@ function showNoticePrompt(){
   const d=new Date(m.ts);c.appendChild(el("div","npmeta",m.name+" · "+(d.getMonth()+1)+"/"+d.getDate()+" "+hm(d)));
   const tx=el("div","nptext");
   if(m.file&&isImgF(m.file)){const P=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).find(v=>v.id===m.file.id);   // 사진 공지(이달의 게시물 등)는 바로 보이게 — 누르면 크게
+    if(P){try{localStorage.setItem("fstalk-poster",P.k);}catch(e){}}
     const im=el("img","npimg");im.alt="";im.referrerPolicy="no-referrer";im.src=driveThumb(m.file.id,800);im.onclick=()=>{if(P)openPosterViewer(P);else openViewer(m);};
     im.onerror=()=>{im.replaceWith(el("div","more","📷 사진 — 전체공지 방에서 보기"));};tx.appendChild(im);tx.appendChild(el("div","nphint","사진을 누르면 크게 볼 수 있어요"));}
   else if(m.file)tx.appendChild(el("div","more","📎 "+(m.file.name||"파일")));if(m.text)tx.appendChild(richText(String(m.text).slice(0,1200)));c.appendChild(tx);
