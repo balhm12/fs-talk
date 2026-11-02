@@ -119,6 +119,7 @@
    - 1차: 포털 → Slack (전체공지·새 기술정보·3점 이하 만족도·아침 일정 브리핑을 채널로) — Incoming Webhook, notify.gs에서 발송
    - 2차: Slack → 포털 (`/실마리 코드` 조회, 채널 글 가져오기) — Slack 앱(Events·Slash Command), 워크스페이스 관리자 승인 필요
 3. **Salesforce(NEW CRM) 연동** — 서버에서 OAuth, 읽기부터
+   - **준비됨(2026-11-03, 사용자 「다음에 진행」)**: 브랜치 `sf-test` — notify v21 `sfTest_`(Client Credentials, 스크립트 속성 `SF_DOMAIN`·`SF_CLIENT_ID`·`SF_CLIENT_SECRET`, 관리자만, WorkOrder·ServiceAppointment 등 읽기 권한·건수만 반환) + 관리 화면 「Salesforce 연결 시험」 버튼. 목 시험 통과. 재개 시 main에 병합(앱 버전 올림)·Connected App 정보는 IT에서 받아 스크립트 속성에만
    - 오늘 내 방문·작업 지시 → 「오늘의 업무」 / 설치·근무일정과 CRM 일정 맞추기 / 실마리 결과에 장비 수리 이력 / KPI를 CRM 데이터로 직접 계산(엑셀 업로드 대체 — 단 KPI 계산 기준은 fsg-kpi `kpiCore()`와 같게)
 4. **회사 서버로 이전** (단계별)
    - 4-1 주소 이전(1~2일): 예 `fsportal.sysmex.co.kr`, Firebase는 유지. **설치·근무일정표·실마리·KPI 대시보드도 같은 주소 아래로 함께**(포털 안 열기·실마리 키 공유·KPI iframe 계산이 같은 출처 전제). 새 주소는 기기 저장값이 넘어가지 않으므로 「다른 기기 연결(6자리)」로 옮기는 안내 화면, Firebase 승인 도메인 추가
