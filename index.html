@@ -1602,7 +1602,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.146";
+const APP_VERSION="2026-11-03.147";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3239,7 +3239,7 @@ function renderPoster(){
   const t=el("span","hpt");t.appendChild(el("b",null,P.title));const d=P.at?new Date(P.at):null;t.appendChild(el("small",null,(d?(d.getMonth()+1)+"/"+d.getDate()+" 게시 · ":"")+"눌러서 크게 보기"));b.appendChild(t);
   if(!posterSeen(P))b.appendChild(el("span","hbn","NEW"));
   b.appendChild(icEl("chevron","mnchev",18));b.onclick=()=>openPosterViewer(P);box.appendChild(b);
-  if(isAdmin){const u=el("button","sillink","+ 새 달 게시물 올리기 · 지난 게시물 관리");u.onclick=openPosterUpload;box.appendChild(u);}
+  if(isAdmin){const u=el("button","sillink","+ 새 달 게시물 올리기 · 지난 게시물 관리·삭제");u.onclick=openPosterUpload;box.appendChild(u);}
 }
 function openPosterViewer(P){track("poster");
   try{localStorage.setItem("fstalk-poster",P.k);}catch(e){}
@@ -3255,8 +3255,25 @@ function openPosterViewer(P){track("poster");
   const L=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).filter(v=>v.id).sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
   const bar=el("div","vbar");
   if(L.length>1)L.slice(0,6).forEach(Q=>{const c=el("button","vbtn"+(Q.k===P.k?" on":""),(+String(Q.ym).slice(5))+"월");c.onclick=()=>openPosterViewer(Q);bar.appendChild(c);});
+  if(isAdmin){const dl=el("button","vbtn bad","삭제");dl.onclick=()=>delPoster(P);bar.appendChild(dl);}
   const o=el("a","vbtn","원본 열기");o.href=driveView(P.id);o.target="_blank";o.rel="noopener";bar.appendChild(o);ov.appendChild(bar);
   ov.appendChild(el("div","vhint","눌러서 확대 · 다시 누르면 전체"));ov.hidden=false;
+}
+
+/* 잘못 올린 게시물 한 번에 삭제: 포털 카드 + 같은 사진을 단 전체공지 글 + 드라이브 파일(휴지통) */
+async function delPoster(P){
+  const ms=msgs.filter(m=>m.room==="notice"&&m.file&&m.file.id===P.id);
+  if(!confirm(P.title+" 게시물을 삭제할까요?\n· 홈 카드·브리핑에서 사라지고\n"+(ms.length?"· 전체공지 글 "+ms.length+"건도 지워지고\n· 드라이브 원본은 휴지통으로 옮겨집니다.":"· 드라이브 원본은 그대로 남습니다.")))return;
+  try{await R("posters/"+P.k).remove();}catch(e){toast("삭제 실패: "+(e.code||e.message));return;}
+  let note="";
+  for(const m of ms){
+    try{const idToken=await auth.currentUser.getIdToken();
+      const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"deleteFile",idToken,room:m.room,msgId:m.id})});
+      const j=await res.json().catch(()=>null);if(!j||!j.ok)note=" (드라이브 원본은 남음"+(j&&j.err?": "+j.err:"")+")";}catch(e){note=" (드라이브 원본은 남음)";}
+    try{const pr=Object.keys(pins).find(k=>pins[k]&&pins[k].id===m.id);if(pr)await R("pins/"+pr).remove().catch(()=>{});await R("msgs/"+m.room+"/"+m.id).remove();}
+    catch(e){note=" (전체공지 글은 직접 지워 주세요: "+(e.code||e.message)+")";}
+  }
+  closeProfile();closeViewer();toast("삭제했습니다."+note);renderPoster();renderBrief();
 }
 async function shrinkTo(file,max,q){
   const img=await loadImg(file);let w=img.naturalWidth,h=img.naturalHeight;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
@@ -3294,7 +3311,7 @@ function openPosterUpload(){
   const L=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
   if(L.length){c.appendChild(el("h4","postlh","올린 게시물"));L.forEach(P=>{const r=el("div","postrow");r.appendChild(el("span",null,P.title));
     const v=el("button","sillink","보기");v.onclick=()=>{closeProfile();openPosterViewer(P);};r.appendChild(v);
-    const d=el("button","sillink bad","내리기");d.onclick=async()=>{if(!confirm(P.title+" 게시물을 포털에서 내릴까요? (드라이브 파일과 전체공지 글은 그대로)"))return;try{await R("posters/"+P.k).remove();toast("내렸습니다.");closeProfile();}catch(e){toast("실패: "+(e.code||e.message));}};r.appendChild(d);c.appendChild(r);});}
+    const d=el("button","sillink bad","삭제");d.onclick=()=>delPoster(P);r.appendChild(d);c.appendChild(r);});}
   $("pOv").hidden=false;
 }
 /* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
