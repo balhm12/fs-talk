@@ -1360,6 +1360,26 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
   .smi.ok b{color:#2E8B35}.smi.bad b{color:#C8312E}html[data-theme=dark] .smi.ok b{color:#7FD487}html[data-theme=dark] .smi.bad b{color:#FF8A86}
   .smore{flex:none;font-size:12.5px;color:var(--blue);font-weight:600;padding-left:4px}html[data-theme=dark] .smore{color:#9CCBFF}
 }
+
+/* 이달의 고객만족도 게시물 */
+.hposter:empty{display:none}.hposter{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.hpost{display:flex;align-items:center;gap:12px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px;font:inherit;color:var(--text);cursor:pointer;text-align:left;box-shadow:var(--sh-1)}
+.hpost img,.hpost .hpic{width:48px;height:66px;object-fit:cover;object-position:top;border-radius:6px;border:1px solid var(--line);flex:none;background:var(--bg)}
+.hpost .hpic{display:flex;align-items:center;justify-content:center;color:var(--blue)}
+.hpt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.hpt b{font-size:15px;color:var(--strong)}.hpt small{font-size:12.5px;color:var(--sub)}
+.hpost.empty{justify-content:center;color:var(--blue);font-weight:600;border-style:dashed;box-shadow:none;min-height:52px}
+.hpost .hbn{flex:none}
+.postpv{max-width:100%;max-height:220px;display:block;margin:6px auto 10px;border:1px solid var(--line);border-radius:8px}
+.postck{display:flex;align-items:center;gap:6px;font-size:13.5px;margin:6px 0 10px}
+.postlh{margin:16px 0 6px;font-size:13px;color:var(--sub)}.postrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}.postrow span{flex:1}
+.sillink.bad{color:#C8312E}
+
+.npimg{display:block;width:100%;max-height:46vh;object-fit:contain;object-position:top;background:#fff;border:1px solid var(--line);border-radius:10px;cursor:zoom-in;margin-bottom:4px}
+.nphint{font-size:12px;color:var(--sub);text-align:center;margin-bottom:8px}
+.vmid.pzoom{overflow:auto;-webkit-overflow-scrolling:touch}.vmid.pzoom .vimg{cursor:zoom-in}
+.vmid.pzoom.on{display:block!important;align-items:initial;justify-content:initial}.vmid.pzoom.on .vimg{max-width:none!important;max-height:none!important;width:200%!important;height:auto!important;cursor:zoom-out}
+.vbtn.on{background:#fff;color:#005BAC}
+.vhint{position:absolute;left:0;right:0;top:64px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);pointer-events:none}
 </style>
 
 </head>
@@ -1582,7 +1602,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-10-31.145";
+const APP_VERSION="2026-11-03.146";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1926,6 +1946,7 @@ function start(){
   try{const c=JSON.parse(localStorage.getItem("fstalk-kpi-cache")||"null");if(c&&c.k===myKey){if(!kpiSvc)kpiSvc=c.svc;if(!kpiMe)kpiMe=c.me;}}catch(e){}   // 연결 전·전파 약할 때 마지막 받은 KPI
   const kpiSave=()=>{try{localStorage.setItem("fstalk-kpi-cache",JSON.stringify({k:myKey,svc:kpiSvc,me:kpiMe}));}catch(e){}};
   R("kpisvc").on("value",s=>{kpiSvc=s.val();kpiSave();renderKpi();},()=>{});
+  R("posters").on("value",s=>{posters=s.val()||{};try{renderPoster();renderBrief();}catch(e){}},()=>{});
   R("kpime/"+myKey).on("value",s=>{kpiMe=s.val();kpiSave();renderKpi();},()=>{});
   setTimeout(()=>{if(isAdmin||myLead()||myRole()==="group")R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
   setTimeout(()=>{if(isAdmin||myLead())R("vocfu").on("value",s=>{vocFu=s.val()||{};renderVoc();},()=>{});},1500);
@@ -2891,7 +2912,7 @@ function renderHome(){
   ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
   renderBoardCards();
   // 3. 서비스 현황
-  const s3=sec("svc","서비스 현황");const smi=el("button","svcmini");smi.id="svcMini";smi.setAttribute("aria-expanded","false");s3.appendChild(smi);
+  const s3=sec("svc","서비스 현황");const hpo=el("div","hposter");hpo.id="hposter";s3.appendChild(hpo);const smi=el("button","svcmini");smi.id="svcMini";smi.setAttribute("aria-expanded","false");s3.appendChild(smi);
   const s3w=el("div","hrow2 even");s3w.id="svcFull";s3.appendChild(s3w);
   smi.onclick=()=>{const o=s3.classList.toggle("open");smi.setAttribute("aria-expanded",o?"true":"false");try{localStorage.setItem("fstalk-svcopen",o?"1":"");}catch(e){}if(o){renderVoc();renderKpi();}renderSvcMini();};
   try{if(localStorage.getItem("fstalk-svcopen"))s3.classList.add("open");}catch(e){}
@@ -2903,7 +2924,7 @@ function renderHome(){
   applyHomeLayout(grid);
   const eh=el("div","hedit");const eb=el("button","hmore","홈 화면 순서·표시 바꾸기");eb.onclick=openLayoutEditor;eh.appendChild(eb);b.appendChild(eh);
   navFooter(b);
-  renderSch();renderVoc();renderKpi();
+  renderSch();renderVoc();renderKpi();try{renderPoster();}catch(e){}
   updateHome();
 }
 function updateHome(){
@@ -3115,6 +3136,7 @@ function renderBrief(){try{renderStart();}catch(e){}
   const pn=pendingNotices().length,lim=Date.now()-7*864e5,mn=msgs.filter(m=>shown(m)&&m.ts>lim&&!isMine(m)&&mentionsMe(m)&&!(notiState.ids||{})["m_"+m.id]&&m.ts>(notiState.all||0)).length;
   if(pn||mn)it("bell",[["확인할 것 "],[(pn?"공지 "+pn+"건":"")+(pn&&mn?" · ":"")+(mn?"나를 언급 "+mn+"건":""),1]],()=>pn?go("room-notice"):openNotiCenter(),"warn");
   else it("bell",[["확인할 공지·언급 없음"]],()=>openNotiCenter());
+  {const P=latestPoster();if(P&&!posterSeen(P)&&(!P.at||Date.now()-P.at<14*864e5))it("star",[["새 게시물 "],[P.title,1]],()=>openPosterViewer(P));}
   if((isAdmin||myLead())&&vocData){const vs=vocSummary();if(vs){const all=myRole()==="group"||!myField(),tm=myTeamU(),open=vs.R.filter(vocLow).filter(r=>all||String(r.team||"").toUpperCase()===tm).filter(r=>(vocFu[vocKey(r)]||{}).s!=="done").length;
     if(open)it("flag",[["3점 이하 미조치 "],[open+"건",1]],openVocLow,"warn");}}
 }
@@ -3203,6 +3225,78 @@ function renderMenuPage(){
 function kptwSync(w){if(w&&w.isConnected)w.classList.toggle("end",w.scrollLeft+w.clientWidth>=w.scrollWidth-4);}
 document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("kptw"))kptwSync(t);},true);
 window.addEventListener("resize",()=>document.querySelectorAll(".kptw").forEach(kptwSync));
+
+/* ===== 이달의 고객만족도 게시물(사내 게시판·사이니지 한 장)을 포털에 게시 =====
+   talk/posters/{id} = {id(드라이브 파일), w, h, ym, title, by, at} — 관리자만 올림, 승인된 직원 모두 봄. 가장 최근 달 것이 홈·브리핑에 */
+let posters={};
+function latestPoster(){const L=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).filter(v=>v&&v.id);L.sort((a,b)=>String(b.ym).localeCompare(String(a.ym))||(b.at||0)-(a.at||0));return L[0]||null;}
+function posterSeen(P){try{return localStorage.getItem("fstalk-poster")===P.k;}catch(e){return true;}}
+function renderPoster(){
+  const box=document.getElementById("hposter");if(!box||!me)return;box.textContent="";const P=latestPoster();
+  if(!P){if(isAdmin){const b=el("button","hpost empty");b.appendChild(icEl("plus","",18));b.appendChild(el("span",null,"이달의 고객만족도 게시물 올리기"));b.onclick=openPosterUpload;box.appendChild(b);}return;}
+  const b=el("button","hpost");b.setAttribute("aria-label",P.title+" 크게 보기");
+  const im=el("img");im.alt="";im.loading="lazy";im.referrerPolicy="no-referrer";im.src=driveThumb(P.id,240);im.onerror=()=>{im.replaceWith(icEl("star","hpic",22));};b.appendChild(im);
+  const t=el("span","hpt");t.appendChild(el("b",null,P.title));const d=P.at?new Date(P.at):null;t.appendChild(el("small",null,(d?(d.getMonth()+1)+"/"+d.getDate()+" 게시 · ":"")+"눌러서 크게 보기"));b.appendChild(t);
+  if(!posterSeen(P))b.appendChild(el("span","hbn","NEW"));
+  b.appendChild(icEl("chevron","mnchev",18));b.onclick=()=>openPosterViewer(P);box.appendChild(b);
+  if(isAdmin){const u=el("button","sillink","+ 새 달 게시물 올리기 · 지난 게시물 관리");u.onclick=openPosterUpload;box.appendChild(u);}
+}
+function openPosterViewer(P){track("poster");
+  try{localStorage.setItem("fstalk-poster",P.k);}catch(e){}
+  const ov=$("vOv");ov.textContent="";
+  const top=el("div","vtop");const who=el("div","vwho");who.appendChild(el("b",null,P.title));if(P.by)who.appendChild(el("span",null,"FSS Team · "+P.by));top.appendChild(who);
+  const x=el("button","vbtn","✕");x.setAttribute("aria-label","닫기");x.onclick=()=>{closeViewer();renderPoster();renderBrief();};top.appendChild(x);ov.appendChild(top);
+  const img=el("img","vimg");img.alt=P.title;img.referrerPolicy="no-referrer";img.src=driveThumb(P.id,2400);
+  img.onerror=()=>{img.replaceWith(el("div","more","게시물을 불러오지 못했습니다. 「원본 열기」를 눌러 주세요."));};
+  const mid=el("div","vmid pzoom");mid.appendChild(img);ov.appendChild(mid);
+  // 휴대폰에서 A4 한 장은 글자가 작음 → 누르면 2배(누른 곳 중심), 다시 누르면 전체
+  img.onclick=e=>{const z=!mid.classList.contains("on");const r=img.getBoundingClientRect(),fx=(e.clientX-r.left)/r.width,fy=(e.clientY-r.top)/r.height;mid.classList.toggle("on",z);
+    if(z)requestAnimationFrame(()=>{mid.scrollLeft=img.offsetWidth*fx-mid.clientWidth/2;mid.scrollTop=img.offsetHeight*fy-mid.clientHeight/2;});};
+  const L=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).filter(v=>v.id).sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
+  const bar=el("div","vbar");
+  if(L.length>1)L.slice(0,6).forEach(Q=>{const c=el("button","vbtn"+(Q.k===P.k?" on":""),(+String(Q.ym).slice(5))+"월");c.onclick=()=>openPosterViewer(Q);bar.appendChild(c);});
+  const o=el("a","vbtn","원본 열기");o.href=driveView(P.id);o.target="_blank";o.rel="noopener";bar.appendChild(o);ov.appendChild(bar);
+  ov.appendChild(el("div","vhint","눌러서 확대 · 다시 누르면 전체"));ov.hidden=false;
+}
+async function shrinkTo(file,max,q){
+  const img=await loadImg(file);let w=img.naturalWidth,h=img.naturalHeight;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+  const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.imageSmoothingQuality="high";x.drawImage(img,0,0,w,h);
+  const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",q));if(!blob)throw new Error("변환 실패");return {blob,w,h};}
+function openPosterUpload(){
+  if(!isAdmin)return;const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"고객만족도 게시물 올리기"));
+  c.appendChild(el("div","pkhint","사내 게시판·사이니지용 한 장(PNG·JPG)을 올리면 직원 모두의 홈 「서비스 현황」과 오늘의 브리핑에 보여요. 월은 지난달 확정값으로 만든 게시물 기준으로 고르세요."));
+  const f1=el("div","f");f1.appendChild(el("label",null,"월"));const sel=el("select");const now=new Date();
+  for(let i=1;i<=6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const ym=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");const op=el("option",null,d.getFullYear()+"년 "+(d.getMonth()+1)+"월");op.value=ym;sel.appendChild(op);}
+  {const op=el("option",null,now.getFullYear()+"년 "+(now.getMonth()+1)+"월(이번 달)");op.value=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");sel.insertBefore(op,sel.firstChild);sel.selectedIndex=1;}
+  f1.appendChild(sel);c.appendChild(f1);
+  const f2=el("div","f");f2.appendChild(el("label",null,"게시물 이미지"));const fi=el("input");fi.type="file";fi.accept="image/*";f2.appendChild(fi);c.appendChild(f2);
+  const pv=el("img","postpv");pv.alt="";pv.hidden=true;c.appendChild(pv);
+  fi.onchange=()=>{const f=fi.files[0];if(f){pv.src=URL.createObjectURL(f);pv.hidden=false;}};
+  const f3=el("label","postck");const ck=el("input");ck.type="checkbox";ck.checked=true;f3.appendChild(ck);f3.appendChild(document.createTextNode(" 전체공지에도 올리기 (직원 모두에게 알림·확인 요청)"));c.appendChild(f3);
+  const f4=el("div","f");f4.appendChild(el("label",null,"공지 문구 (한 줄)"));const msgIn=el("input");msgIn.maxLength=120;msgIn.value="이달의 우수 엔지니어와 고객이 칭찬한 점을 확인해 보세요.";f4.appendChild(msgIn);c.appendChild(f4);
+  ck.onchange=()=>{f4.hidden=!ck.checked;};
+  const st=el("div","pkhint");c.appendChild(st);
+  const ok=el("button","btn pri","올리기");c.appendChild(ok);
+  ok.onclick=async()=>{const f=fi.files[0];if(!f){toast("이미지를 골라 주세요.");return;}if(!NOTIFY_URL){toast("첨부 기능이 설정되지 않았습니다.");return;}
+    const ym=sel.value,title=(+ym.slice(0,4))+"년 "+(+ym.slice(5))+"월 방문 서비스 고객만족도";
+    ok.disabled=true;st.textContent="올리는 중…";
+    try{const up=await shrinkTo(f,2400,.9);if(up.blob.size>MAX_UP)throw new Error("10MB를 넘습니다");
+      const idToken=await auth.currentUser.getIdToken();const name=ym+"_고객만족도_게시물.jpg";
+      const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"upload",idToken,name,mime:"image/jpeg",data:await toB64(up.blob)})});
+      const j=await res.json().catch(()=>null);if(!j||!j.ok)throw new Error(j&&j.err||"업로드 실패");
+      await R("posters").push({id:String(j.id),w:up.w,h:up.h,ym,title,by:me.name,at:SV});
+      if(ck.checked)await R("msgs/notice").push({uid,name:me.name,text:"["+title+"] "+(msgIn.value.trim()||"게시물입니다.")+"\n홈 「서비스 현황」에서 지난 달 게시물도 볼 수 있어요.",ts:SV,file:{id:String(j.id),name,size:up.blob.size,mime:"image/jpeg",w:up.w,h:up.h}});
+      track("poster_up");toast("게시했습니다.");closeProfile();
+    }catch(e){st.textContent="";ok.disabled=false;toast("올리기 실패: "+(e.code||e.message));}};
+  // 지난 게시물
+  const L=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
+  if(L.length){c.appendChild(el("h4","postlh","올린 게시물"));L.forEach(P=>{const r=el("div","postrow");r.appendChild(el("span",null,P.title));
+    const v=el("button","sillink","보기");v.onclick=()=>{closeProfile();openPosterViewer(P);};r.appendChild(v);
+    const d=el("button","sillink bad","내리기");d.onclick=async()=>{if(!confirm(P.title+" 게시물을 포털에서 내릴까요? (드라이브 파일과 전체공지 글은 그대로)"))return;try{await R("posters/"+P.k).remove();toast("내렸습니다.");closeProfile();}catch(e){toast("실패: "+(e.code||e.message));}};r.appendChild(d);c.appendChild(r);});}
+  $("pOv").hidden=false;
+}
 /* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
 let myLayout=null;
 const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
@@ -4230,7 +4324,11 @@ function showNoticePrompt(){
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
   const hd=el("div","nphead");hd.appendChild(icEl("megaphone","",22));hd.appendChild(el("b",null,(m.room==="notice"?"확인이 필요한 공지":(getRoom(m.room)||{name:"팀"}).name+" 팀 공지")+(list.length>1?" · 전체 "+list.length+"건":"")));c.appendChild(hd);
   const d=new Date(m.ts);c.appendChild(el("div","npmeta",m.name+" · "+(d.getMonth()+1)+"/"+d.getDate()+" "+hm(d)));
-  const tx=el("div","nptext");if(m.file)tx.appendChild(el("div","more",isImgF(m.file)?"📷 사진":"📎 "+(m.file.name||"파일")));if(m.text)tx.appendChild(richText(String(m.text).slice(0,1200)));c.appendChild(tx);
+  const tx=el("div","nptext");
+  if(m.file&&isImgF(m.file)){const P=Object.entries(posters||{}).map(([k,v])=>Object.assign({k},v)).find(v=>v.id===m.file.id);   // 사진 공지(이달의 게시물 등)는 바로 보이게 — 누르면 크게
+    const im=el("img","npimg");im.alt="";im.referrerPolicy="no-referrer";im.src=driveThumb(m.file.id,800);im.onclick=()=>{if(P)openPosterViewer(P);else openViewer(m);};
+    im.onerror=()=>{im.replaceWith(el("div","more","📷 사진 — 전체공지 방에서 보기"));};tx.appendChild(im);tx.appendChild(el("div","nphint","사진을 누르면 크게 볼 수 있어요"));}
+  else if(m.file)tx.appendChild(el("div","more","📎 "+(m.file.name||"파일")));if(m.text)tx.appendChild(richText(String(m.text).slice(0,1200)));c.appendChild(tx);
   const ok=el("button","btn pri","확인했어요"+(list.length>1?" · 다음 공지":""));ok.onclick=()=>{ackNotice(m,true).then(()=>{if(pendingNotices().filter(x=>x.id!==m.id).length)setTimeout(showNoticePrompt,150);else{closeProfile();toast("공지를 모두 확인했습니다.");}});};c.appendChild(ok);
   const vw=el("button","btn",m.room==="notice"?"전체공지 방에서 보기":"팀방에서 보기");vw.onclick=()=>{closeProfile();jumpTo(m.id);};c.appendChild(vw);
   const later=el("button","nplater","나중에 볼게요");later.onclick=()=>{try{localStorage.setItem("fstalk-nsnooze",String(Date.now()+2*3600e3));}catch(e){}closeProfile();};c.appendChild(later);

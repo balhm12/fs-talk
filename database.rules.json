@@ -479,6 +479,13 @@
           }
         }
       },
+      "posters": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        "$p": {
+          ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+          ".validate": "newData.hasChildren(['id','ym','title']) && newData.child('id').isString() && newData.child('id').val().length <= 100 && newData.child('ym').isString() && newData.child('ym').val().matches(/^20[0-9][0-9]-[01][0-9]$/) && newData.child('title').isString() && newData.child('title').val().length <= 80"
+        }
+      },
       "kpisvc": {
         ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
         ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
