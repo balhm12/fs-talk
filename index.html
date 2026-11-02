@@ -1604,7 +1604,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.148";
+const APP_VERSION="2026-11-03.149";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3441,7 +3441,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={map:"길찾기",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={map:"길찾기",sf_test:"Salesforce 시험",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
@@ -5124,7 +5124,30 @@ function renderAdmin(){
   body.appendChild(el("div","nthint","새 직원이 등록을 요청하면 관리자(같은 사람의 휴대폰·PC 모두)에게 알림이 갑니다. 안 오면 아래 버튼으로 확인하세요."));
   const nb=el("button","btn","🔔 등록 알림 테스트");nb.onclick=()=>testAdminNotify(nb);body.appendChild(nb);
   const nr=el("div","nthint");nr.id="ntRes";nr.style.margin="8px 0 24px";body.appendChild(nr);
+  body.appendChild(el("div","sec","Salesforce 연결 시험"));
+  body.appendChild(el("div","nthint","NEW CRM(Salesforce)에 서버가 읽기 전용으로 접속되는지 확인합니다. 키는 Apps Script 스크립트 속성에만 있고 이 화면에는 건수(숫자)만 옵니다."));
+  const sb=el("button","btn","🔗 Salesforce 연결 시험");sb.onclick=()=>sfTest(sb);body.appendChild(sb);
+  const sr=el("div","nthint");sr.id="sfRes";sr.style.margin="8px 0 24px";sr.style.whiteSpace="pre-line";body.appendChild(sr);
   body.appendChild(el("div","sec","사용 현황 (최근 14일)"));const ub=el("div");body.appendChild(ub);renderUsage(ub);
+}
+async function sfTest(btn){
+  if(!NOTIFY_URL)return;
+  btn.disabled=true;const box=$("sfRes");box.textContent="접속 시험 중… (10~20초)";
+  try{
+    const idToken=await auth.currentUser.getIdToken();
+    const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"sfTest",idToken})});
+    const j=await res.json().catch(()=>null);let t;
+    if(!j)t="❌ 서버 응답이 없습니다.";
+    else if(!j.ok&&j.err==="bad request")t="❌ 서버가 아직 예전 버전입니다(notify v21 필요).";
+    else if(!j.ok)t="❌ "+(j.err||"실패");
+    else if(j.configured===false)t="⚠️ 아직 연결 정보가 없습니다. Apps Script 「프로젝트 설정 → 스크립트 속성」에 다음을 넣어 주세요: "+j.need.join(", ")+"\n(Salesforce 관리자가 만든 Connected App — Client Credentials Flow·읽기 전용 실행 사용자)";
+    else{
+      t=(j.steps||[]).map(s=>(s.ok?"✅ ":"❌ ")+s.msg).join("\n");
+      if(j.objects)t+="\n\n"+j.objects.map(o=>"· "+o.name+": "+o.state+(o.total!=null?" · 전체 "+o.total.toLocaleString()+"건":"")+(o.today!=null?" · 오늘 "+o.today+"건":"")).join("\n");
+    }
+    box.textContent=t;track("sf_test");
+  }catch(e){box.textContent="❌ 서버 연결 실패: "+e.message;}
+  btn.disabled=false;
 }
 
 /* ---------- 홈 화면 설치 (PWA) ---------- */

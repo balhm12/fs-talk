@@ -30,6 +30,7 @@ function doPost(e){
     if(req.type === 'voice') return out_(voice_(req));
     if(req.type === 'link') return out_(link_(req));
     if(req.type === 'adminsync') return out_(adminSync_(req));
+    if(req.type === 'sfTest') return out_(sfTest_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -100,7 +101,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v20';
+const NOTIFY_VER = 'v21';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -409,6 +410,67 @@ function testAdmin_(req){
   const a = adminTargets_();
   const sent = send_(a.targets, '🔔 등록 알림 테스트', '이 알림이 보이면 등록 요청 알림도 이 기기로 옵니다.', APP_URL + '#admin', 'admin-test', {room:''});
   return {ok:true,sent:sent,targets:a.targets.length,devices:a.devices,people:a.people,ver:NOTIFY_VER};
+}
+
+/* ---------- v21: Salesforce(NEW CRM) 연결 시험 — 관리자만, 읽기 전용, 숫자만 돌려줌(레코드 내용·병원명은 앱으로 안 보냄) ----------
+ * Apps Script 「프로젝트 설정 → 스크립트 속성」에만 넣는다(저장소·채팅 금지):
+ *   SF_DOMAIN        예) https://회사명.my.salesforce.com  (샌드박스: https://회사명--sb.sandbox.my.salesforce.com)
+ *   SF_CLIENT_ID     Connected App(또는 External Client App)의 Consumer Key
+ *   SF_CLIENT_SECRET 같은 앱의 Consumer Secret
+ * Connected App 설정: OAuth 사용, Client Credentials Flow 사용 + Run As 사용자(읽기 전용 API 사용자), 범위 api */
+const SF_OBJS = ['WorkOrder','ServiceAppointment','Case','Asset','Account','ServiceResource','ServiceTerritory'];
+function sfToken_(){
+  const dom = String(P_('SF_DOMAIN')||'').replace(/\/+$/,''), id = P_('SF_CLIENT_ID'), sec = P_('SF_CLIENT_SECRET');
+  const need = []; if(!dom) need.push('SF_DOMAIN'); if(!id) need.push('SF_CLIENT_ID'); if(!sec) need.push('SF_CLIENT_SECRET');
+  if(need.length) return {need:need};
+  if(!/^https:\/\/[-\w.]+\.salesforce\.com$/.test(dom)) return {err:'SF_DOMAIN 형식이 맞지 않습니다 (https://…my.salesforce.com)'};
+  const r = UrlFetchApp.fetch(dom + '/services/oauth2/token', {method:'post', muteHttpExceptions:true,
+    payload:{grant_type:'client_credentials', client_id:id, client_secret:sec}});
+  let j = {}; try{ j = JSON.parse(r.getContentText()); }catch(e){}
+  if(r.getResponseCode() !== 200) return {err:'로그인 실패 ('+r.getResponseCode()+') '+(j.error||'')+' '+(j.error_description||'')};
+  return {tok:j.access_token, url:j.instance_url || dom, idUrl:j.id};
+}
+function sfGet_(t, path){
+  const r = UrlFetchApp.fetch(t.url + path, {headers:{Authorization:'Bearer '+t.tok}, muteHttpExceptions:true});
+  let j = null; try{ j = JSON.parse(r.getContentText()); }catch(e){}
+  return {code:r.getResponseCode(), j:j};
+}
+function sfTest_(req){
+  const uid = verifyUser_(String(req.idToken||''));
+  if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  if(db_('talk/admins/'+uid) !== true) return {ok:false,err:'관리자만 시험할 수 있습니다',ver:NOTIFY_VER};
+  const steps = [];
+  const t = sfToken_();
+  if(t.need) return {ok:true,configured:false,need:t.need,ver:NOTIFY_VER};
+  if(t.err){ steps.push({k:'login',ok:false,msg:t.err}); return {ok:true,configured:true,steps:steps,ver:NOTIFY_VER}; }
+  steps.push({k:'login',ok:true,msg:'로그인(토큰 발급) 성공'});
+  // API 버전
+  const v = sfGet_(t, '/services/data/');
+  if(v.code !== 200 || !v.j || !v.j.length){ steps.push({k:'api',ok:false,msg:'API 버전 조회 실패 ('+v.code+')'}); return {ok:true,configured:true,steps:steps,ver:NOTIFY_VER}; }
+  const base = v.j[v.j.length-1].url; steps.push({k:'api',ok:true,msg:'API '+v.j[v.j.length-1].version});
+  // 실행 사용자(이름·사용자명만)
+  if(t.idUrl){ const u = sfGet_({tok:t.tok,url:''}, t.idUrl); if(u.code === 200 && u.j) steps.push({k:'user',ok:true,msg:'실행 사용자: '+(u.j.display_name||'')+' ('+(u.j.username||'')+')'}); }
+  // 개체별 읽기 권한 + 건수(숫자만)
+  const so = sfGet_(t, base + '/sobjects/');
+  const have = {}; ((so.j && so.j.sobjects)||[]).forEach(function(o){ have[o.name] = o.queryable; });
+  const objs = SF_OBJS.map(function(n){
+    if(!(n in have)) return {name:n, state:'없음'};
+    if(!have[n]) return {name:n, state:'조회 권한 없음'};
+    const out = {name:n, state:'읽기 가능'};
+    const q = sfGet_(t, base + '/query/?q=' + encodeURIComponent('SELECT COUNT() FROM ' + n));
+    if(q.code === 200 && q.j) out.total = q.j.totalSize; else out.state = '조회 실패 ('+q.code+')';
+    if(n === 'ServiceAppointment' && q.code === 200){
+      const d = sfGet_(t, base + '/query/?q=' + encodeURIComponent('SELECT COUNT() FROM ServiceAppointment WHERE SchedStartTime = TODAY'));
+      if(d.code === 200 && d.j) out.today = d.j.totalSize;
+    }
+    if(n === 'WorkOrder' && q.code === 200){
+      const d = sfGet_(t, base + '/query/?q=' + encodeURIComponent('SELECT COUNT() FROM WorkOrder WHERE CreatedDate = TODAY'));
+      if(d.code === 200 && d.j) out.today = d.j.totalSize;
+    }
+    return out;
+  });
+  steps.push({k:'objects',ok:objs.some(function(o){ return o.state === '읽기 가능'; }),msg:'개체 읽기 확인'});
+  return {ok:true,configured:true,steps:steps,objects:objs,ver:NOTIFY_VER};
 }
 
 /** FCM 발송 공통 (쓸 수 없는 토큰은 정리) */
