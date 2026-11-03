@@ -1605,7 +1605,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.149";
+const APP_VERSION="2026-11-03.150";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2853,8 +2853,10 @@ function hmore(c,label,fn){const a=el("button","hmore",label+" ›");a.onclick=f
 const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calendar","근무일정",()=>openApp("work")],silmari:["compass","실마리",()=>openApp("silmari")],
   system:["sysgrid","전국시스템",()=>openApp("system")],voc:["star","고객 만족도",()=>openApp("voc")],kpi:["chart","KPI 대시보드",()=>openApp("kpi")],
   saved:["bookmark","저장한 글",()=>go("saved")],org:["users","조직도",()=>go("org")],
-  search:["search","통합 검색",()=>go("search")],team:["users","팀 현황",()=>go("team")],notice:["megaphone","전체공지",()=>go("room-notice")],tech:["doc","기술정보 검색",()=>go("tech")],video:["video","동영상 교육",()=>openBoard("video")]};
-const HLINKS_DEF=["install","work","silmari","system","voc","kpi","saved","org"];
+  search:["search","통합 검색",()=>go("search")],team:["users","팀 현황",()=>go("team")],notice:["megaphone","전체공지",()=>go("room-notice")],tech:["doc","기술정보 검색",()=>go("tech")],video:["video","동영상 교육",()=>openBoard("video")],
+  kc:["wrench","KnowledgeCenter",()=>{openUrl("https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do");track("kc");},"Service Manual, ECR 정보"],
+  pmdb:["doc","Product Manual DB",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_randd001");track("pmdb");},"IFU, 인터페이스 자료, 시약 정보"]};
+const HLINKS_DEF=["install","work","silmari","system","voc","kpi","kc","pmdb","saved","org"];
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
 const homeLinks=()=>{const l=(myLinks||HLINKS_DEF.join(",")).split(",").filter(k=>HLINKS[k]);return l.length?l:HLINKS_DEF;};
 function renderHome(){
@@ -2923,7 +2925,7 @@ function renderHome(){
   const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";s3w.appendChild(kc);
   // 4. 바로가기
   const s4=sec("links");s4.dataset.hk="links";const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
-  const lg=el("div","hlg");homeLinks().filter(k=>k!=="kpi"||isAdmin||myLead()).forEach(k=>{const [i,t,fn]=HLINKS[k];const x=el("button","hlink");x.appendChild(icEl(i,"",20));x.appendChild(el("span",null,t));x.onclick=fn;lg.appendChild(x);});s4.appendChild(lg);
+  const lg=el("div","hlg");homeLinks().filter(k=>k!=="kpi"||isAdmin||myLead()).forEach(k=>{const [i,t,fn,tip]=HLINKS[k];const x=el("button","hlink");if(tip){x.title=tip;x.setAttribute("aria-label",t+" — "+tip);}x.appendChild(icEl(i,"",20));x.appendChild(el("span",null,t));x.onclick=fn;lg.appendChild(x);});s4.appendChild(lg);
   applyHomeLayout(grid);
   const eh=el("div","hedit");const eb=el("button","hmore","홈 화면 순서·표시 바꾸기");eb.onclick=openLayoutEditor;eh.appendChild(eb);b.appendChild(eh);
   navFooter(b);
@@ -3196,7 +3198,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
   grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[]).map(k=>HLINKS[k]));
-  grp("기술지원",[HLINKS.tech,HLINKS.video,["compass","실마리",()=>openApp("silmari")]]);
+  grp("기술지원",[HLINKS.tech,HLINKS.video,HLINKS.kc,HLINKS.pmdb,["compass","실마리",()=>openApp("silmari")]]);
   $("pOv").hidden=false;
 }
 
@@ -3208,14 +3210,14 @@ function renderMenuPage(){
   const role={group:"그룹장",lead:"팀장",staff:""}[myRole()]||"";pt.appendChild(el("span",null,[me.team,me.office,role,isAdmin?"관리자":""].filter(Boolean).join(" · ")));pf.appendChild(pt);
   pf.appendChild(el("span","mnps","내 정보·설정"));pf.appendChild(icEl("chevron","mnchev",18));pf.onclick=()=>go("settings");b.appendChild(pf);
   const grid=(title,items)=>{if(!items.length)return;b.appendChild(el("div","mnh",title));const g=el("div","mngrid");
-    items.forEach(([ic,t,fn,badge,tone])=>{const x=el("button","mnapp");const i=el("span","mnic"+(tone?" "+tone:""));i.appendChild(icEl(ic,"",24));x.appendChild(i);x.appendChild(el("span","mnl",t));if(badge){x.appendChild(el("span","dot",String(badge)));}x.onclick=fn;g.appendChild(x);});b.appendChild(g);};
+    items.forEach(([ic,t,fn,badge,tone,tip])=>{const x=el("button","mnapp");if(tip)x.title=tip;const i=el("span","mnic"+(tone?" "+tone:""));i.appendChild(icEl(ic,"",24));x.appendChild(i);x.appendChild(el("span","mnl",t));if(badge){x.appendChild(el("span","dot",String(badge)));}x.onclick=fn;g.appendChild(x);});b.appendChild(g);};
   const mine=[["search","통합 검색",()=>go("search"),0,"b"],["bookmark","저장한 글",()=>go("saved"),0,"b"],["bell","알림 센터",()=>openNotiCenter(),0,"b"]];
   if(isAdmin||myLead())mine.push(["users","팀 현황",()=>go("team"),0,"b"]);
   if(isAdmin)mine.push(["shield","관리",()=>go("admin"),pendingCount||0,"r"]);
   grid("자주 쓰는 것",mine);
-  const tool=k=>{const h=HLINKS[k];return [h[0],h[1],h[2],0,{install:"o",work:"o",silmari:"g",system:"g",voc:"y",kpi:"y",tech:"b",video:"b"}[k]];};
+  const tool=k=>{const h=HLINKS[k];return [h[0],h[1],h[2],0,{install:"o",work:"o",silmari:"g",system:"g",voc:"y",kpi:"y",tech:"b",video:"b",kc:"b",pmdb:"b"}[k],h[3]];};
   grid("업무 도구",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[]).map(tool));
-  grid("기술지원",["tech","video"].map(tool));
+  grid("기술지원",["tech","video","kc","pmdb"].map(tool));
   b.appendChild(el("div","mnh","앱"));
   const L=el("div","mnlist");const row=(ic,t,sub,fn)=>{const r=el("button","mnrow");r.appendChild(icEl(ic,"",20));const tx=el("span","mnrt");tx.appendChild(el("b",null,t));if(sub)tx.appendChild(el("small",null,sub));r.appendChild(tx);r.appendChild(icEl("chevron","mnchev",18));r.onclick=fn;L.appendChild(r);};
   row("info","사용 안내 · 새 기능","화면을 하나씩 짚어 주는 30초 둘러보기",()=>openCoach());
@@ -3442,7 +3444,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={map:"길찾기",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={map:"길찾기",kc:"KnowledgeCenter",pmdb:"Product Manual DB",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
