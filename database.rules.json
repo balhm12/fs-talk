@@ -458,6 +458,9 @@
             },
             "rby": {
               ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "no": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
             }
           }
         }
