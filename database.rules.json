@@ -427,7 +427,7 @@
             ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
             ".validate": "newData.hasChildren(['t','u','ts','by'])",
             "t": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
             },
             "u": {
               ".validate": "newData.isString() && newData.val().length <= 500 && newData.val().matches(/^https:\\/\\/[^ ]+$/)"
@@ -436,7 +436,7 @@
               ".validate": "newData.isString() && newData.val().length <= 20"
             },
             "n": {
-              ".validate": "newData.isString() && newData.val().length <= 120"
+              ".validate": "newData.isString() && newData.val().length <= 300"
             },
             "ts": {
               ".validate": "newData.isNumber() && newData.val() <= now"
