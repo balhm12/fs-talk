@@ -461,9 +461,9 @@
         }
       },
       "vocfu": {
-        ".read": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
+        ".read": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/users/' + auth.uid + '/team').val() === '고객접점부문' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
         "$k": {
-          ".write": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
+          ".write": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/users/' + auth.uid + '/team').val() === '고객접점부문' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
           ".validate": "newData.hasChildren(['s','by','ts'])",
           "s": {
             ".validate": "newData.val() === 'doing' || newData.val() === 'done'"
@@ -491,7 +491,7 @@
         ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"
       },
       "kpime": {
-        ".read": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
+        ".read": "(auth != null && root.child('talk/admins/' + auth.uid).val() === true) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/users/' + auth.uid + '/team').val() === '고객접점부문' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
         "$p": {
           ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())",
           ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true"

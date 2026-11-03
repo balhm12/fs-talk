@@ -1441,6 +1441,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
     <div class="f"><label for="rTeam">소속</label>
       <select id="rTeam">
         <option value="">선택하세요</option>
+        <option value="고객접점부문">고객접점부문 (부문장)</option>
         <option value="FSG">FSG (그룹장)</option>
         <option>FS WEST</option><option>FS EAST</option><option>FS CENTRAL</option><option>FS SOUTH</option><option>FSS Team</option><option>FSOM Team</option><option>기타</option>
       </select></div>
@@ -1620,7 +1621,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.153";
+const APP_VERSION="2026-11-03.154";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1879,9 +1880,10 @@ function byTeamLead(a,b){
     ||((a.office===lo(a.team)?0:1)-(b.office===lo(b.team)?0:1))||(a.office||"").localeCompare(b.office||"","ko")
     ||((b.lead?1:0)-(a.lead?1:0))||a.name.localeCompare(b.name,"ko");
 }
-function roleTag(p){if(!p)return null;if(p.team==="FSG")return el("span","lead","그룹장");if(p.lead)return el("span","lead","팀장");return null;}
-const TEAM_ORDER=["FSG","FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
-const teamLabel=t=>t==="FSG"?"FSG 그룹장":t;
+const TOP_TEAM="고객접점부문";const isTop=t=>t==="FSG"||t===TOP_TEAM;   // 부문장(FSG 상위)·그룹장 = FSG 전체를 봄
+function roleTag(p){if(!p)return null;if(p.team===TOP_TEAM)return el("span","lead","부문장");if(p.team==="FSG")return el("span","lead","그룹장");if(p.lead)return el("span","lead","팀장");return null;}
+const TEAM_ORDER=["고객접점부문","FSG","FS WEST","FS EAST","FS CENTRAL","FS SOUTH","FSS Team","FSOM Team"];
+const teamLabel=t=>t==="FSG"?"FSG 그룹장":t===TOP_TEAM?"고객접점부문 부문장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
 function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};rosterVer++;syncPickMode();applyMe();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
@@ -2067,7 +2069,7 @@ const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const hm=d=>{const h=d.getHours();return (h<12?"오전 ":"오후 ")+((h%12)||12)+":"+pad(d.getMinutes());};
 let pendingCount=0,listTab="rooms";
 /* 팀 색: 시스멕스 팔레트(파랑·하늘·녹색·주황·퍼플·마젠타)와 그 톤만 사용 */
-const TEAM_COLOR={"FSG":"#00457F","FS WEST":"#0094C6","FS EAST":"#D08A00","FS CENTRAL":"#7E49DC","FS SOUTH":"#2E9E35","FSS Team":"#C232CB","FSOM Team":"#3A78C2"};
+const TEAM_COLOR={"고객접점부문":"#2B3A4A","FSG":"#00457F","FS WEST":"#0094C6","FS EAST":"#D08A00","FS CENTRAL":"#7E49DC","FS SOUTH":"#2E9E35","FSS Team":"#C232CB","FSOM Team":"#3A78C2"};
 const ROOM_LOOK={all:["전체","#00457F","globe"],notice:["전체공지","#E7413E","megaphone"],ts:["FS","#005BAC","wrench"],cs:["CS","#0094C6","headset"],west:["W","#0094C6"],east:["E","#D08A00"],central:["C","#7E49DC"],daejeon:["대전","#9A70E3"],gwangju:["광주","#9A70E3"],south:["S","#2E9E35"],busan:["부산","#4DB353"],daegu:["대구","#4DB353"],fss:["FSS","#C232CB"],fsom:["OM","#3A78C2"]};
 const ROOM_SCOPE={west:["FS WEST"],east:["FS EAST"],central:["FS CENTRAL"],daejeon:["FS CENTRAL","대전"],gwangju:["FS CENTRAL","광주"],south:["FS SOUTH"],busan:["FS SOUTH","부산"],daegu:["FS SOUTH","대구"],fss:["FSS Team"],fsom:["FSOM Team"]};
 function personTeam(name){const p=rosterList().find(x=>x.name===name);return p||null;}
@@ -2505,7 +2507,7 @@ function openVocLow(){
   c.appendChild(el("h3",null,S.mlabel+" 3점 이하 응답 · 후속 조치"));
   c.appendChild(el("div","pkhint","항목마다 조치 상태를 남기면 팀장·관리자가 함께 봅니다. (만족도 원본 데이터는 바꾸지 않음)"));
   const myTeam=me?String(me.team||"").toUpperCase():"";
-  const L=S.R.filter(vocLow).filter(r=>isAdmin||me.team==="FSG"||!myField()||String(r.team||"").toUpperCase()===myTeam).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+  const L=S.R.filter(vocLow).filter(r=>isAdmin||isTop(me.team)||!myField()||String(r.team||"").toUpperCase()===myTeam).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
   const list=el("div","vlist");if(!L.length)list.appendChild(el("p","hp","해당하는 응답이 없습니다."));
   L.forEach(r=>{const k=vocKey(r),fu=vocFu[k]||{};const row=el("div","vrow");
     const h=el("div","vrh");h.appendChild(el("b",null,String(r.org||"")));h.appendChild(el("span",null,[r.fsr,r.team,String(r.ts||"").slice(0,10)].filter(Boolean).join(" · ")));
@@ -2643,7 +2645,7 @@ function openKpiPeople(){
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"개인별 KPI"));const L=el("div","kplist");L.appendChild(el("div","hsoon","불러오는 중…"));c.appendChild(L);$("pOv").hidden=false;
   R("kpime").once("value").then(s=>{const v=s.val()||{};L.textContent="";const myT=me.team;
-    const rows=Object.values(v).filter(r=>r&&r.name&&(isAdmin||me.team==="FSG"||rosterList().some(p=>p.name===r.name&&p.team===myT))).sort((a,b)=>(b.score||0)-(a.score||0));
+    const rows=Object.values(v).filter(r=>r&&r.name&&(isAdmin||isTop(me.team)||rosterList().some(p=>p.name===r.name&&p.team===myT))).sort((a,b)=>(b.score||0)-(a.score||0));
     if(!rows.length){L.appendChild(el("p","hp","올라온 KPI가 없습니다."));return;}
     const t=el("table","kpt");const hr=el("tr");["이름","팀·사무소","KPI 점수","직급 보정","건수","고장","PM","MTTR"].forEach(h=>hr.appendChild(el("th",null,h)));t.appendChild(hr);
     rows.forEach(r=>{const tr=el("tr");[r.name,String(r.team||"").replace("FS ",""),(+r.score||0).toFixed(1),r.gi==null?"–":(+r.gi).toFixed(1),r.total||0,r.rep||0,r.pm||0,r.mttr==null?"–":(+r.mttr).toFixed(1)].forEach(v=>tr.appendChild(el("td",null,String(v))));t.appendChild(tr);});
@@ -3399,9 +3401,9 @@ function openLinkEditor(){                                 // 바로가기 고�
 /* 보는 기준: 직원 = 나 + 우리 팀, 팀장 = 우리 팀, 그룹장(FSG) = 전체 */
 const FIELD_TEAMS=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH"];
 const myField=()=>!!me&&FIELD_TEAMS.includes(String(me.team||"").toUpperCase());   // 현장 팀 여부 (FSS·FSOM 등 지원 팀은 FSG 전체 기준)
-const myRole=()=>!me?"staff":me.team==="FSG"?"group":myLead()?"lead":"staff";
+const myRole=()=>!me?"staff":isTop(me.team)?"group":myLead()?"lead":"staff";
 const myTeamU=()=>me?String(me.team||"").toUpperCase():"";
-const myLead=()=>{if(!me)return false;if(me.team==="FSG")return true;const p=rosterList().find(x=>x.name===me.name&&x.team===me.team);return !!(p&&p.lead);};
+const myLead=()=>{if(!me)return false;if(isTop(me.team))return true;const p=rosterList().find(x=>x.name===me.name&&x.team===me.team);return !!(p&&p.lead);};
 function noticeCards(nav){
       // 전체공지 방에 고정한 글은 대화 목록 맨 위에도 고정 (×로 접으면 다른 글이 고정될 때까지 숨김)
   const np=pinOf("notice");let npHide="";try{npHide=localStorage.getItem("fstalk-npin-hide")||"";}catch(e){}
@@ -3722,7 +3724,7 @@ function renderTeamPage(){
   const b=$("teamBody");if(!b||!me)return;if(!(isAdmin||myLead())){go("home");return;}
   if(!schData&&!schP&&!schErr)schLoad();if(!vocData&&!vocP)vocLoad();
   b.textContent="";
-  const field=TEAM_ORDER.filter(t=>t!=="FSG"&&rosterList().some(p=>p.team===t));   // 현장 4팀 + 지원 팀(FSS·FSOM)
+  const field=TEAM_ORDER.filter(t=>!isTop(t)&&rosterList().some(p=>p.team===t));   // 현장 4팀 + 지원 팀(FSS·FSOM)
   const canPick=isAdmin||myRole()==="group"||!myField();
   if(!teamSel||!field.includes(teamSel))teamSel=field.includes(me.team)?me.team:field[0];   // 처음엔 본인 팀
   const T=teamSel,TU=T.toUpperCase(),tk=schTeamKey(T),tl=(SCH_TEAMS.find(x=>x[0]===tk)||[])[1];
@@ -3856,7 +3858,7 @@ function renderOrgBoard(){
       const c=el("section","obteam");c.style.setProperty("--tc",TEAM_COLOR[t]||"#005BAC");
       const h=el("div","obth");h.appendChild(el("b",null,teamLabel(t)));h.appendChild(el("span",null,ps.length+"명"));
       const tr=teamRoomOf({team:t,office:""});if(tr){const rb=el("button","hmore","팀방 ›");rb.onclick=()=>go("room-"+tr);h.appendChild(rb);}c.appendChild(h);
-      const leads=ps.filter(p=>p.lead||t==="FSG");leads.forEach(p=>c.appendChild(person(p,true)));
+      const leads=ps.filter(p=>p.lead||isTop(t));leads.forEach(p=>c.appendChild(person(p,true)));
       const rest=ps.filter(p=>!leads.includes(p));const offs=[...new Set(rest.map(p=>p.office||""))];
       offs.forEach(o=>{if(offs.length>1||o)c.appendChild(el("div","obof",o?o+" 사무소":"본사·기타"));const g=el("div","obpg");rest.filter(p=>(p.office||"")===o).forEach(p=>g.appendChild(person(p)));c.appendChild(g);});
       G.appendChild(c);});b.appendChild(G);}
