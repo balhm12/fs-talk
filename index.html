@@ -1637,7 +1637,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.155";
+const APP_VERSION="2026-11-03.156";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4708,6 +4708,15 @@ input.addEventListener("keydown",e=>{
   if(e.key==="Escape"&&(replyTo||editing)){cancelCompose();return;}
   if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&!isTouch()){e.preventDefault();$("composer").requestSubmit();}
 });
+/* 한 줄 입력칸에 붙여넣기: 줄바꿈이 사라지며 단어가 붙던 것(웹·PDF에서 복사한 글) → 줄바꿈·특수 공백을 띄어쓰기 하나로 (156) */
+document.addEventListener("paste",e=>{const t=e.target;if(!t||t.tagName!=="INPUT"||!/^(text|search|url|)$/.test(t.type||""))return;
+  const cd=e.clipboardData;if(!cd||(cd.files&&cd.files.length))return;const raw=cd.getData("text/plain");if(!raw||!/[\r\n\t\u00a0\u2000-\u200b\u2028\u2029\u3000]/.test(raw))return;
+  let v=raw.replace(/[\u200b]/g,"").replace(/[\r\n\t\u00a0\u2000-\u200a\u2028\u2029\u3000]+/g," ").replace(/ {2,}/g," ");
+  if(t.type==="url")v=v.trim();
+  e.preventDefault();const a=t.selectionStart??t.value.length,b=t.selectionEnd??a;
+  try{t.setRangeText(v,a,b,"end");}catch(er){t.value=t.value.slice(0,a)+v+t.value.slice(b);}
+  if(t.maxLength>0&&t.value.length>t.maxLength)t.value=t.value.slice(0,t.maxLength);
+  t.dispatchEvent(new Event("input",{bubbles:true}));},true);
 input.addEventListener("paste",e=>{const f=e.clipboardData&&e.clipboardData.files;if(f&&f.length){e.preventDefault();sendFiles(f);}});
 $("composer").addEventListener("submit",async e=>{
   if(isLocked()){e.preventDefault();return;}
