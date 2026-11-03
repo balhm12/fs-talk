@@ -160,6 +160,9 @@
           "phone": {
             ".validate": "newData.isString() && newData.val().length <= 20"
           },
+          "ophone": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
           "email": {
             ".validate": "newData.isString() && newData.val().length <= 80"
           },

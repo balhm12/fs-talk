@@ -1668,7 +1668,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.173";
+const APP_VERSION="2026-11-03.174";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1997,7 +1997,7 @@ function start(){
   R("joined/"+myKey).set(true).catch(()=>{});
   R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
   R("reads").on("value",s=>{reads=s.val()||{};schedule();},()=>{});
-  R("profiles").on("value",s=>{profiles=s.val()||{};if(listTab==="org")renderNav();if(view==="org")renderOrgBoard();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
+  R("profiles").on("value",s=>{profiles=s.val()||{};profilesLoaded=true;setTimeout(profileAuto,2500);if(listTab==="org")renderNav();if(view==="org")renderOrgBoard();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
   R("avatars").on("value",s=>{avatars=s.val()||{};schedule();if(view==="org")renderOrgBoard();if(view==="team")try{renderTeamPage();}catch(e){}renderInfo();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
   refreshPush();
   myRooms().forEach(r=>watchRoom(r.id));
@@ -3427,7 +3427,7 @@ function renderStart(){
   let roomSeen=false;try{roomSeen=!!localStorage.getItem("fstalk-start-room");}catch(e){}
   const items=[
     ["camera","얼굴 사진 넣기","동료가 나를 알아보기 쉬워요",!!avatars[myKey],()=>pickAvatar()],
-    ["phone","휴대폰 번호 넣기","조직도에서 바로 전화할 수 있어요",!!pf.phone,()=>editMyProfile()],
+    ["phone","연락처 넣기 (회사·휴대폰·메일)","조직도에서 바로 전화할 수 있어요",!!(pf.phone&&pf.ophone&&pf.email),()=>editMyProfile()],
     needInst?["download","홈 화면에 설치하기","앱처럼 열리고 알림도 받아요",false,()=>{go("");instOpen=true;try{localStorage.removeItem("fstalk-inst-hide");}catch(e){}renderInstall();}]
       :(typeof pushSupported==="function"&&pushSupported()?["bell","알림 켜기","공지·나를 부른 글을 바로 받아요",push,()=>enablePush()]:null),
     ["chat","우리 팀 대화방 열어 보기","대화 탭 맨 위 「우리 팀」",roomSeen,()=>{listTab="rooms";go("");}]].filter(Boolean);
@@ -4150,12 +4150,12 @@ function renderOrgBoard(){
   const hit=p=>!qq||(p.name+p.team+(p.office||"")+((profiles[personKey(p.team,p.name)]||{}).phone||"")).toLowerCase().replace(/\s+/g,"").includes(qq);
   const person=(p,big)=>{const isMe=me&&p.name===me.name&&p.team===me.team;const row=el("div","obp"+(big?" lead":"")+(isMe?" me":""));const x=el("button","obpb");x.appendChild(personAv(p.name,"s"));
     const m=el("span","obpm");const nm=el("b",null,p.name);const tg=roleTag(p);if(tg)nm.appendChild(tg);m.appendChild(nm);
-    const pf=profiles[personKey(p.team,p.name)]||{};const sub=[p.office?p.office:"",pf.phone||""].filter(Boolean).join(" · ");if(sub)m.appendChild(el("small",null,sub));
+    const pf=profiles[personKey(p.team,p.name)]||{};const sub=[p.office?p.office:"",pf.ophone||pf.phone||""].filter(Boolean).join(" · ");if(sub)m.appendChild(el("small",null,sub));
     const st=schTodayOf(p.name);if(st.length){const sw=el("span","obst");st.forEach(v=>sw.appendChild(el("span","stag "+v[1],v[0])));m.appendChild(sw);}
     x.appendChild(m);x.onclick=()=>openProfile(p);row.appendChild(x);
     // 현장에서 바로 연락: 전화·1:1 (프로필을 열지 않고)
     const acts=el("span","obpa");
-    if(pf.phone){const a=el("a","obpi");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");a.title=p.name+"님에게 전화";a.onclick=()=>track("call");a.setAttribute("aria-label",p.name+"님에게 전화");a.appendChild(icEl("phone","",17));acts.appendChild(a);}
+    const tel=pf.ophone||pf.phone;if(tel){const a=el("a","obpi");a.href="tel:"+tel.replace(/[^0-9+]/g,"");a.title=p.name+"님에게 전화";a.onclick=()=>track("call");a.setAttribute("aria-label",p.name+"님에게 전화");a.appendChild(icEl("phone","",17));acts.appendChild(a);}
     if(!isMe){const c=el("button","obpi");c.title=p.name+"님과 1:1 대화";c.setAttribute("aria-label",p.name+"님과 1:1 대화");c.appendChild(icEl("chat","",17));c.onclick=()=>openDm(p);acts.appendChild(c);}
     row.appendChild(acts);return row;};
   const shown=teams.filter(t=>!orgTeam||t===orgTeam);let any=false;
@@ -5557,7 +5557,7 @@ renderInstall();
 
 /* ---------- 프로필 (연락처·메일) ---------- */
 let profiles={};
-function closeProfile(){scanStop();if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer","cmdk");if(view==="settings")renderSettings();}
+function closeProfile(){if(profReq&&profMissing()){toast("연락처 세 칸을 입력해야 사용할 수 있어요.");return;}profReq=false;scanStop();if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer","cmdk");if(view==="settings")renderSettings();}
 $("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
@@ -5573,9 +5573,10 @@ function openProfile(p){
   c.appendChild(el("div","tm2",teamLabel(p.team)+(p.office?" · "+p.office+" 사무소":"")));
   const pf=profiles[personKey(p.team,p.name)]||{};
   const acts=el("div","acts");
-  if(pf.phone){const a=el("a","act");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("phone",18);return x;})();const t=el("span");t.appendChild(document.createTextNode(pf.phone));t.appendChild(el("small",null,"눌러서 전화 걸기"));a.appendChild(i);a.appendChild(t);acts.appendChild(a);}
+  if(pf.ophone){const a=el("a","act");a.href="tel:"+pf.ophone.replace(/[^0-9+]/g,"");const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("phone",18);return x;})();const t=el("span");t.appendChild(document.createTextNode(pf.ophone));t.appendChild(el("small",null,"회사 번호 · 눌러서 전화"));a.appendChild(i);a.appendChild(t);acts.appendChild(a);}
+  if(pf.phone){const a=el("a","act");a.href="tel:"+pf.phone.replace(/[^0-9+]/g,"");const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("phone",18);return x;})();const t=el("span");t.appendChild(document.createTextNode(pf.phone));t.appendChild(el("small",null,"휴대폰 · 눌러서 전화"));a.appendChild(i);a.appendChild(t);acts.appendChild(a);}
   if(pf.email){const a=el("a","act");a.href="mailto:"+pf.email;const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("mail",18);return x;})();const t=el("span");t.appendChild(document.createTextNode(pf.email));t.appendChild(el("small",null,"눌러서 메일 쓰기"));a.appendChild(i);a.appendChild(t);acts.appendChild(a);}
-  if(!pf.phone&&!pf.email)acts.appendChild(el("div","none","아직 연락처를 입력하지 않았습니다."));
+  if(!pf.phone&&!pf.email&&!pf.ophone)acts.appendChild(el("div","none","아직 연락처를 입력하지 않았습니다."));
   if(me&&!(p.name===me.name&&p.team===me.team)){const b=el("button","act");const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("chat",18);return x;})();const t=el("span");t.appendChild(document.createTextNode("1:1 대화"));t.appendChild(el("small",null,p.name+"님과 둘만 보는 대화"));b.appendChild(i);b.appendChild(t);b.onclick=()=>openDm(p);acts.appendChild(b);}
   const tr=teamRoomOf(p);
   if(tr){const b=el("button","act");const i=(()=>{const x=el("span","ai2");x.innerHTML=ic("chat",18);return x;})();const t=el("span");t.appendChild(document.createTextNode(roomName(tr)+" 방 열기"));b.appendChild(i);b.appendChild(t);b.onclick=()=>{closeProfile();listTab="rooms";go("room-"+tr);};acts.appendChild(b);}
@@ -5644,29 +5645,36 @@ function openCropper(img){
   };
   draw();$("pOv").hidden=false;
 }
-function editMyProfile(){
+/* 174: 연락처 필수 — 회사 번호(우선)·휴대폰·메일 셋 다. 비어 있으면 접속할 때 입력 창(닫을 수 없음) */
+let profReq=false,profilesLoaded=false;
+const profMissing=()=>{const pf=(me&&profiles[myKey])||{};return !pf.ophone||!pf.phone||!pf.email;};
+function profileAuto(){if(!me||!started||!profilesLoaded||!profMissing()||profReq)return;if(!$("pOv").hidden){setTimeout(profileAuto,1500);return;}editMyProfile(true);}
+function editMyProfile(req){
+  req=req===true;profReq=req;
   const c=$("pCard");c.textContent="";
-  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
-  c.appendChild(personAv(me.name));c.appendChild(el("h3",null,"내 연락처"));
-  c.appendChild(el("div","tm2","FS 포털 사용자 모두가 볼 수 있어요"));
+  if(!req){const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);}
+  c.appendChild(personAv(me.name));c.appendChild(el("h3",null,req?"연락처를 입력해 주세요":"내 연락처"));
+  c.appendChild(el("div","tm2",req?"회사 번호·휴대폰 번호·메일은 꼭 필요합니다. FS 포털 사용자 모두가 볼 수 있어요 (조직도에서 바로 전화·메일).":"FS 포털 사용자 모두가 볼 수 있어요 · 세 칸 모두 필수"));
   const pf=profiles[myKey]||{};
   const f=el("form");f.style.marginTop="14px";
   const mk=(lab,id,type,ph,val)=>{const d=el("div","f");const l=el("label",null,lab);l.htmlFor=id;const i=el("input");i.id=id;i.type=type;i.placeholder=ph;i.value=val||"";i.autocomplete="off";d.appendChild(l);d.appendChild(i);return d;};
-  f.appendChild(mk("휴대폰 번호","pfPhone","tel","010-0000-0000",pf.phone));
-  f.appendChild(mk("메일","pfMail","email","name@sysmex.co.kr",pf.email));
+  f.appendChild(mk("회사 번호 (필수)","pfOffice","tel","02-0000-0000",pf.ophone));
+  f.appendChild(mk("휴대폰 번호 (필수)","pfPhone","tel","010-0000-0000",pf.phone));
+  f.appendChild(mk("메일 (필수)","pfMail","email","name@sysmex.co.kr",pf.email));
   const b=el("button","btn pri","저장");b.type="submit";f.appendChild(b);
   f.addEventListener("submit",async e=>{
     e.preventDefault();
-    const phone=$("pfPhone").value.trim(),email=$("pfMail").value.trim();
-    if(phone&&!/^[0-9+\-\s()]{7,20}$/.test(phone)){toast("휴대폰 번호 형식을 확인해 주세요.");return;}
-    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast("메일 주소 형식을 확인해 주세요.");return;}
+    const ophone=$("pfOffice").value.trim(),phone=$("pfPhone").value.trim(),email=$("pfMail").value.trim();
+    const PH=/^[0-9+\-\s()]{7,20}$/;
+    if(!PH.test(ophone)){toast("회사 번호를 넣어 주세요 (예: 02-0000-0000).");$("pfOffice").focus();return;}
+    if(!PH.test(phone)){toast("휴대폰 번호를 넣어 주세요 (예: 010-0000-0000).");$("pfPhone").focus();return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast("메일 주소를 확인해 주세요.");$("pfMail").focus();return;}
     try{
-      if(!phone&&!email)await R("profiles/"+myKey).remove();
-      else await R("profiles/"+myKey).set({phone,email,ts:firebase.database.ServerValue.TIMESTAMP});
-      toast("저장했습니다.");closeProfile();
+      await R("profiles/"+myKey).set({ophone,phone,email,ts:firebase.database.ServerValue.TIMESTAMP});
+      profReq=false;toast("저장했습니다.");closeProfile();
     }catch(err){toast("저장 실패: "+(err.code||err.message)+" — DB 규칙이 최신인지 확인하세요.");}
   });
-  c.appendChild(f);$("pOv").hidden=false;setTimeout(()=>$("pfPhone").focus(),50);
+  c.appendChild(f);$("pOv").hidden=false;setTimeout(()=>$((pf.ophone?"pfPhone":"pfOffice")).focus(),50);
 }
 
 /* ---------- 푸시 알림 ---------- */
@@ -5948,6 +5956,7 @@ function renderSettings(){
   let c=setSec(wrap,"내 정보");
   setRow(c,"camera",avatars[pk]?"얼굴 사진 바꾸기":"얼굴 사진 넣기","이름 옆 동그라미 대신 보여요",()=>pickAvatar());
   if(avatars[pk])setRow(c,"trash","사진 지우기","",async()=>{if(!confirm("얼굴 사진을 지울까요?"))return;try{await R("avatars/"+pk).remove();toast("사진을 지웠습니다.");}catch(e){toast("지우기 실패: "+(e.code||e.message));}});
+  setRow(c,"phone","회사 번호",pf.ophone||"입력 안 함",()=>editMyProfile());
   setRow(c,"phone","휴대폰",pf.phone||"입력 안 함",()=>editMyProfile());
   setRow(c,"mail","메일",pf.email||"입력 안 함",()=>editMyProfile());
   // 알림
