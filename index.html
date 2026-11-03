@@ -1670,7 +1670,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.181";
+const APP_VERSION="2026-11-03.182";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2591,7 +2591,9 @@ function kpiCompute(){
     const tm=setInterval(()=>{n++;let w;try{w=f.contentWindow;}catch(e){}
       try{const lock=w&&w.document.getElementById("lock");if(lock&&!lock.hidden&&n>6)return fin(new Error("KPI 접근 코드가 맞지 않습니다 — KPI 대시보드에서 다시 넣어 주세요"));
         const ok=w&&w.eval("typeof D!=='undefined'&&D&&typeof RAW!=='undefined'&&RAW?1:0");
-        if(ok){const out=w.eval(`(()=>{const p=curPeriod(),pp=prevPeriod(p),c=stats(p.months,null),v=stats(pp.months,null);
+        if(ok){const out=w.eval(`(()=>{/* 182: 대시보드 기본은 진행 중인 달(월초엔 며칠치라 1인당 점수가 한 자리) → 포털은 마지막으로 다 끝난 달 기준 */
+          try{const fm=(D.periods||[]).find(x=>x.kind==='m'&&!x.partial);if(fm&&$('fPeriod').value!==fm.id){['fPeriod','pPeriod'].forEach(id=>{const e=$(id);if(e)e.value=fm.id;});if(typeof syncRange==='function')syncRange();PROD_DIRTY=true;}}catch(e){}
+          const p=curPeriod(),pp=prevPeriod(p),c=stats(p.months,null),v=stats(pp.months,null);
           renderProd();const P=PROD,PR="이번 년도";const groups=P.groups||[];
           const mt=pe=>{const m=(pe.mttr||{})[PR]||{};let s=0,k=0;groups.forEach(g=>{if(m[g]){s+=m[g].avg*m[g].n;k+=m[g].n;}});return k?Math.round(s/k*10)/10:null;};
           const names=Object.keys(P.person||{}),sc=n=>(P.person[n].score||{})[PR]||0;
