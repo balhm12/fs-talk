@@ -1435,6 +1435,8 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .prt small{font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prtag{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;color:#B37400;background:#FDF3E1;border-radius:6px;padding:1px 6px;vertical-align:1px}
 .prst{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:46%}.prtag.x{color:#B42318;background:#FDECEC}
+.pc.used{background:#FDF3E1;color:#9A6200}.pc.used.on2{font-weight:700}html[data-theme=dark] .pc.used{background:rgba(230,158,11,.16);color:#F0B847}
+.bdsep{margin-top:6px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;font-weight:700;color:#9A6200}
 .pc{font-size:12px;border-radius:999px;padding:2px 8px;background:var(--soft);color:var(--sub);white-space:nowrap}
 .pc.on{background:#E9F7EA;color:#1E7A24;font-weight:600}html[data-theme=dark] .pc.on{background:rgba(63,186,70,.18);color:#7DD383}
 .bdv.lnk{border:0;background:none;padding:0;color:var(--link);cursor:pointer;font:inherit;text-align:left}
@@ -1664,7 +1666,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.169";
+const APP_VERSION="2026-11-03.170";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2916,30 +2918,36 @@ function partsLoad(force){
 function partsSearch(q,max){
   const D=partsD;if(!D)return [];const nq=String(q||"").toLowerCase().trim();if(!nq)return [];
   const ws=nq.split(/\s+/).filter(Boolean),flat=v=>String(v||"").toLowerCase().replace(/[\s\-_.]/g,"");const fq=flat(nq);const out=[];
-  const one=(r,u)=>{const code=r[0],erp=u?"":r[1],name=u?r[1]:r[2],eq=u?r[2]:r[11],dk=u?"":r[16];const hay=(code+" "+erp+" "+name+" "+eq+" "+dk).toLowerCase(),fh=flat(code)+" "+flat(erp)+" "+flat(dk);
+  const one=(r,u)=>{const code=r[0],erp=u?"":r[1],name=u?r[1]:r[2],eq=u?r[2]:r[11],dk=u?"":r[16];const ux=!u&&D._ui[code]?D._ui[code].map(x=>x[0]+" "+x[1]).join(" "):"";const hay=(code+" "+erp+" "+name+" "+eq+" "+dk+" "+ux).toLowerCase(),fh=flat(code)+" "+flat(erp)+" "+flat(dk);
     if(!ws.every(w=>hay.includes(w)||fh.includes(flat(w))))return;
     let sc=0;const fc=flat(code),fe=flat(erp);if(fc===fq||fe===fq)sc=100;else if(fc.startsWith(fq)||fe.startsWith(fq))sc=60;else if(name.toLowerCase().includes(nq))sc=30;
     if(!u){const st=r[4]+r[5]+r[6]+r[7]+r[8]+r[9];if(st>0)sc+=5;sc+=Math.min(5,(r[17]||0)/10);if(/폐기|단종/.test(r[15]))sc-=15;}
     out.push({r,u,sc});};
-  D.P.forEach(r=>one(r,false));(D.U||[]).forEach(r=>one(r,true));
+  /* 170: 같은 부품의 중고(번호 뒤 「_★B」 등)는 신규 부품 한 줄에 함께 — 신규 없는 중고만 따로 */
+  if(!(D._pc instanceof Set)){const ui={};(D.U||[]).forEach(u=>{const b=String(u[0]).replace(/_.*$/,"");(ui[b]=ui[b]||[]).push(u);});Object.defineProperty(D,"_ui",{value:ui,enumerable:false,configurable:true});Object.defineProperty(D,"_pc",{value:new Set(D.P.map(r=>r[0])),enumerable:false,configurable:true});}
+  D.P.forEach(r=>one(r,false));(D.U||[]).forEach(r=>{if(!D._pc.has(String(r[0]).replace(/_.*$/,"")))one(r,true);});
+  out.forEach(h=>{if(!h.u)h.us=D._ui[h.r[0]]||null;});
   return out.sort((a,b)=>b.sc-a.sc).slice(0,max||30);
 }
 const won=n=>n?Math.round(n).toLocaleString()+"원":"";
 function partRow(h){const r=h.r,b=el("button","prow");const t=el("span","prt");const nm=el("b",null,h.u?r[1]:r[2]);if(h.u)nm.appendChild(el("span","prtag","중고"));if(!h.u&&/폐기|단종/.test(r[15]))nm.appendChild(el("span","prtag x",/단종/.test(r[15])?"단종":"폐기"));t.appendChild(nm);
   t.appendChild(el("small",null,[r[0],h.u||r[1]===r[0]?"":r[1],h.u?r[2]:r[11]].filter(Boolean).join(" · ")));b.appendChild(t);
   const st=el("span","prst");if(h.u){const left=Math.max(0,(r[7]||0)-(r[8]||0));st.appendChild(el("span",left?"pc on":"pc","남은 "+left));}
-  else{let any=false;POFF.forEach((o,i)=>{const n=r[4+i];if(n>0){any=true;st.appendChild(el("span","pc on",o+" "+n));}});if(!any)st.appendChild(el("span","pc","재고 없음"));}
+  else{let any=false;POFF.forEach((o,i)=>{const n=r[4+i];if(n>0){any=true;st.appendChild(el("span","pc on",o+" "+n));}});if(!any)st.appendChild(el("span","pc",h.us?"신규 없음":"재고 없음"));
+    if(h.us){const left=h.us.reduce((a,u)=>a+Math.max(0,(u[7]||0)-(u[8]||0)),0);st.appendChild(el("span","pc used"+(left?" on2":""),"중고 "+left));}}
   b.appendChild(st);b.onclick=()=>partDetail(h);return b;}
 function partDetail(h){track("parts_v");const r=h.r,c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
-  const tg=el("div","bdtags");tg.appendChild(el("span","hbd",h.u?"중고 부품":"부품"));const eq=h.u?r[2]:r[11];if(eq)tg.appendChild(el("span","hbd",eq));c.appendChild(tg);
+  const tg=el("div","bdtags");tg.appendChild(el("span","hbd",h.u?"중고 부품":h.us?"신규 + 중고":"부품"));const eq=h.u?r[2]:r[11];if(eq)tg.appendChild(el("span","hbd",eq));c.appendChild(tg);
   c.appendChild(el("h3",null,h.u?r[1]:r[2]));
   const tb=el("div","bdinfo");const row=(k,v,fn)=>{if(v===""||v==null)return;const rr=el("div","bdr");rr.appendChild(el("span","bdk",k));const vv=el(fn?"button":"span","bdv"+(fn?" lnk":""),String(v));if(fn)vv.onclick=fn;rr.appendChild(vv);tb.appendChild(rr);};
   row("부품번호",r[0]);
   if(!h.u){row("ERP CODE",r[1]);row("DK CODE",r[16]);row("위치",r[3]);row("금액",won(r[12]));row("포장 단위",r[13]>1?r[13]:"");
     const stk=POFF.map((o,i)=>r[4+i]>0?o+" "+r[4+i]:"").filter(Boolean).join(" · ")||"재고 없음";row("재고",stk+(r[10]?" · 입고 예정 "+r[10]:""));
     row("최근 1년",(r[17]||0)+"개 출고 · "+(r[19]||0)+"개 입고"+(r[18]?" · 마지막 출고 "+fmtMD(r[18]):""));
-    if(r[14])row("교체 부품",r[14]+" ›",()=>{closeProfile();partsQuery(r[14]);});row("비고",r[15]);}
+    if(r[14])row("교체 부품",r[14]+" ›",()=>{closeProfile();partsQuery(r[14]);});row("비고",r[15]);
+    if(h.us)h.us.forEach(u=>{const left=Math.max(0,(u[7]||0)-(u[8]||0));const sep=el("div","bdsep","중고 · "+u[0]);tb.appendChild(sep);
+      row("남은 수량",left+"개 (입고 "+(u[7]||0)+" · 출고 "+(u[8]||0)+")");row("위치",u[3]);row("금액",won(u[4]));row("비고",u[6]);});}
   else{row("위치",r[3]);row("금액",won(r[4]));row("입고·출고",(r[7]||0)+" 입고 · "+(r[8]||0)+" 출고 (남은 "+Math.max(0,(r[7]||0)-(r[8]||0))+")");if(r[5])row("교체 부품",r[5]+" ›",()=>{closeProfile();partsQuery(r[5]);});row("비고",r[6]);}
   c.appendChild(tb);
   const bt=el("div","lebtns wrap");const cp=el("button","btn","번호 복사");cp.onclick=()=>{try{navigator.clipboard.writeText(r[0]);toast("「"+r[0]+"」을 복사했습니다.");}catch(e){}};bt.appendChild(cp);
@@ -5891,7 +5899,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
