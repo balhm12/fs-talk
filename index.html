@@ -1030,6 +1030,7 @@ b,strong,h1,h2,h3{letter-spacing:-.015em}
 /* 왼쪽 레일: 흰 바탕 + 파란 선택 띠 (sysmex.co.kr처럼 흰 헤더·파란 포인트) */
 .rail{background:var(--panel);border-right:1px solid var(--line);gap:4px}
 html[data-theme=dark] .rail{background:var(--panel)}
+.rail .logo{border:0;padding:0;cursor:pointer;font-family:var(--font);transition:transform .12s}.rail button.logo:hover{transform:scale(1.06);background:#005BAC;color:#fff}.rail .logo:active{transform:scale(.95)}
 .rail .logo{background:#005BAC;color:#fff;box-shadow:0 4px 12px rgba(0,91,172,.25);font-weight:800;letter-spacing:-.02em}
 .rail button,.rail a.rlink{color:#7A8594;font-weight:600}
 .rail button:hover,.rail a.rlink:hover{background:var(--soft);color:#005BAC}
@@ -1457,7 +1458,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 
 <div class="app" id="app" hidden>
   <nav class="rail" id="rail">
-    <div class="logo">FS</div>
+    <button class="logo" id="rLogo" title="홈으로" aria-label="홈으로">FS</button>
     <button id="rHome" title="홈"><span class="ri" data-ic="home"></span>홈</button>
     <button id="rOrg" title="조직도"><span class="ri" data-ic="users"></span>조직도</button>
     <button id="rChat" title="대화"><span class="ri" data-ic="chat"></span>대화</button>
@@ -1604,7 +1605,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.148";
+const APP_VERSION="2026-11-03.149";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3957,7 +3958,7 @@ $("rSaved").onclick=$("tSaved").onclick=()=>go("saved");
 $("rTech").onclick=$("tTech").onclick=()=>go("tech");
 $("tMenu").onclick=()=>go("menu");
 $("rSettings").onclick=()=>go("settings");
-$("rHome").onclick=$("tHome").onclick=()=>go("home");
+$("rHome").onclick=$("tHome").onclick=$("rLogo").onclick=()=>go("home");
 $("rAdmin").onclick=$("tAdmin").onclick=()=>go("admin");
 $("lq").addEventListener("input",renderNav);
 
