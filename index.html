@@ -1424,6 +1424,10 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 #mbox .mi b{font-weight:700;color:var(--strong)}#mbox .mi small{color:var(--sub)}
 .lencnt{font-size:12px;color:var(--sub);text-align:right;margin-top:4px}.lencnt.full{color:#C8322F;font-weight:600}
 .f textarea.bdesc{width:100%;min-height:76px;resize:vertical;font-family:inherit;font-size:16px;line-height:1.45;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel);color:inherit;box-sizing:border-box}
+/* 기술정보 상세(168) */
+.bdtags{display:flex;gap:6px;margin:0 0 6px}.bdinfo{display:grid;gap:6px;margin:8px 0 10px;padding:10px 12px;background:var(--soft2);border:1px solid var(--line2);border-radius:12px}
+.bdr{display:flex;gap:12px;font-size:14px}.bdk{flex:0 0 72px;color:var(--sub)}.bdv{color:var(--strong);word-break:break-word}
+.bddesc{white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.6;color:var(--text);margin:0 0 12px}
 </style>
 
 </head>
@@ -1647,7 +1651,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.167";
+const APP_VERSION="2026-11-03.168";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2853,11 +2857,33 @@ function boardEmbed(u){
   return "";
 }
 const KC_HOME="https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do";
+function boardGo(x){
+  if(x.no&&/kcenter\.usu\.com/.test(x.u)){try{navigator.clipboard.writeText(x.no);}catch(e){}toast("「"+x.no+"」을 복사했습니다 — KnowledgeCenter 검색창에 붙여 넣으세요 (Ctrl+V).");setTimeout(()=>openUrl(x.u),300);return;}
+  openUrl(x.u);
+}
+/* 168: 기술정보는 누르면 바로 사이트로 가지 않고 정보(분류·번호·장비·설명·등록/개정)를 먼저 보여 준 뒤 「열기」 */
+function boardDetail(x){
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
+  const cl=el("button","x","×");cl.setAttribute("aria-label","닫기");cl.onclick=closeProfile;c.appendChild(cl);
+  const tags=el("div","bdtags");[x.c&&BCAT[x.c]?BCAT[x.c]:"",x.d||""].filter(Boolean).forEach(t=>tags.appendChild(el("span","hbd",t)));if(tags.children.length)c.appendChild(tags);
+  c.appendChild(el("h3",null,x.t));
+  const tb=el("div","bdinfo");const row=(k,v)=>{if(!v)return;const r=el("div","bdr");r.appendChild(el("span","bdk",k));r.appendChild(el("span","bdv",v));tb.appendChild(r);};
+  row(x.c==="fca"?"FCA 번호":"ECR 번호",x.no);row("분류",x.c&&BCAT[x.c]);row("장비",x.d);row("등록",fmtMD(x.ts)+(x.by?" · "+x.by:""));
+  if(x.ru&&x.ru>(x.ts||0))row("개정",fmtMD(x.ru)+(x.rv?" ("+x.rv+")":"")+(x.rby?" · "+x.rby:""));
+  let host="";try{host=new URL(x.u).hostname.replace(/^www\./,"");}catch(e){}row("연결",/kcenter\.usu\.com/.test(x.u)?"KnowledgeCenter"+(x.no?" (열 때 번호 복사)":""):/sharepoint\.com/.test(x.u)?"SharePoint":/drive\.google|docs\.google/.test(x.u)?"구글 드라이브":host);
+  c.appendChild(tb);
+  if(x.n){const d=el("div","bddesc",x.n);c.appendChild(d);}
+  const bt=el("div","lebtns");
+  const on=!!bfav[x.id];const fv=el("button","btn",on?"★ 즐겨찾기":"☆ 즐겨찾기");fv.onclick=()=>{const now=!bfav[x.id];R("prefs/"+myKey+"/bfav/"+x.id).set(now?true:null).then(()=>{bfav=Object.assign({},bfav);if(now)bfav[x.id]=true;else delete bfav[x.id];fv.textContent=now?"★ 즐겨찾기":"☆ 즐겨찾기";}).catch(()=>{});};bt.appendChild(fv);
+  if(boardMine(x)){const e=el("button","btn","✎ 고치기");e.onclick=()=>boardForm(x.k,x);bt.appendChild(e);}
+  const go=el("button","btn pri",x.no&&/kcenter\.usu\.com/.test(x.u)?"번호 복사하고 열기 ›":"열기 ›");go.onclick=()=>boardGo(x);bt.appendChild(go);
+  c.appendChild(bt);$("pOv").hidden=false;
+}
 function boardOpenItem(x){
   bRecentAdd(x);
-  if(x.no&&/kcenter\.usu\.com/.test(x.u)){try{navigator.clipboard.writeText(x.no);}catch(e){}toast("「"+x.no+"」을 복사했습니다 — KnowledgeCenter 검색창에 붙여 넣으세요 (Ctrl+V).");setTimeout(()=>openUrl(x.u),300);return;}
+  if(x.k==="tech"){boardDetail(x);return;}
   const em=x.k==="video"?boardEmbed(x.u):"";
-  if(!em){openUrl(x.u);return;}
+  if(!em){boardGo(x);return;}
   const c=$("pCard");c.textContent="";c.classList.add("wide");
   const cl=el("button","x","×");cl.setAttribute("aria-label","닫기");cl.onclick=closeProfile;c.appendChild(cl);
   c.appendChild(el("h3",null,(x.d?x.d+" · ":"")+x.t));if(x.n)c.appendChild(el("div","pkhint",x.n));
@@ -2959,15 +2985,17 @@ const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calen
   system:["sysgrid","전국시스템",()=>openApp("system")],voc:["star","고객 만족도",()=>openApp("voc")],kpi:["chart","KPI 대시보드",()=>openApp("kpi")],
   saved:["bookmark","저장한 글",()=>go("saved")],org:["users","조직도",()=>go("org")],
   search:["search","통합 검색",()=>go("search")],team:["users","팀 현황",()=>go("team")],notice:["megaphone","전체공지",()=>go("room-notice")],tech:["doc","기술정보 검색",()=>go("tech")],video:["video","동영상 교육",()=>openBoard("video")],
+  po:["box","부품 발주 관리 시스템",()=>{openUrl("https://parts-order-system-14084.web.app/");track("po");},"FSS·FSOM 부품 발주"],
   kc:["wrench","KnowledgeCenter",()=>{openUrl("https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do");track("kc");},"Service Manual, ECR 정보"],
   pmdb:["doc","Product Manual DB",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_randd001");track("pmdb");},"IFU, 인터페이스 자료, 시약 정보"],
   hr:["user","HR System",()=>{openUrl("https://hr.jadehr.co.kr/");track("hr");},"Sysmex Korea 회사 사이트 · eHR(JaDE)"],
   skr:["globe","SKR SharePoint",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_SKR/SitePages/Home.aspx");track("skr");},"Sysmex Korea 회사 사이트 · SharePoint 메인"]};
-const LGRP=[["업무 도구",["install","work","silmari","system","voc","kpi"],"o"],["기술 자료",["tech","video","kc","pmdb"],"b"],["회사 사이트",["hr","skr"],"g"]];
-const HLINKS_DEF=["install","work","silmari","system","voc","kpi","kc","pmdb","hr","skr","saved","org"];
+const LGRP=[["업무 도구",["install","work","silmari","system","voc","kpi","po"],"o"],["기술 자료",["tech","video","kc","pmdb"],"b"],["회사 사이트",["hr","skr"],"g"]];
+const HLINKS_DEF=["install","work","silmari","system","voc","kpi","po","kc","pmdb","hr","skr","saved","org"];
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
 // 저장 형식: "켠 키들|끈 키들" (예전 형식은 "켠 키들"만). 저장 뒤에 새로 생긴 기본 바로가기는 켜진 채로 뒤에 붙임
-const LINK_ADDED=["kc","pmdb","hr","skr"];   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
+const LINK_ADDED=["kc","pmdb","hr","skr","po"];
+const poOk=()=>isAdmin||(!!me&&(me.team==="FSS Team"||me.team==="FSOM Team"));   // 168: 부품 발주 관리 시스템 = FSS·FSOM(·관리자)   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
 const homeLinks=()=>{if(!myLinks)return HLINKS_DEF.slice();const [a,b]=myLinks.split("|"),on=a.split(",").filter(k=>HLINKS[k]);
   const off=b!==undefined?b.split(","):[],cand=b!==undefined?HLINKS_DEF:LINK_ADDED;cand.forEach(k=>{if(!on.includes(k)&&!off.includes(k))on.push(k);});return on.length?on:HLINKS_DEF.slice();};
 function renderHome(){
@@ -3036,7 +3064,7 @@ function renderHome(){
   const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";s3w.appendChild(kc);
   // 4. 바로가기
   const s4=sec("links");s4.dataset.hk="links";const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
-  const lks=homeLinks().filter(k=>k!=="kpi"||isAdmin||myLead()),used={};
+  const lks=homeLinks().filter(k=>(k!=="kpi"||isAdmin||myLead())&&(k!=="po"||poOk())),used={};
   const lgs=el("div","hlgs");s4.appendChild(lgs);
   LGRP.concat([["포털",lks,"p"]]).forEach(([gt,keys,tone])=>{const ks=lks.filter(k=>keys.indexOf(k)>=0&&!used[k]);if(!ks.length)return;
     const gb=el("div","hlgb");gb.style.setProperty("--k",ks.length);gb.appendChild(el("div","hlgh",gt));const lg=el("div","hlg");gb.appendChild(lg);lgs.appendChild(gb);
@@ -3313,7 +3341,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
-  grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[]).map(k=>HLINKS[k]));
+  grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(k=>HLINKS[k]));
   grp("회사 사이트 (새 창)",[HLINKS.hr,HLINKS.skr]);
   grp("기술지원",[HLINKS.tech,HLINKS.video,HLINKS.kc,HLINKS.pmdb,["compass","실마리",()=>openApp("silmari")]]);
   $("pOv").hidden=false;
@@ -3332,8 +3360,8 @@ function renderMenuPage(){
   if(isAdmin||myLead())mine.push(["users","팀 현황",()=>go("team"),0,"b"]);
   if(isAdmin)mine.push(["shield","관리",()=>go("admin"),pendingCount||0,"r"]);
   grid("자주 쓰는 것",mine);
-  const tool=k=>{const h=HLINKS[k];return [h[0],h[1],h[2],0,{install:"o",work:"o",silmari:"g",system:"g",voc:"y",kpi:"y",tech:"b",video:"b",kc:"b",pmdb:"b",hr:"g",skr:"g"}[k],h[3]];};
-  grid("업무 도구",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[]).map(tool));
+  const tool=k=>{const h=HLINKS[k];return [h[0],h[1],h[2],0,{install:"o",work:"o",silmari:"g",system:"g",voc:"y",kpi:"y",tech:"b",video:"b",kc:"b",pmdb:"b",hr:"g",skr:"g",po:"o"}[k],h[3]];};
+  grid("업무 도구",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(tool));
   grid("기술지원",["tech","video","kc","pmdb"].map(tool));
   grid("회사 사이트",["hr","skr"].map(tool));
   b.appendChild(el("div","mnh","앱"));
@@ -3474,7 +3502,7 @@ function openLinkEditor(){                                 // 바로가기 고�
   c.appendChild(el("h3",null,"바로가기 편집"));c.appendChild(el("div","pkhint","보일 항목을 고르고 ▲▼로 순서를 바꿉니다. 모든 기기에 같이 적용돼요."));
   const list=el("div","ledit");c.appendChild(list);
   const draw=()=>{list.textContent="";
-    const keys=cur.concat(Object.keys(HLINKS).filter(k=>!cur.includes(k)));
+    const keys=cur.concat(Object.keys(HLINKS).filter(k=>!cur.includes(k))).filter(k=>k!=="po"||poOk());
     keys.forEach(k=>{const on=cur.includes(k),i=cur.indexOf(k);const r=el("div","lerow"+(on?"":" off"));
       const cb=el("input");cb.type="checkbox";cb.checked=on;cb.id="le-"+k;cb.onchange=()=>{if(cb.checked)cur.push(k);else cur=cur.filter(z=>z!==k);draw();};r.appendChild(cb);
       const lb=el("label");lb.htmlFor=cb.id;lb.appendChild(icEl(HLINKS[k][0],"",18));lb.appendChild(el("span",null,HLINKS[k][1]));r.appendChild(lb);
@@ -3562,7 +3590,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={map:"길찾기",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={map:"길찾기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
