@@ -1383,6 +1383,21 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 .vmid.pzoom.on{display:block!important;align-items:initial;justify-content:initial}.vmid.pzoom.on .vimg{max-width:none!important;max-height:none!important;width:200%!important;height:auto!important;cursor:zoom-out}
 .vbtn.on{background:#fff;color:#005BAC}
 .vhint{position:absolute;left:0;right:0;top:64px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);pointer-events:none}
+/* 바로가기 묶음(152) */
+.hlgh{font-size:12px;font-weight:700;color:var(--sub);margin:14px 2px 6px;letter-spacing:.01em}
+.hlgs{--C:6;--g:10px;display:flex;flex-wrap:wrap;column-gap:var(--g);row-gap:2px}
+.hlgb{--kk:min(var(--k),var(--C));width:calc((100% - (var(--C) - 1) * var(--g)) / var(--C) * var(--kk) + (var(--kk) - 1) * var(--g));min-width:0}
+.hlgb .hlgh{margin:10px 2px 6px}
+.hlgb .hlg{grid-template-columns:repeat(var(--kk),minmax(0,1fr));gap:var(--g)}
+.hlink .hlic .ico{color:inherit}
+.hlink{justify-content:flex-start;gap:10px;padding:0 12px;text-align:left;height:56px}
+.hlic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+.hlic.o{background:#FDF3E1;color:#B37400}.hlic.b{background:#EAF2FB;color:#005BAC}.hlic.g{background:#E9F7EA;color:#2E8B34}.hlic.p{background:var(--soft);color:var(--sub)}
+html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html[data-theme=dark] .hlic.b{background:rgba(0,91,172,.25);color:#8CC4F5}html[data-theme=dark] .hlic.g{background:rgba(63,186,70,.16);color:#7DD383}
+.hltx{display:flex;flex-direction:column;min-width:0;line-height:1.25}.hltx b{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hltx small{font-size:11.5px;color:var(--sub);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1100px){.hlgs{--C:4}}
+@media (max-width:820px){.hlgs{--C:4;--g:8px}.hlink{flex-direction:column;justify-content:center;gap:5px;height:76px;padding:0 2px;text-align:center}.hltx{align-items:center;width:100%}.hltx b{font-size:12px;font-weight:600;white-space:normal;line-height:1.2;word-break:keep-all}.hltx small{display:none}}
 </style>
 
 </head>
@@ -1605,7 +1620,7 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.151";
+const APP_VERSION="2026-11-03.152";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2858,6 +2873,7 @@ const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calen
   pmdb:["doc","Product Manual DB",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_randd001");track("pmdb");},"IFU, 인터페이스 자료, 시약 정보"],
   hr:["user","HR System",()=>{openUrl("https://hr.jadehr.co.kr/");track("hr");},"Sysmex Korea 회사 사이트 · eHR(JaDE)"],
   skr:["globe","SKR SharePoint",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_SKR/SitePages/Home.aspx");track("skr");},"Sysmex Korea 회사 사이트 · SharePoint 메인"]};
+const LGRP=[["업무 도구",["install","work","silmari","system","voc","kpi"],"o"],["기술 자료",["tech","video","kc","pmdb"],"b"],["회사 사이트",["hr","skr"],"g"]];
 const HLINKS_DEF=["install","work","silmari","system","voc","kpi","kc","pmdb","hr","skr","saved","org"];
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
 const homeLinks=()=>{const l=(myLinks||HLINKS_DEF.join(",")).split(",").filter(k=>HLINKS[k]);return l.length?l:HLINKS_DEF;};
@@ -2927,7 +2943,12 @@ function renderHome(){
   const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";s3w.appendChild(kc);
   // 4. 바로가기
   const s4=sec("links");s4.dataset.hk="links";const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
-  const lg=el("div","hlg");homeLinks().filter(k=>k!=="kpi"||isAdmin||myLead()).forEach(k=>{const [i,t,fn,tip]=HLINKS[k];const x=el("button","hlink");if(tip){x.title=tip;x.setAttribute("aria-label",t+" — "+tip);}x.appendChild(icEl(i,"",20));x.appendChild(el("span",null,t));x.onclick=fn;lg.appendChild(x);});s4.appendChild(lg);
+  const lks=homeLinks().filter(k=>k!=="kpi"||isAdmin||myLead()),used={};
+  const lgs=el("div","hlgs");s4.appendChild(lgs);
+  LGRP.concat([["포털",lks,"p"]]).forEach(([gt,keys,tone])=>{const ks=lks.filter(k=>keys.indexOf(k)>=0&&!used[k]);if(!ks.length)return;
+    const gb=el("div","hlgb");gb.style.setProperty("--k",ks.length);gb.appendChild(el("div","hlgh",gt));const lg=el("div","hlg");gb.appendChild(lg);lgs.appendChild(gb);
+    ks.forEach(k=>{used[k]=1;const [i,t,fn,tip]=HLINKS[k];const x=el("button","hlink");if(tip){x.title=tip;x.setAttribute("aria-label",t+" — "+tip);}
+      const ic=el("span","hlic "+tone);ic.appendChild(icEl(i,"",18));x.appendChild(ic);const tx=el("span","hltx");tx.appendChild(el("b",null,t.replace("KnowledgeCenter","Knowledge\u200BCenter")));if(tip)tx.appendChild(el("small",null,tip.replace(/^Sysmex Korea 회사 사이트 · /,"")));x.appendChild(tx);x.onclick=fn;lg.appendChild(x);});});
   applyHomeLayout(grid);
   const eh=el("div","hedit");const eb=el("button","hmore","홈 화면 순서·표시 바꾸기");eb.onclick=openLayoutEditor;eh.appendChild(eb);b.appendChild(eh);
   navFooter(b);
