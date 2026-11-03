@@ -1398,6 +1398,22 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .hltx small{font-size:11.5px;color:var(--sub);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:1100px){.hlgs{--C:4}}
 @media (max-width:820px){.hlgs{--C:4;--g:8px}.hlink{flex-direction:column;justify-content:center;gap:5px;height:76px;padding:0 2px;text-align:center}.hltx{align-items:center;width:100%}.hltx b{font-size:12px;font-weight:600;white-space:normal;line-height:1.2;word-break:keep-all}.hltx small{display:none}}
+/* 조직 체계도(155) */
+.obtree{display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 16px 16px;margin:0 0 14px;box-shadow:var(--sh-1)}
+.otlv{display:flex;justify-content:center}
+.otv{width:2px;height:16px;background:var(--line)}
+.otn{border-radius:12px;background:var(--panel);border:1px solid var(--line);font-family:var(--font)}
+.otn.up{min-width:240px;max-width:100%;padding:10px 12px;border-top:4px solid var(--tc);display:flex;flex-direction:column;align-items:center;gap:6px}
+.otl{font-weight:800;font-size:14px;color:var(--strong);text-align:center}
+.otp{display:flex;align-items:center;gap:8px;border:0;background:var(--soft);border-radius:10px;padding:6px 12px 6px 6px;color:var(--strong);cursor:pointer;font-family:var(--font)}
+.otp b{font-size:14px;display:flex;align-items:center;gap:6px}.otp:hover{background:var(--sel)}
+.otrail{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;width:100%;padding-top:16px}
+.otrail::before{content:"";position:absolute;top:0;left:calc(100% / 12);right:calc(100% / 12);height:2px;background:var(--line)}
+.otn.team{position:relative;padding:10px 8px;border-top:4px solid var(--tc);cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:3px;color:var(--strong)}
+.otn.team::before{content:"";position:absolute;top:-21px;left:50%;width:2px;height:17px;background:var(--line)}
+.otn.team small{font-size:12px;color:var(--sub)}.otn.team:hover{box-shadow:var(--sh-hover)}
+.obteam.flash{outline:3px solid var(--blue);outline-offset:2px;transition:outline .3s}
+@media (max-width:820px){.obtree{padding:14px 10px 12px}.otn.up{min-width:0;width:100%}.otrail{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.otrail::before{left:25%;right:25%}.otn.team:nth-child(n+3)::before{display:none}}
 </style>
 
 </head>
@@ -1621,7 +1637,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.154";
+const APP_VERSION="2026-11-03.155";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3854,8 +3870,21 @@ function renderOrgBoard(){
   const shown=teams.filter(t=>!orgTeam||t===orgTeam);let any=false;
   if(orgView==="list"){const L=el("div","oblist");shown.forEach(t=>{const ps=all.filter(p=>p.team===t&&hit(p)).sort(byTeamLead);if(!ps.length)return;any=true;
       L.appendChild(el("div","lgrp",teamLabel(t)+" · "+ps.length+"명"));ps.forEach(p=>L.appendChild(person(p)));});b.appendChild(L);}
-  else{const G=el("div","obgrid");shown.forEach(t=>{const ps=all.filter(p=>p.team===t&&hit(p)).sort(byTeamLead);if(!ps.length)return;any=true;
-      const c=el("section","obteam");c.style.setProperty("--tc",TEAM_COLOR[t]||"#005BAC");
+  else{
+    // 조직 체계도(고객접점부문 → FSG → 팀) — 전체 보기·검색 없음일 때만. 위 두 단계는 체계도에만 두고 아래 카드는 팀만
+    const tree=!orgTeam&&!qq&&teams0.some(isTop);
+    if(tree){const T=el("div","obtree");
+      const node=(t,title)=>{const ps=all.filter(p=>p.team===t).sort(byTeamLead);if(!ps.length)return null;any=true;const n=el("div","otn up");n.style.setProperty("--tc",TEAM_COLOR[t]||"#005BAC");
+        n.appendChild(el("div","otl",title));ps.forEach(p=>{const x=el("button","otp");x.appendChild(personAv(p.name,"s"));const m=el("span",null);const nb=el("b",null,p.name);const tg=roleTag(p);if(tg)nb.appendChild(tg);m.appendChild(nb);x.appendChild(m);x.onclick=()=>openProfile(p);n.appendChild(x);});return n;};
+      const tops=[[TOP_TEAM,"고객접점부문"],["FSG","Field Service Group"]].map(([t,l])=>node(t,l)).filter(Boolean);
+      tops.forEach((n,i)=>{const w=el("div","otlv");w.appendChild(n);T.appendChild(w);T.appendChild(el("div","otv"));});
+      const rail=el("div","otrail");TEAM_ORDER.concat(teams0.filter(t=>!TEAM_ORDER.includes(t))).filter(t=>!isTop(t)&&all.some(p=>p.team===t)).forEach(t=>{
+        const ps=all.filter(p=>p.team===t),ld=ps.filter(p=>p.lead);const x=el("button","otn team");x.style.setProperty("--tc",TEAM_COLOR[t]||"#005BAC");
+        x.appendChild(el("div","otl",teamLabel(t)));x.appendChild(el("small",null,(ld.length?ld.map(p=>p.name).join("·")+" 팀장 · ":"")+ps.length+"명"));
+        x.onclick=()=>{const c=document.getElementById("obt-"+t.replace(/\s+/g,"_"));if(c){c.scrollIntoView({behavior:"smooth",block:"start"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1200);}};rail.appendChild(x);});
+      T.appendChild(rail);b.appendChild(T);}
+    const G=el("div","obgrid");shown.filter(t=>!(tree&&isTop(t))).forEach(t=>{const ps=all.filter(p=>p.team===t&&hit(p)).sort(byTeamLead);if(!ps.length)return;any=true;
+      const c=el("section","obteam");c.id="obt-"+t.replace(/\s+/g,"_");c.style.setProperty("--tc",TEAM_COLOR[t]||"#005BAC");
       const h=el("div","obth");h.appendChild(el("b",null,teamLabel(t)));h.appendChild(el("span",null,ps.length+"명"));
       const tr=teamRoomOf({team:t,office:""});if(tr){const rb=el("button","hmore","팀방 ›");rb.onclick=()=>go("room-"+tr);h.appendChild(rb);}c.appendChild(h);
       const leads=ps.filter(p=>p.lead||isTop(t));leads.forEach(p=>c.appendChild(person(p,true)));
