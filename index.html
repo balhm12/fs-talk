@@ -1670,7 +1670,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.183";
+const APP_VERSION="2026-11-03.184";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2016,7 +2016,7 @@ function start(){
   R("kpisvc").on("value",s=>{kpiSvc=s.val();kpiSave();renderKpi();},()=>{});
   R("posters").on("value",s=>{posters=s.val()||{};try{renderPoster();renderBrief();}catch(e){}},()=>{});
   R("kpime/"+myKey).on("value",s=>{kpiMe=s.val();kpiSave();renderKpi();},()=>{});
-  setTimeout(()=>{if(isAdmin||myLead()||myRole()==="group")R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
+  setTimeout(()=>{if(isAdmin||myLead()||myRole()==="group")R("kpime").on("value",s=>{kpiAll=s.val()||{};renderKpi();if(view==="team")try{renderTeamPage();}catch(e){}},()=>{});},1600);   // 팀장 = 우리 팀, 그룹장·관리자 = 전체
   setTimeout(()=>{if(isAdmin||myLead())R("vocfu").on("value",s=>{vocFu=s.val()||{};renderVoc();},()=>{});},1500);
   setTimeout(()=>{let last=0;try{last=+localStorage.getItem("fstalk-kpi-pub")||0;}catch(e){}   // 관리자 PC: 하루 한 번 KPI 자동 갱신
     if(isAdmin&&!isM()&&kpiHasCode()&&Date.now()-last>20*3600e3&&(!kpiSvc||Date.now()-(kpiSvc.at||0)>20*3600e3))kpiPublish(false);},12000);
@@ -4091,7 +4091,7 @@ function renderTeamPage(){
     c3.appendChild(g);if(low.length){const bt=el("button","btn","3점 이하 확인·조치");bt.onclick=openVocLow;c3.appendChild(bt);}}
   // 3. 팀원 KPI
   const h4=el("div","tsech");h4.appendChild(icEl("chart","",18));h4.appendChild(el("b",null,"팀원 KPI"));b.appendChild(h4);const c4=el("section","tsec");b.appendChild(c4);
-  const all=kpiAll?Object.values(kpiAll).filter(r=>r&&r.name&&String(r.team||"").toUpperCase()===TU).sort((a,b)=>(b.score||0)-(a.score||0)):[];
+  const all=kpiAll?Object.values(kpiAll).filter(r=>r&&r.name&&(String(r.team||"").toUpperCase()===TU||String(r.grp||"").toUpperCase()===TU)).sort((a,b)=>(b.score||0)-(a.score||0)):[];
   if(!all.length)c4.appendChild(el("div","hsoon","올라온 KPI가 없습니다 (관리자 PC에서 「KPI 다시 올리기」)."));
   else{const tb=el("table","kpt");const hr=el("tr");["이름","KPI 점수","직급 보정","건수","고장","PM","설치","MTTR(분)"].forEach(h=>hr.appendChild(el("th",null,h)));tb.appendChild(hr);
     all.forEach(r=>{const tr=el("tr");[r.name,(+r.score||0).toFixed(1),r.gi==null?"–":(+r.gi).toFixed(1),r.total||0,r.rep||0,r.pm||0,r.ins||0,r.mttr==null?"–":(+r.mttr).toFixed(1)].forEach(v=>tr.appendChild(el("td",null,String(v))));tb.appendChild(tr);});
