@@ -1620,7 +1620,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.152";
+const APP_VERSION="2026-11-03.153";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2876,7 +2876,10 @@ const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calen
 const LGRP=[["업무 도구",["install","work","silmari","system","voc","kpi"],"o"],["기술 자료",["tech","video","kc","pmdb"],"b"],["회사 사이트",["hr","skr"],"g"]];
 const HLINKS_DEF=["install","work","silmari","system","voc","kpi","kc","pmdb","hr","skr","saved","org"];
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
-const homeLinks=()=>{const l=(myLinks||HLINKS_DEF.join(",")).split(",").filter(k=>HLINKS[k]);return l.length?l:HLINKS_DEF;};
+// 저장 형식: "켠 키들|끈 키들" (예전 형식은 "켠 키들"만). 저장 뒤에 새로 생긴 기본 바로가기는 켜진 채로 뒤에 붙임
+const LINK_ADDED=["kc","pmdb","hr","skr"];   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
+const homeLinks=()=>{if(!myLinks)return HLINKS_DEF.slice();const [a,b]=myLinks.split("|"),on=a.split(",").filter(k=>HLINKS[k]);
+  const off=b!==undefined?b.split(","):[],cand=b!==undefined?HLINKS_DEF:LINK_ADDED;cand.forEach(k=>{if(!on.includes(k)&&!off.includes(k))on.push(k);});return on.length?on:HLINKS_DEF.slice();};
 function renderHome(){
   if(!me)return;
   const key=me.name+"|"+ymd(new Date())+"|"+isAdmin+"|"+(myLinks||"");
@@ -3390,7 +3393,7 @@ function openLinkEditor(){                                 // 바로가기 고�
       list.appendChild(r);});};
   draw();
   const row=el("div","lebtns");const rs=el("button","btn","기본값");rs.onclick=()=>{cur=HLINKS_DEF.slice();draw();};row.appendChild(rs);
-  const ok=el("button","btn pri","저장");ok.onclick=async()=>{if(!cur.length){toast("하나 이상 골라 주세요.");return;}try{await R("prefs/"+myKey+"/links").set(cur.join(","));toast("바로가기를 저장했습니다.");closeProfile();}catch(e){toast("저장 실패: "+(e.code||e.message));}};row.appendChild(ok);c.appendChild(row);
+  const ok=el("button","btn pri","저장");ok.onclick=async()=>{if(!cur.length){toast("하나 이상 골라 주세요.");return;}try{await R("prefs/"+myKey+"/links").set(cur.join(",")+"|"+Object.keys(HLINKS).filter(k=>!cur.includes(k)).join(","));toast("바로가기를 저장했습니다.");closeProfile();}catch(e){toast("저장 실패: "+(e.code||e.message));}};row.appendChild(ok);c.appendChild(row);
   $("pOv").hidden=false;
 }
 /* 보는 기준: 직원 = 나 + 우리 팀, 팀장 = 우리 팀, 그룹장(FSG) = 전체 */
