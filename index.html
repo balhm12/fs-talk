@@ -1666,7 +1666,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.170";
+const APP_VERSION="2026-11-03.171";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3137,7 +3137,8 @@ const HLINKS_DEF=["install","work","silmari","system","voc","kpi","po","kc","pmd
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
 // 저장 형식: "켠 키들|끈 키들" (예전 형식은 "켠 키들"만). 저장 뒤에 새로 생긴 기본 바로가기는 켜진 채로 뒤에 붙임
 const LINK_ADDED=["kc","pmdb","hr","skr","po"];
-const poOk=()=>isAdmin||(!!me&&(me.team==="FSS Team"||me.team==="FSOM Team"));   // 168: 부품 발주 관리 시스템 = FSS·FSOM(·관리자)   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
+const poOk=()=>isAdmin||(!!me&&(me.team==="FSS Team"||me.team==="FSOM Team"||isTop(me.team)));
+const partsFirst=()=>isAdmin||(!!me&&(me.team==="FSOM Team"||isTop(me.team)));   // 171: FSOM·관리자·그룹장(부문장)은 부품 검색·발주를 기술지원·서비스 현황보다 위에   // 168: 부품 발주 관리 시스템 = FSS·FSOM(·관리자)   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
 const homeLinks=()=>{if(!myLinks)return HLINKS_DEF.slice();const [a,b]=myLinks.split("|"),on=a.split(",").filter(k=>HLINKS[k]);
   const off=b!==undefined?b.split(","):[],cand=b!==undefined?HLINKS_DEF:LINK_ADDED;cand.forEach(k=>{if(!on.includes(k)&&!off.includes(k))on.push(k);});return on.length?on:HLINKS_DEF.slice();};
 function renderHome(){
@@ -3198,7 +3199,9 @@ function renderHome(){
   ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
   renderBoardCards();
   // 2-1. 마스터 부품 검색 (CRM 부품재고관리·입출내역·중고 부품 기준)
-  const s2p=sec("parts");const pc=hcard("부품 검색","box","parts");pc.dataset.hk="parts";pc.id="hc-parts";s2p.appendChild(pc);renderPartsCard(pc);
+  const s2p=sec("parts");const pc=hcard("부품 검색","box","parts");pc.dataset.hk="parts";pc.id="hc-parts";s2p.appendChild(pc);
+  if(poOk())hmore(pc,"부품 발주 시스템",()=>HLINKS.po[2]());
+  renderPartsCard(pc);if(partsFirst())s2.parentNode.insertBefore(s2p,s2);
   // 3. 서비스 현황
   const s3=sec("svc","서비스 현황");const hpo=el("div","hposter");hpo.id="hposter";s3.appendChild(hpo);const smi=el("button","svcmini");smi.id="svcMini";smi.setAttribute("aria-expanded","false");s3.appendChild(smi);
   const s3w=el("div","hrow2 even");s3w.id="svcFull";s3.appendChild(s3w);
