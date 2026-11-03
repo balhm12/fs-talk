@@ -1647,7 +1647,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.164";
+const APP_VERSION="2026-11-03.165";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2827,7 +2827,7 @@ const boardSeenKey=k=>"fstalk-board-seen-"+k;
 const boardSeen=k=>{try{return +localStorage.getItem(boardSeenKey(k))||0;}catch(e){return 0;}};
 const boardNew=x=>{const t=Math.max(x.ts||0,x.ru||0);return Date.now()-t<14*864e5&&t>boardSeen(x.k);};   // 14일 안에 올라왔고 아직 안 본 글
 const boardMark=k=>{try{localStorage.setItem(boardSeenKey(k),String(Date.now()));}catch(e){}};
-const BCAT={tb:"기술회보",manual:"매뉴얼 개정",parts:"부품 변경",sop:"SOP",iq:"IQ",oq:"OQ",etc:"기타"};
+const BCAT={tb:"기술회보",manual:"매뉴얼 개정",parts:"부품 변경",ecr:"ECR",fca:"FCA",sop:"SOP",iq:"IQ",oq:"OQ",etc:"기타"};
 let bfav={};
 const bRecent=()=>{try{return JSON.parse(localStorage.getItem("fstalk-brecent")||"[]");}catch(e){return [];}};
 function bRecentAdd(x){const r=bRecent().filter(v=>v!==x.k+"/"+x.id);r.unshift(x.k+"/"+x.id);try{localStorage.setItem("fstalk-brecent",JSON.stringify(r.slice(0,12)));}catch(e){}}
@@ -3878,7 +3878,7 @@ function renderTechPage(){
   const res=el("div","tres");b.appendChild(res);
   const devs=["XN","XN-L","XR","UF","UC","SP-50","CN","HISCL","CS","CA"];
   const drawChips=()=>{fl.textContent="";fl2.textContent="";const mk=(l,on,fn,to)=>{const x=el("button","hchip sm"+(on?" on":""),l);x.onclick=fn;(to||fl).appendChild(x);};
-    [["","전체"],["tb","기술회보"],["manual","매뉴얼 개정"],["parts","부품 변경"],["sop","SOP"],["iq","IQ"],["oq","OQ"],["video","교육 영상"],["sil","실마리 에러"],["fav","★ 즐겨찾기"]].forEach(([k,l])=>mk(l,techF===k,()=>{techF=techF===k?"":k;drawChips();drawRes();}));
+    [["","전체"],["tb","기술회보"],["manual","매뉴얼 개정"],["parts","부품 변경"],["ecr","ECR"],["fca","FCA"],["sop","SOP"],["iq","IQ"],["oq","OQ"],["video","교육 영상"],["sil","실마리 에러"],["fav","★ 즐겨찾기"]].forEach(([k,l])=>mk(l,techF===k,()=>{techF=techF===k?"":k;drawChips();drawRes();}));
     fl2.appendChild(el("span","tclab","장비"));devs.forEach(d=>mk(d,techDev===d,()=>{techDev=techDev===d?"":d;drawChips();drawRes();},fl2));};
   const sec=(title,ic,n,more)=>{const h=el("div","tsech");h.appendChild(icEl(ic,"",18));h.appendChild(el("b",null,title));if(n!=null)h.appendChild(el("span",null,String(n)));if(more)h.appendChild(more);res.appendChild(h);const box=el("div","tsec");res.appendChild(box);return box;};
   const drawRes=()=>{res.textContent="";const qq=techQ.toLowerCase(),ws=qq.split(/\s+/).filter(Boolean),hit=s0=>{const x=String(s0||"").toLowerCase();return ws.every(w=>x.includes(w));};
