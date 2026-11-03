@@ -1670,7 +1670,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.182";
+const APP_VERSION="2026-11-03.183";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2821,14 +2821,14 @@ function openSchWeek(){
   if(!schData||!schData.week)return;
   const c=$("pCard");c.textContent="";c.classList.add("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
-  c.appendChild(el("h3",null,"7일 근무 (야간·당직·휴가)"));
+  c.appendChild(el("h3",null,"7일 근무"));
   const myTk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===myTk)||[])[1];
   let only=schScopeNow()==="team"&&!!myTk;
   const draw=()=>{list.textContent="";
     schData.week.forEach(({d,o},i)=>{const dd=new Date(d+"T00:00:00");const off=dd.getDay()===0||dd.getDay()===6;
       const day=el("div","swday"+(off?" off":"")+(i===0?" today":""));day.appendChild(el("div","swd",(i===0?"오늘 ":i===1?"내일 ":"")+(dd.getMonth()+1)+"/"+dd.getDate()+" ("+"일월화수목금토"[dd.getDay()]+")"));
-      const f=a=>a.filter(v=>!only||v.tl===tl);
-      const rows=[["야간",f(o.night),"n"],["당직",f(o.duty),"d"],["휴가",f(o.leave),"l"],["교육",f(o.edu),"e"]].filter(r=>r[1].length);
+      const f=a=>{const seen={};return (a||[]).filter(v=>(!only||v.tl===tl)&&!seen[v.nm+"|"+v.k]&&(seen[v.nm+"|"+v.k]=1));};   /* 183: 회의·내근·기타도, 같은 사람·같은 내용은 한 번 */
+      const rows=[["야간",f(o.night),"n"],["당직",f(o.duty),"d"],["휴가",f(o.leave),"l"],["교육",f(o.edu),"e"],["회의·내근·기타",f(o.plan),"p"]].filter(r=>r[1].length);
       if(!rows.length)day.appendChild(el("div","schnone","등록 없음"));
       rows.forEach(([lab,arr,cls])=>{const r=el("div","schw "+cls);r.appendChild(el("span","schwl",lab));const v=el("span","schwv");
         arr.forEach((p,j)=>{if(j)v.appendChild(document.createTextNode(", "));const n=el("span",me&&p.nm===me.name?"me":null,p.nm+(p.k!==lab?"("+p.k+")":""));n.title=p.tl;v.appendChild(n);if(!only){v.appendChild(el("i",null," "+p.tl));}});r.appendChild(v);day.appendChild(r);});
