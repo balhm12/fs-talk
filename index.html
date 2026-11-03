@@ -1669,7 +1669,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.177";
+const APP_VERSION="2026-11-03.178";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2439,7 +2439,7 @@ function renderSch(){
   // 오늘 근무
   const w=el("div","schsec");w.appendChild(el("h3",null,"오늘 근무"));
   const line=(lab,arr,cls)=>{if(!arr.length)return;const r=el("div","schw "+(cls||""));r.appendChild(el("span","schwl",lab));const v=el("span","schwv");
-    const g={};arr.forEach(x=>{(g[x.k]=g[x.k]||[]).push(x);});
+    const g={};arr.forEach(x=>{const q=(g[x.k]=g[x.k]||[]);if(!q.some(y=>y.nm===x.nm))q.push(x);});   /* 같은 종류에 같은 사람은 한 번만 */
     const multi=Object.keys(g).length>1;   // 종류가 여럿이면(당직·전화대기·대전당직…) 종류마다 한 줄 — 한 줄에 다 붙으면 읽기 어려움
     Object.keys(g).forEach((k,i)=>{const gv=multi?el("span","schg"):v;if(multi)v.appendChild(gv);if(multi||k!==lab)gv.appendChild(el("i",null,k+" "));g[k].forEach((x,j)=>{if(j)gv.appendChild(document.createTextNode(", "));const n=el("span",mine(x)?"me":null,x.nm);n.title=x.tl;gv.appendChild(n);});});
     r.appendChild(v);w.appendChild(r);};
@@ -4164,7 +4164,8 @@ function renderOrgBoard(){
   // 팀 칩 + 오늘 근무 요약
   const ch=el("div","obchips");const chip=(t,l,n)=>{const x=el("button","hchip sm"+(orgTeam===t?" on":""),l+" "+n);x.onclick=()=>{orgTeam=orgTeam===t?"":t;renderOrgBoard();};ch.appendChild(x);};
   chip("","전체",all.length);teams.forEach(t=>chip(t,teamLabel(t).replace(/^FS /,""),all.filter(p=>p.team===t).length));b.appendChild(ch);
-  if(schData&&schData.today===ymd(new Date())){const w=schData.w,sm=el("div","obsum");const it=(c,l,a)=>{if(!a.length)return;const x=el("span","obs "+c);x.appendChild(el("b",null,l+" "+a.length));x.appendChild(el("span",null,a.map(v=>v.nm).join(", ")));sm.appendChild(x);};
+  /* 178: 휴대폰에서는 「오늘」 요약 숨김(사용자 요청 — 어수선함). PC는 그대로, 이름은 한 번씩만(같은 사람이 여러 칸이면 중복되던 것) */
+  if(schData&&schData.today===ymd(new Date())&&!MQ_M.matches){const w=schData.w,sm=el("div","obsum");const it=(c,l,a)=>{const nm=[...new Set(a.map(v=>v.nm))];if(!nm.length)return;const x=el("span","obs "+c);x.appendChild(el("b",null,l+" "+nm.length));x.appendChild(el("span",null,nm.join(", ")));sm.appendChild(x);};
     it("l","휴가",w.leave);it("n","야간·석간",w.night);it("d","당직",w.duty);it("e","교육",w.edu);it("p","회의·내근·기타",w.plan||[]);if(sm.children.length){sm.insertBefore(el("span","obsl","오늘"),sm.firstChild);b.appendChild(sm);}}
   const qq=orgQ.toLowerCase().replace(/\s+/g,"");
   const hit=p=>!qq||(p.name+p.team+(p.office||"")+((profiles[personKey(p.team,p.name)]||{}).phone||"")).toLowerCase().replace(/\s+/g,"").includes(qq);
