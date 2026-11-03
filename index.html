@@ -1637,7 +1637,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.156";
+const APP_VERSION="2026-11-03.157";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1902,7 +1902,7 @@ const TEAM_ORDER=["고객접점부문","FSG","FS WEST","FS EAST","FS CENTRAL","F
 const teamLabel=t=>t==="FSG"?"FSG 그룹장":t===TOP_TEAM?"고객접점부문 부문장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
-function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};rosterVer++;syncPickMode();applyMe();if(view==="admin")renderAdmin();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
+function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};rosterVer++;syncPickMode();applyMe();if(view==="admin")renderAdmin();if(view==="org"&&typeof renderOrgBoard==="function")renderOrgBoard();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
 function syncPickMode(){
   const has=rosterList().length>0;
   const usePick=has;
@@ -1967,7 +1967,7 @@ function start(){
   R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
   R("reads").on("value",s=>{reads=s.val()||{};schedule();},()=>{});
   R("profiles").on("value",s=>{profiles=s.val()||{};if(listTab==="org")renderNav();if(view==="org")renderOrgBoard();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
-  R("avatars").on("value",s=>{avatars=s.val()||{};schedule();renderInfo();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
+  R("avatars").on("value",s=>{avatars=s.val()||{};schedule();if(view==="org")renderOrgBoard();if(view==="team")try{renderTeamPage();}catch(e){}renderInfo();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
   refreshPush();
   ROOMS.forEach(r=>watchRoom(r.id));
   R("dms/"+myKey).on("value",s=>{dms=s.val()||{};Object.keys(dms).forEach(id=>{if(dmOther(id))watchRoom(id);});schedule();if(view==="chat"&&isDm(room))showView();},()=>{});
