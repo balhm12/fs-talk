@@ -100,7 +100,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v20';
+const NOTIFY_VER = 'v22';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -578,15 +578,15 @@ function schDay_(day){
     let w = {}; try{ w = schGet_('work-schedule/'+t+'/'+day) || {}; }catch(e){ console.error(e); }
     Object.keys(w).forEach(function(nm){
       const e = w[nm]; if(!e || typeof e !== 'object') return;
-      const n = schKey_(e.night); if(n && n!=='OFF' && n!=='잔업') add(nm, n);
+      const n = schKey_(e.night); if(n && n!=='OFF') add(nm, n);
       const wk = schKey_(e.weekend); if(wk) add(nm, wk==='전화' ? '전화대기' : wk);
       const sl = ['am1','am2','pm1','pm2'].map(function(k){ return schKey_(e[k]); });
       if(sl.indexOf('휴가')>=0) add(nm,'휴가'); else if(sl.indexOf('오전휴가')>=0) add(nm,'오전휴가'); else if(sl.indexOf('오후휴가')>=0) add(nm,'오후휴가');
       // v19: 개인 일정 — 교육·회의·내근·DP와 세부 내용(「회의:팀장회의」), 반나절이면 (오전)/(오후)
       const pl = {};
       ['am1','am2','pm1','pm2'].forEach(function(k, j){ const v = String(e[k]||'').trim(), k0 = schKey_(v);
-        if(['교육','회의','내근','DP'].indexOf(k0) < 0) return;
-        const d = v.indexOf(':') >= 0 ? v.slice(v.indexOf(':')+1).trim().slice(0,20) : '', lab = k0 + (d ? ' ' + d : '');
+        if(!k0 || ['ON','휴가','오전휴가','오후휴가'].indexOf(k0) >= 0) return;   // v22: 휴가 외 모든 칸(당직·OFF·그 밖에 적힌 값 포함)
+        const d = v.indexOf(':') >= 0 ? v.slice(v.indexOf(':')+1).trim().slice(0,20) : '', lab = (k0==='OFF'?'휴무(OFF)':k0) + (d ? ' ' + d : '');
         (pl[lab] = pl[lab] || {}); pl[lab][j < 2 ? 'am' : 'pm'] = 1; });
       Object.keys(pl).forEach(function(lab){ const h = pl[lab]; add(nm, lab + (h.am && h.pm ? '' : h.am ? '(오전)' : '(오후)')); });
     });

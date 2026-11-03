@@ -411,7 +411,7 @@ html[data-theme=dark] .ncic{background:#16273A;color:#8CC4F5}
 .obsum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
 .obsl{font-size:12.5px;font-weight:800;color:var(--strong)}
 .obs{display:inline-flex;gap:6px;align-items:baseline;font-size:13px;border-radius:10px;padding:4px 10px;background:var(--soft2)}.obs b{font-size:12.5px}
-.obs.l b{color:#C8332F}.obs.n b{color:#4F46E5}.obs.d b{color:#6D28D9}.obs.e b{color:#0F766E}
+.obs.l b{color:#C8332F}.obs.n b{color:#4F46E5}.obs.d b{color:#6D28D9}.obs.e b{color:#0F766E}.obs.p b{color:#854D0E}
 .obgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
 .obteam{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
 .obth{display:flex;align-items:baseline;gap:8px}.obth b{font-size:16px;color:var(--strong)}.obth span{font-size:12.5px;color:var(--sub)}.obth .hmore{margin-left:auto}
@@ -1637,7 +1637,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.157";
+const APP_VERSION="2026-11-03.158";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2343,15 +2343,16 @@ function schLoad(force){
       .sort((x,y)=>x.start.localeCompare(y.start)||String(x.title||"").localeCompare(String(y.title||"")));
     const day=list=>{const o={night:[],leave:[],duty:[],edu:[],plan:[]};
       list.forEach((w,i)=>{const tl=SCH_TEAMS[i][1];Object.entries(w||{}).forEach(([nm,e])=>{if(!e||typeof e!=="object")return;
-        const nk=schKey(e.night);if(nk&&nk!=="OFF"&&nk!=="잔업")o.night.push({nm,tl,k:nk});
-        const wk=schKey(e.weekend);if(wk)o.duty.push({nm,tl,k:wk==="전화"?"전화대기":wk});
+        const det=v=>{v=String(v||"");return v.includes(":")?v.slice(v.indexOf(":")+1).trim().slice(0,20):"";};   // 「기타:내용」의 세부 내용
+        const nk=schKey(e.night);if(nk&&nk!=="OFF")(nk==="잔업"?o.plan:o.night).push({nm,tl,k:nk+(det(e.night)?" · "+det(e.night):"")});
+        const wk=schKey(e.weekend);if(wk)o.duty.push({nm,tl,k:(wk==="전화"?"전화대기":wk)+(det(e.weekend)?" · "+det(e.weekend):"")});
         const sl=["am1","am2","pm1","pm2"].map(k=>schKey(e[k]));
         const lv=sl.includes("휴가")||(sl.includes("오전휴가")&&sl.includes("오후휴가"))?"휴가":sl.includes("오전휴가")?"오전휴가":sl.includes("오후휴가")?"오후휴가":"";
         if(lv)o.leave.push({nm,tl,k:lv});
         // 개인 일정: 교육·회의·내근·DP(세부 내용 「교육:XN」 포함), 오전·오후만이면 표시
         const raw=["am1","am2","pm1","pm2"].map(k=>String(e[k]||"").trim()),pl={};
-        raw.forEach((v,j)=>{const k0=schKey(v);if(!["교육","회의","내근","DP"].includes(k0))return;const d=v.includes(":")?v.slice(v.indexOf(":")+1).trim():"";const lab=k0+(d?" · "+d.slice(0,20):"");(pl[lab]=pl[lab]||{k0,h:new Set()}).h.add(j<2?"am":"pm");});
-        Object.entries(pl).forEach(([lab,{k0,h}])=>{const k=lab+(h.size===1?(h.has("am")?" (오전)":" (오후)"):"");(k0==="교육"?o.edu:o.plan).push({nm,tl,k});});});});return o;};
+        raw.forEach((v,j)=>{const k0=schKey(v);if(!k0||["ON","휴가","오전휴가","오후휴가"].includes(k0))return;   /* 휴가 외 모든 칸(교육·회의·내근·DP·당직·OFF·그 밖에 근무일정표에 적힌 값) */const d=v.includes(":")?v.slice(v.indexOf(":")+1).trim():"";const lab=k0+(d?" · "+d.slice(0,20):"");(pl[lab]=pl[lab]||{k0,h:new Set()}).h.add(j<2?"am":"pm");});
+        Object.entries(pl).forEach(([lab,{k0,h}])=>{const k=lab+(h.size===1?(h.has("am")?" (오전)":" (오후)"):"");(k0==="교육"?o.edu:k0==="당직"?o.duty:o.plan).push({nm,tl,k:k0==="OFF"?k.replace(/^OFF/,"휴무(OFF)"):k});});});});return o;};
     const at=d=>work.map(w=>(w||{})[d]||{});
     const week=[];for(let i=0;i<7;i++){const d=schAdd(today,i);week.push({d,o:day(at(d))});}
     const nick={};Object.keys(troster||{}).forEach(tk=>schVals(troster[tk]).forEach(m=>{if(m&&m.name)nick[m.name]={tk,nn:String(m.nickname||"").trim()};}));
@@ -2409,7 +2410,7 @@ function renderSch(){
     const multi=Object.keys(g).length>1;   // 종류가 여럿이면(당직·전화대기·대전당직…) 종류마다 한 줄 — 한 줄에 다 붙으면 읽기 어려움
     Object.keys(g).forEach((k,i)=>{const gv=multi?el("span","schg"):v;if(multi)v.appendChild(gv);if(multi||k!==lab)gv.appendChild(el("i",null,k+" "));g[k].forEach((x,j)=>{if(j)gv.appendChild(document.createTextNode(", "));const n=el("span",mine(x)?"me":null,x.nm);n.title=x.tl;gv.appendChild(n);});});
     r.appendChild(v);w.appendChild(r);};
-  line("야간",D.w.night,"n");if(schOff(D.today)||D.w.duty.length)line("당직",D.w.duty,"d");line("휴가",D.w.leave,"l");line("교육",D.w.edu,"e");line("회의·내근·DP",D.w.plan||[],"p");
+  line("야간",D.w.night,"n");if(schOff(D.today)||D.w.duty.length)line("당직",D.w.duty,"d");line("휴가",D.w.leave,"l");line("교육",D.w.edu,"e");line("회의·내근·기타",D.w.plan||[],"p");
   if(!D.w.night.length&&!D.w.leave.length&&!D.w.duty.length&&!D.w.edu.length&&!(D.w.plan||[]).length)w.appendChild(el("div","schnone","등록된 야간·휴가가 없습니다."));
   if(schOff(D.tom)&&D.w2.duty.length)line("내일 당직",D.w2.duty,"d");
   box.appendChild(w);
@@ -3854,7 +3855,7 @@ function renderOrgBoard(){
   const ch=el("div","obchips");const chip=(t,l,n)=>{const x=el("button","hchip sm"+(orgTeam===t?" on":""),l+" "+n);x.onclick=()=>{orgTeam=orgTeam===t?"":t;renderOrgBoard();};ch.appendChild(x);};
   chip("","전체",all.length);teams.forEach(t=>chip(t,teamLabel(t).replace(/^FS /,""),all.filter(p=>p.team===t).length));b.appendChild(ch);
   if(schData&&schData.today===ymd(new Date())){const w=schData.w,sm=el("div","obsum");const it=(c,l,a)=>{if(!a.length)return;const x=el("span","obs "+c);x.appendChild(el("b",null,l+" "+a.length));x.appendChild(el("span",null,a.map(v=>v.nm).join(", ")));sm.appendChild(x);};
-    it("l","휴가",w.leave);it("n","야간·석간",w.night);it("d","당직",w.duty);it("e","교육",w.edu);if(sm.children.length){sm.insertBefore(el("span","obsl","오늘"),sm.firstChild);b.appendChild(sm);}}
+    it("l","휴가",w.leave);it("n","야간·석간",w.night);it("d","당직",w.duty);it("e","교육",w.edu);it("p","회의·내근·기타",w.plan||[]);if(sm.children.length){sm.insertBefore(el("span","obsl","오늘"),sm.firstChild);b.appendChild(sm);}}
   const qq=orgQ.toLowerCase().replace(/\s+/g,"");
   const hit=p=>!qq||(p.name+p.team+(p.office||"")+((profiles[personKey(p.team,p.name)]||{}).phone||"")).toLowerCase().replace(/\s+/g,"").includes(qq);
   const person=(p,big)=>{const isMe=me&&p.name===me.name&&p.team===me.team;const row=el("div","obp"+(big?" lead":"")+(isMe?" me":""));const x=el("button","obpb");x.appendChild(personAv(p.name,"s"));
