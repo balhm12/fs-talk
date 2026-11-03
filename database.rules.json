@@ -464,6 +464,9 @@
             },
             "bk": {
               ".validate": "newData.isString() && newData.val().length <= 80"
+            },
+            "f": {
+              ".validate": "newData.hasChildren(['id','name']) && newData.child('id').isString() && newData.child('id').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length <= 200"
             }
           }
         }
