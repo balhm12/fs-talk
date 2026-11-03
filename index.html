@@ -1669,7 +1669,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.175";
+const APP_VERSION="2026-11-03.176";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3268,11 +3268,12 @@ const APPS={install:{t:"설치일정",ic:"box",u:LINKS.install},work:{t:"근무�
   voc:{t:"고객 만족도",ic:"star",u:LINKS.voc},kpi:{t:"KPI 대시보드",ic:"chart",u:LINKS.kpi,lead:true},system:{t:"전국시스템",ic:"sysgrid",u:LINKS.system,ext:true},
   po:{t:"부품 발주",ic:"box",u:"https://parts-order-system-14084.web.app/",ext:true,po:true},   // 172: 부품 발주 관리 시스템도 포털 안에서(FSS·FSOM·그룹장·관리자)
   /* 175: 다른 사이트도 포털 안에서 — side = 위쪽 탭에는 지금 연 것만 보임. SharePoint는 Microsoft가 다른 사이트 안에 띄우기를 막아(frame-ancestors) 새 창 그대로 */
-  kc:{t:"KnowledgeCenter",ic:"wrench",u:"https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do",ext:true,side:true},
-  hr:{t:"HR System",ic:"user",u:"https://hr.jadehr.co.kr/",ext:true,side:true},
-  edu:{t:"교육 영상",ic:"video",u:"https://sysmex.co.kr/training/video/xn/",ext:true,side:true},
+  /* 176: KC·HR·교육 영상은 실제로 앱 안에서 연결이 거부됨(사용자 확인 11/3) → nofr = 항상 새 창 */
+  kc:{t:"KnowledgeCenter",ic:"wrench",u:"https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do",ext:true,side:true,nofr:true},
+  hr:{t:"HR System",ic:"user",u:"https://hr.jadehr.co.kr/",ext:true,side:true,nofr:true},
+  edu:{t:"교육 영상",ic:"video",u:"https://sysmex.co.kr/training/video/xn/",ext:true,side:true,nofr:true},
   web:{t:"웹 페이지",ic:"globe",u:"",ext:true,side:true}};
-const NOFRAME=/(^|\.)sharepoint\.com$|(^|\.)naver\.com$/;
+const NOFRAME=/(^|\.)sharepoint\.com$|(^|\.)naver\.com$|(^|\.)kcenter\.usu\.com$|(^|\.)jadehr\.co\.kr$|(^|\.)sysmex\.co\.kr$/;
 function winHosts(){try{return JSON.parse(localStorage.getItem("fstalk-win")||"[]");}catch(e){return [];}}
 function siteHost(u){try{return new URL(u,location.href).hostname;}catch(e){return "";}}
 /* 사이트 열기 공통: 포털 앱이면 그 탭, SharePoint 등 막힌 곳·「항상 새 창」으로 정한 곳은 새 창, 나머지는 포털 안 「웹 페이지」 탭 */
@@ -3282,7 +3283,7 @@ function openSite(u,title){if(!u)return;const h=siteHost(u);
   if(/kcenter\.usu\.com$/.test(h)){openApp("kc",u);return;}
   APPS.web.t=(title||h).slice(0,30);APPS.web.u=u;openApp("web",u);}
 let appKey="",appUrlNext={};
-function openApp(k,url){if(!APPS[k]){openUrl(url||k);return;}const A=APPS[k];if(A.side&&winHosts().includes(siteHost(url||A.u))){openUrl(url||A.u);return;}if(url)appUrlNext[k]=url;go("app-"+k);}
+function openApp(k,url){if(!APPS[k]){openUrl(url||k);return;}const A=APPS[k];if(A.nofr||A.side&&winHosts().includes(siteHost(url||A.u))){openUrl(url||A.u);return;}if(url)appUrlNext[k]=url;go("app-"+k);}
 function showApp(){
   const A=APPS[appKey];if(!A)return;if(!A.u&&!appUrlNext[appKey]){go("home");return;}
   $("appTitle").textContent=A.t;const ic=$("appIc");ic.textContent="";ic.appendChild(icEl(A.ic,"",20));
@@ -5951,7 +5952,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/3","KnowledgeCenter·HR·교육 영상·기술정보 링크도 포털 안에서 열기"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
