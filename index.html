@@ -1428,6 +1428,19 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .bdtags{display:flex;gap:6px;margin:0 0 6px}.bdinfo{display:grid;gap:6px;margin:8px 0 10px;padding:10px 12px;background:var(--soft2);border:1px solid var(--line2);border-radius:12px}
 .bdr{display:flex;gap:12px;font-size:14px}.bdk{flex:0 0 72px;color:var(--sub)}.bdv{color:var(--strong);word-break:break-word}
 .bddesc{white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.6;color:var(--text);margin:0 0 12px}
+/* 부품 검색(169) */
+.hpres{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.prow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 12px;cursor:pointer;font-family:var(--font);color:var(--text)}
+.prow:hover{border-color:var(--blue)}.prt{flex:1;min-width:0;display:flex;flex-direction:column}.prt b{font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prt small{font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prtag{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;color:#B37400;background:#FDF3E1;border-radius:6px;padding:1px 6px;vertical-align:1px}
+.prst{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:46%}.prtag.x{color:#B42318;background:#FDECEC}
+.pc{font-size:12px;border-radius:999px;padding:2px 8px;background:var(--soft);color:var(--sub);white-space:nowrap}
+.pc.on{background:#E9F7EA;color:#1E7A24;font-weight:600}html[data-theme=dark] .pc.on{background:rgba(63,186,70,.18);color:#7DD383}
+.bdv.lnk{border:0;background:none;padding:0;color:var(--link);cursor:pointer;font:inherit;text-align:left}
+@media (max-width:820px){.prow{flex-wrap:wrap}.prst{max-width:100%;justify-content:flex-start}}
+.lebtns.wrap{flex-wrap:wrap}.lebtns.wrap>.btn{flex:1 1 auto}
+.vlog{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px;max-height:46vh;overflow:auto}.vlr{display:flex;gap:10px;font-size:14px;line-height:1.45}.vld{flex:0 0 42px;color:var(--sub);font-variant-numeric:tabular-nums}
 </style>
 
 </head>
@@ -1651,7 +1664,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.168";
+const APP_VERSION="2026-11-03.169";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2831,7 +2844,7 @@ const boardSeenKey=k=>"fstalk-board-seen-"+k;
 const boardSeen=k=>{try{return +localStorage.getItem(boardSeenKey(k))||0;}catch(e){return 0;}};
 const boardNew=x=>{const t=Math.max(x.ts||0,x.ru||0);return Date.now()-t<14*864e5&&t>boardSeen(x.k);};   // 14일 안에 올라왔고 아직 안 본 글
 const boardMark=k=>{try{localStorage.setItem(boardSeenKey(k),String(Date.now()));}catch(e){}};
-const BCAT={tb:"기술회보",manual:"매뉴얼 개정",parts:"부품 변경",ecr:"ECR",fca:"FCA",sop:"SOP",iq:"IQ",oq:"OQ",etc:"기타"};
+const BCAT={manual:"매뉴얼 개정",parts:"부품 변경",ecr:"ECR",fca:"FCA",sop:"SOP",iq:"IQ",oq:"OQ",etc:"기타"};
 let bfav={};
 const bRecent=()=>{try{return JSON.parse(localStorage.getItem("fstalk-brecent")||"[]");}catch(e){return [];}};
 function bRecentAdd(x){const r=bRecent().filter(v=>v!==x.k+"/"+x.id);r.unshift(x.k+"/"+x.id);try{localStorage.setItem("fstalk-brecent",JSON.stringify(r.slice(0,12)));}catch(e){}}
@@ -2857,6 +2870,127 @@ function boardEmbed(u){
   return "";
 }
 const KC_HOME="https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do";
+/* ===== 169: 마스터 부품 검색 — 관리자가 CRM 내보내기 4종(부품재고관리·부품입출내역·중고 부품·중고 부품입출내역)을 올리면
+   필요한 열만 뽑아 gzip+base64로 talk/parts/{meta,data}에 저장(입출내역은 부품별 최근 1년 출고·입고 수량과 마지막 출고일만 — 병원·사람 이름은 저장 안 함).
+   직원은 처음 검색할 때 한 번 받아 이 기기에 저장(fstalk-parts, meta.at가 바뀌면 다시 받음) ===== */
+const POFF=["서울","대전","대구","부산","광주","제주"];
+let partsD=null,partsP=null,partsMeta=null;
+function partsBuild(sheets,prev){
+  const H=r=>r.map(x=>String(x==null?"":x).trim());
+  const out={v:1,src:Object.assign({},prev&&prev.src||{}),P:prev&&prev.P||[],U:prev&&prev.U||[],at:Date.now()};
+  const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/,/g,""));return isNaN(n)?0:n;};
+  const dt=v=>{if(v instanceof Date)return v.getTime();const s=String(v||"");const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?Date.UTC(+m[1],+m[2]-1,+m[3]):(typeof v==="number"&&v>20000&&v<80000?Math.round((v-25569)*864e5):0);};
+  const kind=h=>{const a=h[0]||"";return /중고 부품입출내역/.test(a)?"uh":/부품입출내역/.test(a)?"h":/중고 부품$/.test(a)?"u":/부품재고관리/.test(a)?"m":"";};
+  const S={};sheets.forEach(sh=>{if(!sh.rows||!sh.rows.length)return;const h=H(sh.rows[0]);const k=kind(h);if(k&&!S[k])S[k]={h,rows:sh.rows.slice(1),name:sh.name};});
+  const col=(sh,re)=>sh.h.findIndex(x=>re.test(x));
+  const hist=(sh)=>{const m={};if(!sh)return m;const ci=col(sh,/^입출구분/),cd=col(sh,/^입출고일자/),cp=sh.h.findIndex((x,i)=>i>2&&/^(중고 )?부품$/.test(x)),cq=col(sh,/^수량/);
+    const lim=Date.now()-365*864e5;
+    sh.rows.forEach(r=>{const code=String(r[cp]||"").trim();if(!code)return;const t=String(r[ci]||""),d=dt(r[cd]),q=num(r[cq]);const o=m[code]||(m[code]={o:0,i:0,l:0,oa:0,ia:0});
+      if(/^1\.?\s*입고/.test(t)){o.ia+=q;if(d>=lim)o.i+=q;}
+      else if(/^2\.?\s*출고/.test(t)){o.oa+=q;if(d>=lim)o.o+=q;if(d>o.l)o.l=d;}
+      else if(/출고취소/.test(t)){o.oa-=q;if(d>=lim)o.o-=q;}});return m;};
+  if(S.m){const sh=S.m,g=re=>col(sh,re);const ix={erp:g(/^ERP CODE/),code:sh.h.findIndex((x,i)=>i>2&&x==="부품"),name:g(/^부품 명/),loc:g(/^위치/),se:g(/^서울$/),dj:g(/^대전$/),dg:g(/^대구$/),bs:g(/^부산$/),gj:g(/^광주$/),jj:g(/^제주$/),pl:g(/^예정$/),eq:g(/^대표 장비/),pr:g(/^부품 금액/),pk:g(/^포장 단위/),rp:g(/^교체 부품/),nt:g(/^부품 비고/),dk:g(/^DK CODE/)};
+    if(ix.code<0||ix.name<0)throw new Error("부품재고관리 파일에서 「부품」·「부품 명」 열을 찾지 못했습니다");
+    const s=v=>String(v==null?"":v).trim();
+    out.P=sh.rows.filter(r=>s(r[ix.code])).map(r=>[s(r[ix.code]),s(r[ix.erp]),s(r[ix.name]),s(r[ix.loc]).replace(/^0$/,""),num(r[ix.se]),num(r[ix.dj]),num(r[ix.dg]),num(r[ix.bs]),num(r[ix.gj]),num(r[ix.jj]),num(r[ix.pl]),s(r[ix.eq]),num(r[ix.pr]),num(r[ix.pk])||1,s(r[ix.rp]),s(r[ix.nt]).slice(0,120),s(r[ix.dk]),0,0,0]);
+    out.src.m=sh.name;}
+  if(S.h){const m=hist(S.h);out.P.forEach(p=>{const o=m[p[0]];p[17]=o?Math.max(0,o.o):0;p[18]=o?o.l:0;p[19]=o?o.i:0;});out.src.h=S.h.name;}
+  if(S.u){const sh=S.u,g=re=>col(sh,re),s=v=>String(v==null?"":v).trim();const ix={code:g(/^중고 부품 번호/),name:g(/^중고 부품 명$/),eq:g(/^대표 장비/),loc:g(/^위치/),pr:g(/^중고 부품 금액/),rp:g(/^교체 중고 부품/),nt:g(/^중고 부품 비고/)};
+    out.U=sh.rows.filter(r=>s(r[ix.code])).map(r=>[s(r[ix.code]),s(r[ix.name]),s(r[ix.eq]),s(r[ix.loc]).replace(/^0$/,""),num(r[ix.pr]),s(r[ix.rp]),s(r[ix.nt]).slice(0,120),0,0]);out.src.u=sh.name;}
+  if(S.uh){const m=hist(S.uh);out.U.forEach(p=>{const o=m[p[0]];p[7]=o?o.ia:0;p[8]=o?Math.max(0,o.oa):0;});out.src.uh=S.uh.name;}
+  out.kinds=Object.keys(S);return out;
+}
+
+const b64e=u8=>{let s="";for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);};
+const b64d=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;};
+async function gzStr(str){return b64e(new Uint8Array(await new Response(new Blob([new TextEncoder().encode(str)]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer()));}
+async function gunStr(b){return new TextDecoder().decode(await new Response(new Blob([b64d(b)]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());}
+function partsLoad(force){
+  if(partsD&&!force)return Promise.resolve(partsD);if(partsP)return partsP;
+  partsP=(async()=>{const m=(await R("parts/meta").once("value")).val();partsMeta=m;if(!m){partsD=null;return null;}
+    try{const c=JSON.parse(localStorage.getItem("fstalk-parts")||"null");if(c&&c.at===m.at&&!force){partsD=c.d;return partsD;}}catch(e){}
+    const b=(await R("parts/data").once("value")).val();if(!b)return null;partsD=JSON.parse(await gunStr(b));
+    try{localStorage.setItem("fstalk-parts",JSON.stringify({at:m.at,d:partsD}));}catch(e){}return partsD;})().finally(()=>{partsP=null;});
+  return partsP;
+}
+function partsSearch(q,max){
+  const D=partsD;if(!D)return [];const nq=String(q||"").toLowerCase().trim();if(!nq)return [];
+  const ws=nq.split(/\s+/).filter(Boolean),flat=v=>String(v||"").toLowerCase().replace(/[\s\-_.]/g,"");const fq=flat(nq);const out=[];
+  const one=(r,u)=>{const code=r[0],erp=u?"":r[1],name=u?r[1]:r[2],eq=u?r[2]:r[11],dk=u?"":r[16];const hay=(code+" "+erp+" "+name+" "+eq+" "+dk).toLowerCase(),fh=flat(code)+" "+flat(erp)+" "+flat(dk);
+    if(!ws.every(w=>hay.includes(w)||fh.includes(flat(w))))return;
+    let sc=0;const fc=flat(code),fe=flat(erp);if(fc===fq||fe===fq)sc=100;else if(fc.startsWith(fq)||fe.startsWith(fq))sc=60;else if(name.toLowerCase().includes(nq))sc=30;
+    if(!u){const st=r[4]+r[5]+r[6]+r[7]+r[8]+r[9];if(st>0)sc+=5;sc+=Math.min(5,(r[17]||0)/10);if(/폐기|단종/.test(r[15]))sc-=15;}
+    out.push({r,u,sc});};
+  D.P.forEach(r=>one(r,false));(D.U||[]).forEach(r=>one(r,true));
+  return out.sort((a,b)=>b.sc-a.sc).slice(0,max||30);
+}
+const won=n=>n?Math.round(n).toLocaleString()+"원":"";
+function partRow(h){const r=h.r,b=el("button","prow");const t=el("span","prt");const nm=el("b",null,h.u?r[1]:r[2]);if(h.u)nm.appendChild(el("span","prtag","중고"));if(!h.u&&/폐기|단종/.test(r[15]))nm.appendChild(el("span","prtag x",/단종/.test(r[15])?"단종":"폐기"));t.appendChild(nm);
+  t.appendChild(el("small",null,[r[0],h.u||r[1]===r[0]?"":r[1],h.u?r[2]:r[11]].filter(Boolean).join(" · ")));b.appendChild(t);
+  const st=el("span","prst");if(h.u){const left=Math.max(0,(r[7]||0)-(r[8]||0));st.appendChild(el("span",left?"pc on":"pc","남은 "+left));}
+  else{let any=false;POFF.forEach((o,i)=>{const n=r[4+i];if(n>0){any=true;st.appendChild(el("span","pc on",o+" "+n));}});if(!any)st.appendChild(el("span","pc","재고 없음"));}
+  b.appendChild(st);b.onclick=()=>partDetail(h);return b;}
+function partDetail(h){track("parts_v");const r=h.r,c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  const tg=el("div","bdtags");tg.appendChild(el("span","hbd",h.u?"중고 부품":"부품"));const eq=h.u?r[2]:r[11];if(eq)tg.appendChild(el("span","hbd",eq));c.appendChild(tg);
+  c.appendChild(el("h3",null,h.u?r[1]:r[2]));
+  const tb=el("div","bdinfo");const row=(k,v,fn)=>{if(v===""||v==null)return;const rr=el("div","bdr");rr.appendChild(el("span","bdk",k));const vv=el(fn?"button":"span","bdv"+(fn?" lnk":""),String(v));if(fn)vv.onclick=fn;rr.appendChild(vv);tb.appendChild(rr);};
+  row("부품번호",r[0]);
+  if(!h.u){row("ERP CODE",r[1]);row("DK CODE",r[16]);row("위치",r[3]);row("금액",won(r[12]));row("포장 단위",r[13]>1?r[13]:"");
+    const stk=POFF.map((o,i)=>r[4+i]>0?o+" "+r[4+i]:"").filter(Boolean).join(" · ")||"재고 없음";row("재고",stk+(r[10]?" · 입고 예정 "+r[10]:""));
+    row("최근 1년",(r[17]||0)+"개 출고 · "+(r[19]||0)+"개 입고"+(r[18]?" · 마지막 출고 "+fmtMD(r[18]):""));
+    if(r[14])row("교체 부품",r[14]+" ›",()=>{closeProfile();partsQuery(r[14]);});row("비고",r[15]);}
+  else{row("위치",r[3]);row("금액",won(r[4]));row("입고·출고",(r[7]||0)+" 입고 · "+(r[8]||0)+" 출고 (남은 "+Math.max(0,(r[7]||0)-(r[8]||0))+")");if(r[5])row("교체 부품",r[5]+" ›",()=>{closeProfile();partsQuery(r[5]);});row("비고",r[6]);}
+  c.appendChild(tb);
+  const bt=el("div","lebtns wrap");const cp=el("button","btn","번호 복사");cp.onclick=()=>{try{navigator.clipboard.writeText(r[0]);toast("「"+r[0]+"」을 복사했습니다.");}catch(e){}};bt.appendChild(cp);
+  const tk=el("button","btn","기술정보·실마리에서 찾기");tk.onclick=()=>{closeProfile();techQ=r[0];go("tech~"+encodeURIComponent(r[0]));};bt.appendChild(tk);
+  if(poOk()){const po=el("button","btn pri","부품 발주 시스템 ›");po.onclick=()=>{try{navigator.clipboard.writeText(r[0]);}catch(e){}toast("부품번호를 복사했습니다.");HLINKS.po[2]();};bt.appendChild(po);}
+  c.appendChild(bt);
+  const m=partsMeta;if(m)c.appendChild(el("div","pkhint","CRM 기준 · "+fmtMD(m.at)+" 올림"+(m.by?" ("+m.by+")":"")));
+  $("pOv").hidden=false;}
+function partsQuery(q){const i=document.getElementById("hpq");if(i){i.value=q;i.dispatchEvent(new Event("input"));i.scrollIntoView({behavior:"smooth",block:"center"});}else{go("home");setTimeout(()=>partsQuery(q),400);}}
+function renderPartsCard(pc){
+  const f=el("form","hmini");f.setAttribute("role","search");const lb=el("label","vh","부품 검색");lb.htmlFor="hpq";f.appendChild(lb);
+  const q=el("input");q.id="hpq";q.type="search";q.placeholder="부품번호·ERP CODE·부품 이름·장비 (예: AN965961, LAMP XN)";q.autocomplete="off";f.appendChild(q);
+  const gb=el("button","btn","찾기");gb.type="submit";f.appendChild(gb);pc.appendChild(f);
+  const res=el("div","hpres");pc.appendChild(res);const st=el("div","hsilst");pc.appendChild(st);
+  const status=()=>{st.textContent="";const m=partsMeta;if(m){st.appendChild(document.createTextNode("CRM 부품재고 기준 · "+fmtMD(m.at)+" 올림 · 부품 "+(m.n||0).toLocaleString()+"개"+(m.nu?" · 중고 "+m.nu+"개":"")));}
+    else if(m===null)st.appendChild(document.createTextNode(isAdmin?"아직 올라온 부품 자료가 없습니다 — 아래 「CRM 파일 올리기」":"아직 올라온 부품 자료가 없습니다 (관리자가 CRM 파일을 올리면 보입니다)"));
+    if(isAdmin){const ub=el("button","hmore","CRM 파일 올리기");ub.style.marginLeft="8px";ub.onclick=openPartsUpload;st.appendChild(ub);}};
+  let T=0,shown=8;const run=()=>{const v=q.value.trim();res.textContent="";if(v.length<2){return;}
+    partsLoad().then(()=>{if(q.value.trim()!==v)return;status();const L=partsSearch(v,60);res.textContent="";if(!partsD)return;
+      if(!L.length){res.appendChild(el("div","hsoon","맞는 부품이 없습니다."));return;}
+      L.slice(0,shown).forEach(h=>res.appendChild(partRow(h)));
+      if(L.length>shown){const mb=el("button","schmore","더보기 ▾ ("+(L.length>=60?"60+":L.length)+"건 중 "+shown+")");mb.onclick=()=>{shown+=12;run();};res.appendChild(mb);}
+      track("parts");}).catch(e=>{res.textContent="";res.appendChild(el("div","hsoon","부품 자료를 받지 못했습니다: "+(e.code||e.message)));});};
+  q.oninput=()=>{clearTimeout(T);shown=8;T=setTimeout(run,250);};f.onsubmit=e=>{e.preventDefault();clearTimeout(T);run();};
+  q.onfocus=()=>{if(!partsD&&!partsP)partsLoad().then(status).catch(()=>{});};
+  R("parts/meta").once("value").then(sn=>{partsMeta=sn.val();status();}).catch(()=>{});status();
+}
+let xlsxP=null;
+function loadXlsx(){if(window.XLSX)return Promise.resolve(window.XLSX);if(xlsxP)return xlsxP;
+  xlsxP=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";sc.onload=()=>res(window.XLSX);sc.onerror=()=>{xlsxP=null;rej(new Error("엑셀 읽기 도구를 불러오지 못했습니다"));};document.head.appendChild(sc);});return xlsxP;}
+function openPartsUpload(){
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"부품 자료 올리기 (CRM)"));
+  c.appendChild(el("div","pkhint","CRM에서 내보낸 엑셀을 한꺼번에 고르세요. 파일 종류는 첫 열 이름으로 알아봅니다 — 「활성 부품재고관리」(필수), 「1. 모든 부품입출내역」(최근 1년 출고·마지막 출고일), 「활성 중고 부품」, 「1. 모든 중고부품입출내역」. 빠진 파일은 지난번 자료를 그대로 씁니다. 입출내역에서 병원·사람 이름은 저장하지 않고 부품별 수량만 남깁니다."));
+  const fi=el("input");fi.type="file";fi.multiple=true;fi.accept=".xlsx,.xls,.csv";c.appendChild(fi);
+  const st=el("div","nthint");st.style.margin="10px 0";st.style.whiteSpace="pre-line";c.appendChild(st);
+  const go=el("button","btn pri","올리기");c.appendChild(go);
+  go.onclick=async()=>{const fs=[...fi.files];if(!fs.length){st.textContent="파일을 골라 주세요.";return;}go.disabled=true;
+    try{st.textContent="엑셀 읽는 중… (큰 파일은 10초 정도)";const X=await loadXlsx();const sheets=[];
+      for(const f of fs){const wb=X.read(new Uint8Array(await f.arrayBuffer()),{type:"array",cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];sheets.push({name:f.name,rows:X.utils.sheet_to_json(ws,{header:1,raw:true,defval:""})});}
+      let prev=null;try{prev=await partsLoad(true);}catch(e){}
+      const D=partsBuild(sheets,prev);if(!D.P.length)throw new Error("「활성 부품재고관리」 파일이 필요합니다(처음 한 번)");
+      const nm={m:"부품재고관리",h:"부품입출내역",u:"중고 부품",uh:"중고 부품입출내역"};
+      st.textContent="알아본 파일: "+(D.kinds.map(k=>nm[k]).join(", ")||"없음")+"\n압축해서 올리는 중…";
+      const data=await gzStr(JSON.stringify(D));const meta={at:Date.now(),by:me.name,n:D.P.length,nu:(D.U||[]).length,src:D.src};
+      await R("parts").set({meta,data});partsD=D;partsMeta=meta;try{localStorage.setItem("fstalk-parts",JSON.stringify({at:meta.at,d:D}));}catch(e){}
+      st.textContent="✅ 올렸습니다 — 부품 "+D.P.length.toLocaleString()+"개"+(D.U.length?" · 중고 "+D.U.length+"개":"")+"\n알아본 파일: "+D.kinds.map(k=>nm[k]).join(", ")+" ("+Math.round(data.length/1024)+"KB)";track("parts_up");
+      const pc=document.getElementById("hc-parts");if(pc){const keep=pc._head;pc.textContent="";pc.appendChild(keep);renderPartsCard(pc);}}
+    catch(e){st.textContent="❌ "+(e.code||e.message);}finally{go.disabled=false;}};
+  $("pOv").hidden=false;
+}
 function boardGo(x){
   if(x.no&&/kcenter\.usu\.com/.test(x.u)){try{navigator.clipboard.writeText(x.no);}catch(e){}toast("「"+x.no+"」을 복사했습니다 — KnowledgeCenter 검색창에 붙여 넣으세요 (Ctrl+V).");setTimeout(()=>openUrl(x.u),300);return;}
   openUrl(x.u);
@@ -2873,7 +3007,7 @@ function boardDetail(x){
   let host="";try{host=new URL(x.u).hostname.replace(/^www\./,"");}catch(e){}row("연결",/kcenter\.usu\.com/.test(x.u)?"KnowledgeCenter"+(x.no?" (열 때 번호 복사)":""):/sharepoint\.com/.test(x.u)?"SharePoint":/drive\.google|docs\.google/.test(x.u)?"구글 드라이브":host);
   c.appendChild(tb);
   if(x.n){const d=el("div","bddesc",x.n);c.appendChild(d);}
-  const bt=el("div","lebtns");
+  const bt=el("div","lebtns wrap");
   const on=!!bfav[x.id];const fv=el("button","btn",on?"★ 즐겨찾기":"☆ 즐겨찾기");fv.onclick=()=>{const now=!bfav[x.id];R("prefs/"+myKey+"/bfav/"+x.id).set(now?true:null).then(()=>{bfav=Object.assign({},bfav);if(now)bfav[x.id]=true;else delete bfav[x.id];fv.textContent=now?"★ 즐겨찾기":"☆ 즐겨찾기";}).catch(()=>{});};bt.appendChild(fv);
   if(boardMine(x)){const e=el("button","btn","✎ 고치기");e.onclick=()=>boardForm(x.k,x);bt.appendChild(e);}
   const go=el("button","btn pri",x.no&&/kcenter\.usu\.com/.test(x.u)?"번호 복사하고 열기 ›":"열기 ›");go.onclick=()=>boardGo(x);bt.appendChild(go);
@@ -2934,7 +3068,7 @@ function boardForm(k,ed){
   c.appendChild(el("h3",null,B.title+(ed?" 고치기·개정":" 등록")));
   c.appendChild(el("div","pkhint",ed?"내용을 고치거나, 개정판이면 「개정」을 체크하고 개정 표시(예: Rev.08)를 적으세요. 개정하면 알림 센터에 「기술정보 개정」으로 뜹니다.":"링크(사내 드라이브·유튜브·SharePoint 등)를 등록하면 FSG 모두의 포털 첫 화면에 보입니다."));
   const fld=(lab,node)=>{const f=el("div","f");const l=el("label",null,lab);f.appendChild(l);f.appendChild(node);c.appendChild(f);return node;};
-  let cat=null;if(k==="tech"){cat=fld("분류",el("select"));Object.entries(BCAT).forEach(([v,l])=>{const o=el("option",null,l);o.value=v;cat.appendChild(o);});cat.value=(ed&&ed.c)||"tb";}
+  let cat=null;if(k==="tech"){cat=fld("분류",el("select"));Object.entries(BCAT).forEach(([v,l])=>{const o=el("option",null,l);o.value=v;cat.appendChild(o);});cat.value=(ed&&BCAT[ed.c]?ed.c:"")||"manual";}
   const NOC={ecr:"ECR 번호",fca:"FCA 번호"};   /* 166: ECR·FCA는 번호 입력, 링크는 비우면 KnowledgeCenter */
   const no=fld("번호",el("input"));no.maxLength=40;no.value=ed&&ed.no||"";const noF=no.parentNode;
   const t=fld("제목",el("input"));t.maxLength=200;t.placeholder=k==="tech"?"예: XN-1000 WB 채널 개선 TB":"예: XR-9100 일일 점검";t.value=ed?ed.t:"";
@@ -3055,6 +3189,8 @@ function renderHome(){
   sl.dataset.hk="sil";sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);s2w.appendChild(sl);silStatus();
   ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
   renderBoardCards();
+  // 2-1. 마스터 부품 검색 (CRM 부품재고관리·입출내역·중고 부품 기준)
+  const s2p=sec("parts");const pc=hcard("부품 검색","box","parts");pc.dataset.hk="parts";pc.id="hc-parts";s2p.appendChild(pc);renderPartsCard(pc);
   // 3. 서비스 현황
   const s3=sec("svc","서비스 현황");const hpo=el("div","hposter");hpo.id="hposter";s3.appendChild(hpo);const smi=el("button","svcmini");smi.id="svcMini";smi.setAttribute("aria-expanded","false");s3.appendChild(smi);
   const s3w=el("div","hrow2 even");s3w.id="svcFull";s3.appendChild(s3w);
@@ -3337,7 +3473,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"전체 메뉴"));
   const L=[["home","홈",()=>go("home")],["chat","대화",()=>{listTab="rooms";go("");}],["users","조직도",()=>go("org")],["search","통합 검색",()=>go("search")],["bookmark","저장한 글",()=>go("saved")],["bell","알림 센터",()=>setTimeout(openNotiCenter,50)]]
-    .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")],["info","사용 안내 · 새 기능",()=>setTimeout(openCoach,0)],["home","홈 화면 순서·표시",()=>{go("home");setTimeout(openLayoutEditor,0);}]]);
+    .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")],["info","사용 안내 · 새 기능",()=>setTimeout(openCoach,0)],["info","버전 정보",()=>setTimeout(openVersion,0)],["home","홈 화면 순서·표시",()=>{go("home");setTimeout(openLayoutEditor,0);}]]);
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
@@ -3367,6 +3503,7 @@ function renderMenuPage(){
   b.appendChild(el("div","mnh","앱"));
   const L=el("div","mnlist");const row=(ic,t,sub,fn)=>{const r=el("button","mnrow");r.appendChild(icEl(ic,"",20));const tx=el("span","mnrt");tx.appendChild(el("b",null,t));if(sub)tx.appendChild(el("small",null,sub));r.appendChild(tx);r.appendChild(icEl("chevron","mnchev",18));r.onclick=fn;L.appendChild(r);};
   row("info","사용 안내 · 새 기능","화면을 하나씩 짚어 주는 30초 둘러보기",()=>openCoach());
+  row("info","버전 정보","FS 포털 "+APP_VERSION+" · 최근 바뀐 것",()=>openVersion());
   row("layout","홈 화면 순서·표시","자주 보는 카드를 위로",()=>{go("home");setTimeout(openLayoutEditor,60);});
   if(!isStandalone()&&(isIOS||isAndroid||deferredInstall))row("download","홈 화면에 설치하기","앱처럼 쓰고 알림도 받아요",()=>{go("");instOpen=true;try{localStorage.removeItem("fstalk-inst-hide");}catch(e){}renderInstall();});
   row("gear","설정","사진·연락처·알림·글자 크기·다른 기기 연결",()=>go("settings"));
@@ -3467,7 +3604,7 @@ function openPosterUpload(){
 }
 /* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
 let myLayout=null;
-const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
+const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",parts:"부품 검색",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
 const HCARD_DEF=Object.keys(HCARDS);
 function homeLayout(){const v=String(myLayout||"");const [o,h]=v.split("|");const order=(o||"").split(",").filter(k=>HCARDS[k]);HCARD_DEF.forEach(k=>{if(!order.includes(k))order.push(k);});
   return {order,hidden:myLayout?(h||"").split(",").filter(k=>HCARDS[k]):(isM()?["comm","sil","tech","video"]:[]),custom:!!myLayout};}   // 휴대폰 기본: 대화·기술 카드는 각 탭에
@@ -3590,7 +3727,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={map:"길찾기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={map:"길찾기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
@@ -3642,7 +3779,7 @@ const GUIDE_TOUR=[
   ["home","홈","오늘 내 일정·근무, 우리 팀 설치, 확인할 공지가 한눈에 보여요. 아래로 당기면 새로 불러와요."],
   ["users","조직도","팀·사무소별 사람과 오늘 근무(휴가·야간·교육). 이름 옆 버튼으로 바로 전화·1:1 대화."],
   ["chat","대화","맨 위가 「우리 팀」 방이에요. 「/휴가 11/3」처럼 쓰면 근무일정에 바로 등록돼요."],
-  ["doc","기술","에러코드·부품번호·장비 이름으로 실마리·기술회보·매뉴얼·교육 영상을 한 번에 찾아요. 바코드로 찍어도 돼요."],
+  ["doc","기술","에러코드·부품번호·장비 이름으로 실마리·매뉴얼·ECR·FCA·교육 영상을 한 번에 찾아요. 바코드로 찍어도 돼요."],
   ["menu","메뉴","검색·저장한 글·알림 센터·설정, 설치·근무일정표 등 업무 도구가 모여 있어요."]];
 function guideSeen(){try{return localStorage.getItem("fstalk-guide")||"";}catch(e){return "x";}}
 function openGuide(mode){track("guide");
@@ -3666,7 +3803,7 @@ function coachSteps(){
     [m?"#tHome":"#rHome","홈","오늘 내 근무·우리 팀 설치·확인할 공지가 한눈에 보여요."+(m?" 아래로 당기면 새로 불러와요.":"")],
     [m?"#tOrg":"#rOrg","조직도","팀·사무소별 사람과 오늘 근무(휴가·야간·교육). 이름 옆 버튼으로 바로 전화·1:1 대화."],
     [m?"#tChat":"#rChat","대화","맨 위가 「우리 팀」 방이에요. 「/휴가 11/3」처럼 쓰면 근무일정에 바로 등록돼요."],
-    [m?"#tTech":"#rTech","기술","에러코드·부품번호·장비로 실마리·기술회보·매뉴얼·교육 영상을 한 번에 찾아요. 바코드로 찍어도 돼요."],
+    [m?"#tTech":"#rTech","기술","에러코드·부품번호·장비로 실마리·매뉴얼·ECR·FCA·교육 영상을 한 번에 찾아요. 바코드로 찍어도 돼요."],
     m?["#tMenu","메뉴","설치·근무일정표 같은 업무 도구, 알림 센터, 설정·다른 기기 연결이 여기 있어요."]:["#rail .rlink","업무 도구","설치일정·근무일정·실마리·전국시스템을 포털 안에서 바로 열어요."],
     [null,"준비 끝!",(m?"화면을 좌우로 밀어도 탭이 바뀌어요. ":"Ctrl+K로 어디든 빠르게 갈 수 있어요. ")+"다시 보려면 메뉴 → 「사용 안내」."]];
   return S;
@@ -3917,7 +4054,7 @@ function renderTechPage(){
   const res=el("div","tres");b.appendChild(res);
   const devs=["XN","XN-L","XR","UF","UC","SP-50","CN","HISCL","CS","CA"];
   const drawChips=()=>{fl.textContent="";fl2.textContent="";const mk=(l,on,fn,to)=>{const x=el("button","hchip sm"+(on?" on":""),l);x.onclick=fn;(to||fl).appendChild(x);};
-    [["","전체"],["tb","기술회보"],["manual","매뉴얼 개정"],["parts","부품 변경"],["ecr","ECR"],["fca","FCA"],["sop","SOP"],["iq","IQ"],["oq","OQ"],["video","교육 영상"],["sil","실마리 에러"],["fav","★ 즐겨찾기"]].forEach(([k,l])=>mk(l,techF===k,()=>{techF=techF===k?"":k;drawChips();drawRes();}));
+    [["","전체"],["manual","매뉴얼 개정"],["parts","부품 변경"],["ecr","ECR"],["fca","FCA"],["sop","SOP"],["iq","IQ"],["oq","OQ"],["video","교육 영상"],["sil","실마리 에러"],["fav","★ 즐겨찾기"]].forEach(([k,l])=>mk(l,techF===k,()=>{techF=techF===k?"":k;drawChips();drawRes();}));
     fl2.appendChild(el("span","tclab","장비"));devs.forEach(d=>mk(d,techDev===d,()=>{techDev=techDev===d?"":d;drawChips();drawRes();},fl2));};
   const sec=(title,ic,n,more)=>{const h=el("div","tsech");h.appendChild(icEl(ic,"",18));h.appendChild(el("b",null,title));if(n!=null)h.appendChild(el("span",null,String(n)));if(more)h.appendChild(more);res.appendChild(h);const box=el("div","tsec");res.appendChild(box);return box;};
   const drawRes=()=>{res.textContent="";const qq=techQ.toLowerCase(),ws=qq.split(/\s+/).filter(Boolean),hit=s0=>{const x=String(s0||"").toLowerCase();return ws.every(w=>x.includes(w));};
@@ -5753,6 +5890,20 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
   parent.appendChild(b);return b;
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
+/* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
+const VLOG=[["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+  ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
+  ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
+function openVersion(){
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"버전 정보"));
+  const tb=el("div","bdinfo");const row=(k,v)=>{const r=el("div","bdr");r.appendChild(el("span","bdk",k));r.appendChild(el("span","bdv",v));tb.appendChild(r);};
+  row("앱","FS 포털 "+APP_VERSION);row("접속",isStandalone()?"홈 화면 앱":"브라우저");c.appendChild(tb);
+  c.appendChild(el("div","dgrp","최근 바뀐 것"));const L=el("div","vlog");VLOG.forEach(([d,t])=>{const r=el("div","vlr");r.appendChild(el("span","vld",d));r.appendChild(el("span",null,t));L.appendChild(r);});c.appendChild(L);
+  const bt=el("div","lebtns wrap");const ck=el("button","btn pri","새 버전 확인");ck.onclick=async()=>{ck.disabled=true;await checkUpdate(true);ck.disabled=false;if($("updBar").hidden)toast("최신 버전을 쓰고 있어요.");else{closeProfile();toast("새 버전이 있어요 — 위의 안내를 누르면 바뀝니다.");}};bt.appendChild(ck);
+  const gd=el("button","btn","사용 안내");gd.onclick=()=>{closeProfile();setTimeout(openCoach,50);};bt.appendChild(gd);c.appendChild(bt);
+  const ft=el("div","pkhint","FS 포털 · Made by FSS Team");c.appendChild(ft);$("pOv").hidden=false;track("ver");
+}
 function renderSettings(){
   const body=$("settingsBody");if(!body||!me)return;body.textContent="";
   const wrap=el("div","swrap");body.appendChild(wrap);
@@ -5792,7 +5943,7 @@ function renderSettings(){
   [["box","설치일정","https://balhm12.github.io/Sysmex-schedule/index.html"],["calendar","근무일정","https://balhm12.github.io/Sysmex-schedule/work-schedule.html"],["compass","실마리 · Sysmex TS Guide","https://balhm12.github.io/sysmex-ts/"],["sysgrid","전국시스템","https://sysmex-system-configuration.web.app/"],["star","고객 만족도",LINKS.voc]].forEach(([i,t,u])=>setRow(c,i,t,"새 창으로 열기",()=>window.open(u,"_blank","noopener")));
   // 앱 정보
   c=setSec(wrap,"앱 정보");
-  setRow(c,"info","버전",null,null,APP_VERSION);
+  setRow(c,"info","버전 정보","최근 바뀐 것 보기",()=>openVersion(),APP_VERSION);
   setRow(c,"refresh","새 버전 확인","",async()=>{await checkUpdate(true);toast($("updBar").hidden?"최신 버전을 쓰고 있어요.":"새 버전이 있어요 — 위의 안내를 누르세요.");});
   if(!isStandalone()&&(isIOS||isAndroid||deferredInstall))setRow(c,"download","홈 화면에 설치하기","앱처럼 쓰고 알림도 받아요",()=>{go("");instOpen=true;try{localStorage.removeItem("fstalk-inst-hide");}catch(e){}renderInstall();});
   const ft=el("div","sfoot");const lg=el("img");lg.src=document.documentElement.dataset.theme==="dark"?"icons/sysmex-logo-white.png":"icons/sysmex-logo-blue.png";lg.alt="Sysmex";lg.width=111;lg.height=34;ft.appendChild(lg);
