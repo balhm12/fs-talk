@@ -424,7 +424,7 @@
         "$kind": {
           ".validate": "$kind === 'tech' || $kind === 'video'",
           "$id": {
-            ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+            ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true || (root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $kind === 'tech' && ((!data.exists() && newData.child('bk').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val())) || (data.exists() && data.child('bk').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) && (!newData.exists() || newData.child('bk').val() === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()))))))",
             ".validate": "newData.hasChildren(['t','u','ts','by'])",
             "t": {
               ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
@@ -442,7 +442,7 @@
               ".validate": "newData.isNumber() && newData.val() <= now"
             },
             "by": {
-              ".validate": "newData.isString() && newData.val().length <= 40"
+              ".validate": "newData.isString() && newData.val().length <= 40 && (root.child('talk/admins/' + auth.uid).val() === true || newData.val() === root.child('talk/users/' + auth.uid + '/name').val() || newData.val() === data.val())"
             },
             "$other": {
               ".validate": false
@@ -461,6 +461,9 @@
             },
             "no": {
               ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "bk": {
+              ".validate": "newData.isString() && newData.val().length <= 80"
             }
           }
         }

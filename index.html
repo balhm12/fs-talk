@@ -1647,7 +1647,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.166";
+const APP_VERSION="2026-11-03.167";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2841,7 +2841,7 @@ function boardRow(x,admin){
   b.onclick=()=>boardOpenItem(x);r.appendChild(b);
   const on=!!bfav[x.id];const fv=el("button","silfv"+(on?" on":""),on?"★":"☆");fv.title=on?"즐겨찾기 빼기":"즐겨찾기";fv.setAttribute("aria-label",fv.title);
   fv.onclick=()=>{const now=!bfav[x.id];R("prefs/"+myKey+"/bfav/"+x.id).set(now?true:null).then(()=>{bfav=Object.assign({},bfav);if(now)bfav[x.id]=true;else delete bfav[x.id];fv.textContent=now?"★":"☆";fv.classList.toggle("on",now);toast(now?"즐겨찾기에 넣었습니다.":"즐겨찾기에서 뺐습니다.");}).catch(e=>toast("실패: "+(e.code||e.message)));};r.appendChild(fv);
-  if(admin&&isAdmin){const e=el("button","hbx","✎");e.title="고치기·개정";e.setAttribute("aria-label","고치기");e.onclick=()=>boardForm(x.k,x);r.appendChild(e);
+  if(admin&&boardMine(x)){const e=el("button","hbx","✎");e.title="고치기·개정";e.setAttribute("aria-label","고치기");e.onclick=()=>boardForm(x.k,x);r.appendChild(e);
     const d=el("button","hbx","×");d.title="삭제";d.setAttribute("aria-label","삭제");d.onclick=()=>{if(confirm("「"+x.t+"」을(를) 삭제할까요?"))R("board/"+x.k+"/"+x.id).remove().then(()=>{toast("삭제했습니다.");if(!$("pOv").hidden)openBoard(x.k);}).catch(er=>toast("실패: "+er.message));};r.appendChild(d);}
   return r;
 }
@@ -2872,7 +2872,7 @@ function renderBoardCards(){
     L.slice(0,4).forEach(x=>l.appendChild(boardRow(x)));
     if(L.length>4){const mb=el("button","sillink","외 "+(L.length-4)+"건 — 전체 보기 ›");mb.onclick=()=>openBoard(k);l.appendChild(mb);}
     if(k==="video"&&!c.querySelector(".sysv"))c.appendChild(sysVideoChips());
-    let ab=c.querySelector(".hbadd");if(isAdmin&&!ab){ab=el("button","btn hbadd","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}else if(!isAdmin&&ab)ab.remove();});
+    let ab=c.querySelector(".hbadd");if(boardCanAdd(k)&&!ab){ab=el("button","btn hbadd","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}else if(!boardCanAdd(k)&&ab)ab.remove();});
 }
 function openBoard(k,dev,opt){
   opt=opt||{};const B=BOARD[k];setTimeout(()=>{boardMark(k);renderBoardCards();},1500);
@@ -2896,9 +2896,12 @@ function openBoard(k,dev,opt){
     if(st.rec)LL=rec.map(id=>LL.find(v=>v.k+"/"+v.id===id)).filter(Boolean);
     if(!LL.length)box.appendChild(el("p","hp",st.fav?"즐겨찾기한 자료가 없습니다 (☆를 누르면 추가).":st.rec?"최근 본 자료가 없습니다.":B.empty));LL.forEach(v=>box.appendChild(boardRow(v,true)));};
   q.oninput=draw;draw();
-  if(isAdmin){const ab=el("button","btn pri","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}
+  if(boardCanAdd(k)){const ab=el("button","btn pri","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}
   $("pOv").hidden=false;
 }
+/* 167: 기술정보는 승인된 직원 누구나 등록, 고치기·삭제는 올린 본인(같은 사람의 다른 기기 포함 — bk=팀_이름)과 관리자만. 동영상 교육은 그대로 관리자만 */
+const boardCanAdd=k=>isAdmin||(k==="tech"&&!!me);
+const boardMine=x=>isAdmin||(!!x.bk&&x.bk===myKey);
 function boardForm(k,ed){
   const B=BOARD[k];const c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
@@ -2916,14 +2919,14 @@ function boardForm(k,ed){
   const n=fld("짧은 설명 (선택)",el("textarea"));n.rows=3;n.className="bdesc";n.maxLength=300;n.placeholder=k==="tech"?"예: 해당 S/N, 적용일":"예: 12분, 신입 필수";n.value=ed&&ed.n||"";lenCount(t);lenCount(n);
   let rc=null,rv=null;if(ed){const rl=el("label","bnote");rc=el("input");rc.type="checkbox";rl.appendChild(rc);rl.appendChild(el("span",null,"개정판입니다 (개정일을 지금으로)"));c.appendChild(rl);
     rv=fld("개정 표시 (선택)",el("input"));rv.maxLength=30;rv.placeholder="예: Rev.08, 2026-11 개정";rv.value=ed.rv||"";}
-  const nl=el("label","bnote");const nc=el("input");nc.type="checkbox";nc.checked=!ed&&k==="tech";nl.appendChild(nc);nl.appendChild(el("span",null,"전체공지 방에도 올리기 (모두에게 알림)"));c.appendChild(nl);
+  const nl=el("label","bnote");const nc=el("input");nc.type="checkbox";nc.checked=!ed&&k==="tech"&&(isAdmin||myLead());nl.appendChild(nc);nl.appendChild(el("span",null,"전체공지 방에도 올리기 (모두에게 알림)"));c.appendChild(nl);
   const ok=el("button","btn pri",ed?"저장":"등록");c.appendChild(ok);
   ok.onclick=()=>{const tv=t.value.trim(),isNo=!!(cat&&NOC[cat.value]),nov=no.value.replace(/\s+/g,"").trim();let uv=u.value.trim();
     if(isNo&&!nov){toast(NOC[cat.value]+"를 넣어 주세요.");no.focus();return;}
     if(isNo&&!uv)uv=KC_HOME;
     if(!tv){toast("제목을 넣어 주세요.");t.focus();return;}
     if(!/^https:\/\/[^\s]+$/.test(uv)||uv.length>500){toast("https:// 로 시작하는 링크를 넣어 주세요.");u.focus();return;}
-    const v={t:tv,u:uv,ts:ed?ed.ts:SV,by:ed?ed.by:me.name};if(d.value)v.d=d.value;const nv=n.value.replace(/\s+/g," ").trim();if(nv)v.n=nv.slice(0,300);if(cat)v.c=cat.value;if(isNo)v.no=nov.slice(0,40);
+    const v={t:tv,u:uv,ts:ed?ed.ts:SV,by:ed?ed.by:me.name};if(ed?ed.bk:true)v.bk=ed?ed.bk:myKey;if(d.value)v.d=d.value;const nv=n.value.replace(/\s+/g," ").trim();if(nv)v.n=nv.slice(0,300);if(cat)v.c=cat.value;if(isNo)v.no=nov.slice(0,40);
     if(ed){if(ed.ru)v.ru=ed.ru;if(ed.rby)v.rby=ed.rby;if(rv&&rv.value.trim())v.rv=rv.value.trim().slice(0,30);if(rc&&rc.checked){v.ru=SV;v.rby=me.name;}}
     ok.disabled=true;const ref=ed?R("board/"+k+"/"+ed.id):R("board/"+k).push();
     ref.set(v).then(async()=>{
