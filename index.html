@@ -1666,7 +1666,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.171";
+const APP_VERSION="2026-11-03.172";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3127,7 +3127,7 @@ const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calen
   system:["sysgrid","전국시스템",()=>openApp("system")],voc:["star","고객 만족도",()=>openApp("voc")],kpi:["chart","KPI 대시보드",()=>openApp("kpi")],
   saved:["bookmark","저장한 글",()=>go("saved")],org:["users","조직도",()=>go("org")],
   search:["search","통합 검색",()=>go("search")],team:["users","팀 현황",()=>go("team")],notice:["megaphone","전체공지",()=>go("room-notice")],tech:["doc","기술정보 검색",()=>go("tech")],video:["video","동영상 교육",()=>openBoard("video")],
-  po:["box","부품 발주 관리 시스템",()=>{openUrl("https://parts-order-system-14084.web.app/");track("po");},"FSS·FSOM 부품 발주"],
+  po:["box","부품 발주 관리 시스템",()=>{openApp("po");track("po");},"FSS·FSOM 부품 발주"],
   kc:["wrench","KnowledgeCenter",()=>{openUrl("https://sysmex.kcenter.usu.com/knowledgecenter/infoboard.do");track("kc");},"Service Manual, ECR 정보"],
   pmdb:["doc","Product Manual DB",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_randd001");track("pmdb");},"IFU, 인터페이스 자료, 시약 정보"],
   hr:["user","HR System",()=>{openUrl("https://hr.jadehr.co.kr/");track("hr");},"Sysmex Korea 회사 사이트 · eHR(JaDE)"],
@@ -3243,19 +3243,20 @@ function updateHome(){
 function homeUnread(){const st=navStats||buildNavStats();let n=0;Object.keys(st.unr).forEach(k=>{if(k!=="all")n+=st.unr[k];});return n;}
 /* ===== 포털 안에서 열기: 같은 주소(balhm12.github.io) 앱은 포털 화면 안에, 한 번 연 화면은 상태를 유지 ===== */
 const APPS={install:{t:"설치일정",ic:"box",u:LINKS.install},work:{t:"근무일정",ic:"calendar",u:LINKS.work},silmari:{t:"실마리",ic:"compass",u:LINKS.silmari},
-  voc:{t:"고객 만족도",ic:"star",u:LINKS.voc},kpi:{t:"KPI 대시보드",ic:"chart",u:LINKS.kpi,lead:true},system:{t:"전국시스템",ic:"sysgrid",u:LINKS.system,ext:true}};
+  voc:{t:"고객 만족도",ic:"star",u:LINKS.voc},kpi:{t:"KPI 대시보드",ic:"chart",u:LINKS.kpi,lead:true},system:{t:"전국시스템",ic:"sysgrid",u:LINKS.system,ext:true},
+  po:{t:"부품 발주",ic:"box",u:"https://parts-order-system-14084.web.app/",ext:true,po:true}};   // 172: 부품 발주 관리 시스템도 포털 안에서(FSS·FSOM·그룹장·관리자)
 let appKey="",appUrlNext={};
 function openApp(k,url){if(!APPS[k]){openUrl(url||k);return;}if(url)appUrlNext[k]=url;go("app-"+k);}
 function showApp(){
   const A=APPS[appKey];if(!A)return;
   $("appTitle").textContent=A.t;const ic=$("appIc");ic.textContent="";ic.appendChild(icEl(A.ic,"",20));
-  const tabs=$("appTabs");tabs.textContent="";Object.keys(APPS).filter(k=>!APPS[k].lead||isAdmin||myLead()).forEach(k=>{const b=el("button","apptab"+(k===appKey?" on":""),APPS[k].t);b.onclick=()=>openApp(k);tabs.appendChild(b);});
+  const tabs=$("appTabs");tabs.textContent="";Object.keys(APPS).filter(k=>(!APPS[k].lead||isAdmin||myLead())&&(!APPS[k].po||poOk())).forEach(k=>{const b=el("button","apptab"+(k===appKey?" on":""),APPS[k].t);b.onclick=()=>openApp(k);tabs.appendChild(b);});
   const box=$("appFrames");let f=box.querySelector('iframe[data-k="'+appKey+'"]');
   const want=appUrlNext[appKey];delete appUrlNext[appKey];
   if(!f){f=document.createElement("iframe");f.dataset.k=appKey;f.title=A.t;f.allow="clipboard-write; fullscreen";f.referrerPolicy="strict-origin-when-cross-origin";f.src=want||A.u;box.appendChild(f);}
   else if(want){try{const cw=f.contentWindow,u=new URL(want);if(cw.location.pathname===u.pathname&&u.hash){cw.location.hash=u.hash;}else f.src=want;}catch(e){f.src=want;}}
   box.querySelectorAll("iframe").forEach(x=>x.hidden=x!==f);
-  const note=$("appNote");note.hidden=!A.ext;note.textContent=A.ext?"전국시스템은 다른 주소의 앱이라 화면이 비어 보이면 오른쪽 위 「새 창」으로 열어 주세요.":"";
+  const note=$("appNote");note.hidden=!A.ext;note.textContent=A.ext?"「"+A.t+"」 화면은 다른 주소의 앱이라 화면이 비어 보이거나 로그인이 안 되면 오른쪽 위 「새 창」으로 열어 주세요.":"";
 }
 $("appBack").onclick=()=>{if(history.length>1)history.back();else go("home");};
 $("appReload").onclick=()=>{const f=$("appFrames").querySelector('iframe[data-k="'+appKey+'"]');if(f){try{f.contentWindow.location.reload();}catch(e){f.src=f.src;}}};
@@ -3976,7 +3977,7 @@ function cmdItems(){
   add("home","홈","화면",()=>go("home"));add("chat","대화","화면",()=>{listTab="rooms";go("");});add("users","조직도","화면",()=>go("org"));
   add("doc","기술정보 검색","화면",()=>go("tech"),"tb 회보 매뉴얼 부품");add("scan","바코드·QR 스캔","할 일",()=>setTimeout(openScan,0),"카메라 부품번호 시리얼 sn pn");add("search","통합 검색","화면",()=>go("search"));add("bookmark","저장한 글","화면",()=>go("saved"));
   if(isAdmin||myLead())add("users","팀 현황","화면",()=>go("team"),"팀장");if(isAdmin)add("shield","관리","화면",()=>go("admin"));add("gear","설정","화면",()=>go("settings"));
-  Object.keys(APPS).filter(k=>!APPS[k].lead||isAdmin||myLead()).forEach(k=>add(APPS[k].ic,APPS[k].t,"업무 앱",()=>openApp(k)));
+  Object.keys(APPS).filter(k=>(!APPS[k].lead||isAdmin||myLead())&&(!APPS[k].po||poOk())).forEach(k=>add(APPS[k].ic,APPS[k].t,"업무 앱",()=>openApp(k)));
   add("bell","알림 센터","할 일",()=>openNotiCenter());add("plus","내 근무 등록 (휴가·교육)","할 일",()=>openWorkForm(),"휴가 교육 회의");add("plus","설치·평가 일정 등록","할 일",()=>openInstallForm(),"설치 이전 평가");
   add("calendar","7일 근무 보기","할 일",()=>openSchWeek(),"당직 야간 석간");add("edit","바로가기 편집","할 일",()=>openLinkEditor());
   add(document.documentElement.dataset.theme==="dark"?"sun":"moon","밝게 / 어둡게 바꾸기","할 일",()=>{theme=document.documentElement.dataset.theme==="dark"?"light":"dark";try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();homeBuilt="";if(view==="home")renderHome();},"테마 다크");
@@ -4263,7 +4264,7 @@ function route(){setTimeout(()=>{if(started)track("v_"+(view==="chat"?(room?"cha
   else if(h==="saved"){view="saved";mList=false;}
   else if(h==="settings"){view="settings";mList=false;}
   else if(h==="admin"&&isAdmin){view="admin";mList=false;}
-  else if(h.indexOf("app-")===0&&APPS[h.slice(4).split("~")[0]]){view="app";mList=false;appKey=h.slice(4).split("~")[0];}
+  else if(h.indexOf("app-")===0&&APPS[h.slice(4).split("~")[0]]&&(!APPS[h.slice(4).split("~")[0]].po||poOk())){view="app";mList=false;appKey=h.slice(4).split("~")[0];}
   else if(h==="org"){view="org";mList=false;}
   else if(h==="menu"){view="menu";mList=false;}
   else if(h==="team"&&(isAdmin||myLead())){view="team";mList=false;}
