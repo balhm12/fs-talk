@@ -1669,7 +1669,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.178";
+const APP_VERSION="2026-11-03.179";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3464,13 +3464,18 @@ function renderBrief(){try{renderStart();}catch(e){}
   const it=(ic,html,fn,cls)=>{const b=el("button","hbi2"+(cls?" "+cls:""));b.appendChild(icEl(ic,"",16));const t=el("span");html.forEach(([x,strong])=>t.appendChild(strong?el("b",null,x):document.createTextNode(x)));b.appendChild(t);if(fn)b.onclick=fn;box.appendChild(b);};
   box.appendChild(el("span","hbl","오늘의 브리핑"));
   if(schData){const now=schData.today,list=[];
-    (schData.week||[]).forEach(({d,o})=>["night","duty","leave","edu"].forEach(k=>o[k].filter(x=>x.nm===me.name).forEach(x=>list.push({d,t:x.k}))));
+    (schData.week||[]).forEach(({d,o})=>["night","duty","leave","edu","plan"].forEach(k=>(o[k]||[]).filter(x=>x.nm===me.name).forEach(x=>list.push({d,t:x.k}))));
     schData.ev.filter(schMineEv).forEach(e=>list.push({d:e.start<now?now:e.start,t:(SCH_CAT[e.category]||[e.category])[0]+" "+String(e.title||"").slice(0,14)}));
     list.sort((a,b)=>a.d.localeCompare(b.d));const nx=list[0];
     if(nx){const dd=new Date(nx.d+"T00:00:00"),i=Math.round((dd-new Date(now+"T00:00:00"))/864e5);it("clock",[["다음 내 일정 "],[(i===0?"오늘":i===1?"내일":(dd.getMonth()+1)+"/"+dd.getDate()+"("+"일월화수목금토"[dd.getDay()]+")")+" "+nx.t,1]],()=>openSchWeek(),i<=1?"hot":null);}
     else it("clock",[["이번 주 등록된 내 일정 없음"]],()=>openSchWeek());
     const S=schScoped();if(S){const on=S.ev.filter(e=>e.start<=now&&String(e.end||e.start)>=now);
-      it("users",[[S.label+" 오늘 "],["휴가 "+S.w.leave.length+" · 야간 "+S.w.night.length,1],on.length?[" · 설치 "+on.length+"건 ("+String(on[0].title||"").slice(0,10)+(on.length>1?" 외":"")+")"]:[" · 설치 없음"]],()=>{const c=document.getElementById("hc-sched");if(c)c.scrollIntoView({behavior:"smooth"});});}}
+      /* 179: 팀 근무를 종류별로(사람 이름까지) — 예전엔 휴가·야간 숫자만 나와 팀 근무일정이 안 보였음 */
+      const uq=a=>[...new Set((a||[]).map(x=>x.nm))],nm=a=>a.length>2?a.slice(0,2).join("·")+" 외 "+(a.length-2):a.join("·");
+      const parts=[["휴가",S.w.leave],["야간·석간",S.w.night],["당직",S.w.duty],["교육",S.w.edu],["회의·내근·기타",S.w.plan]].map(([l,a])=>[l,uq(a)]).filter(([,a])=>a.length);
+      const seg=[[S.label+" 오늘 "]];if(!parts.length)seg.push(["근무 특이사항 없음",1]);parts.forEach(([l,a],i)=>{seg.push([(i?" · ":"")+l+" ",1]);seg.push([nm(a)]);});
+      seg.push(on.length?[" · 설치 "+on.length+"건 ("+String(on[0].title||"").slice(0,10)+(on.length>1?" 외":"")+")"]:[" · 설치 없음"]);
+      it("users",seg,()=>{const c=document.getElementById("hc-sched");if(c)c.scrollIntoView({behavior:"smooth"});});}}
   const pn=pendingNotices().length,lim=Date.now()-7*864e5,mn=msgs.filter(m=>shown(m)&&m.ts>lim&&!isMine(m)&&mentionsMe(m)&&!(notiState.ids||{})["m_"+m.id]&&m.ts>(notiState.all||0)).length;
   if(pn||mn)it("bell",[["확인할 것 "],[(pn?"공지 "+pn+"건":"")+(pn&&mn?" · ":"")+(mn?"나를 언급 "+mn+"건":""),1]],()=>pn?go("room-notice"):openNotiCenter(),"warn");
   else it("bell",[["확인할 공지·언급 없음"]],()=>openNotiCenter());
