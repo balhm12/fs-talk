@@ -399,6 +399,7 @@ html[data-theme=dark] .ncic{background:#16273A;color:#8CC4F5}
 .apphd .grow{flex:1 1 0;min-width:0}
 .appnote{font-size:12.5px;color:#7A4E00;background:#FFF6E5;padding:6px 14px}
 .hscanhint{display:flex;align-items:center;gap:6px;background:none;border:0;padding:0 4px;margin:-6px 0 2px;color:var(--sub);font:inherit;font-size:13px;text-align:left;cursor:pointer}.hscanhint .ico{flex:none;color:#005BAC}
+.swl{display:flex;flex-direction:column;gap:3px}.swl .swi{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;line-height:1.45}.swl .swi b{font-weight:600}.swl .swi b.me{color:#005BAC}.swl .swk{color:var(--sub)}.swl .swi i{font-style:normal;font-size:12px;color:var(--sub);opacity:.8}.swmore{align-self:flex-start;background:none;border:0;padding:2px 0;color:#005BAC;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .appwin{background:none;border:0;color:#005BAC;font:inherit;font-weight:600;text-decoration:underline;padding:2px 0;cursor:pointer}
 .appframes{flex:1;min-height:0;position:relative}.appframes iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
 .rail a.rlink.on{background:rgba(255,255,255,.18)}
@@ -1670,7 +1671,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-03.184";
+const APP_VERSION="2026-11-04.185";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2830,8 +2831,14 @@ function openSchWeek(){
       const f=a=>{const seen={};return (a||[]).filter(v=>(!only||v.tl===tl)&&!seen[v.nm+"|"+v.k]&&(seen[v.nm+"|"+v.k]=1));};   /* 183: 회의·내근·기타도, 같은 사람·같은 내용은 한 번 */
       const rows=[["야간",f(o.night),"n"],["당직",f(o.duty),"d"],["휴가",f(o.leave),"l"],["교육",f(o.edu),"e"],["회의·내근·기타",f(o.plan),"p"]].filter(r=>r[1].length);
       if(!rows.length)day.appendChild(el("div","schnone","등록 없음"));
-      rows.forEach(([lab,arr,cls])=>{const r=el("div","schw "+cls);r.appendChild(el("span","schwl",lab));const v=el("span","schwv");
-        arr.forEach((p,j)=>{if(j)v.appendChild(document.createTextNode(", "));const n=el("span",me&&p.nm===me.name?"me":null,p.nm+(p.k!==lab?"("+p.k+")":""));n.title=p.tl;v.appendChild(n);if(!only){v.appendChild(el("i",null," "+p.tl));}});r.appendChild(v);day.appendChild(r);});
+      /* 185: 가독성 — 한 사람 한 줄, 내용은 짧게 자르고(전체는 마우스·누르면), 종류마다 5명 넘으면 「외 n명 더보기」 */
+      rows.forEach(([lab,arr,cls])=>{const r=el("div","schw "+cls);r.appendChild(el("span","schwl",lab));const v=el("span","schwv swl");
+        const LIM=5,line=p=>{const d=el("div","swi");const n=el("b",me&&p.nm===me.name?"me":null,p.nm);d.appendChild(n);
+          if(p.k!==lab){const k=String(p.k||""),t=el("span","swk",k.length>34?k.slice(0,33)+"…":k);t.title=k;d.appendChild(t);}
+          if(!only)d.appendChild(el("i",null,String(p.tl||"")));return d;};
+        arr.slice(0,LIM).forEach(p=>v.appendChild(line(p)));
+        if(arr.length>LIM){const more=el("button","swmore","외 "+(arr.length-LIM)+"명 더보기");more.onclick=()=>{arr.slice(LIM).forEach(p=>v.insertBefore(line(p),more));more.remove();};v.appendChild(more);}
+        r.appendChild(v);day.appendChild(r);});
       list.appendChild(day);});};
   if(myTk){const sw=el("div","schscope");[[false,"전체"],[true,"우리 팀 ("+tl+")"]].forEach(([k,l])=>{const b=el("button","hchip"+(only===k?" on":""),l);b.onclick=()=>{only=k;sw.querySelectorAll(".hchip").forEach((z,i)=>z.classList.toggle("on",(i===1)===k));draw();};sw.appendChild(b);});c.appendChild(sw);}
   const list=el("div","swlist");c.appendChild(list);draw();
