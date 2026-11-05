@@ -523,6 +523,18 @@
           }
         }
       },
+      "hist": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
+        "meta": {
+          ".validate": "newData.hasChildren(['at', 'chunks'])"
+        },
+        "c": {
+          "$k": {
+            ".validate": "newData.isString() && newData.val().length <= 4000000 && $k.matches(/^[0-9]{4}[ab]$/)"
+          }
+        }
+      },
       "parts": {
         ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
         ".write": "auth != null && root.child('talk/admins/' + auth.uid).val() === true",
