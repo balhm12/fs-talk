@@ -1672,7 +1672,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-05.188";
+const APP_VERSION="2026-11-05.190";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3233,6 +3233,14 @@ function renderHome(){
   renderSilHome(sres);
   const chips=el("div","hchips");["XN","XN-L","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 에러 목록 (실마리)";c.onclick=()=>openApp("silmari",LINKS.silmari+"#/d/"+encodeURIComponent(dv));chips.appendChild(c);});
   sl.dataset.hk="sil";sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);s2w.appendChild(sl);silStatus();
+  const hh=hcard("수리이력 검색","search","hist");hh.dataset.hk="hist";hh.id="hc-hist";hmore(hh,"수리이력 열기",()=>{track("hist");openApp("hist");});
+  const hf=el("form","hmini");hf.setAttribute("role","search");const hl=el("label","vh","수리이력 검색");hl.htmlFor="hhq";hf.appendChild(hl);
+  const hq=el("input");hq.id="hhq";hq.type="search";hq.placeholder="에러코드·증상·장비 (시스멕스톡 2016~)";hf.appendChild(hq);
+  const hgo=el("button","btn","찾기");hgo.type="submit";hf.appendChild(hgo);
+  const goHist=v=>{track("hist");openApp("hist","hist.html"+(v?"#q="+encodeURIComponent(v):""));};
+  hf.onsubmit=e=>{e.preventDefault();goHist(hq.value.trim());};hh.appendChild(hf);
+  const hch=el("div","hchips");["XN","XR","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 수리이력 검색";c.onclick=()=>goHist(dv);hch.appendChild(c);});
+  hh.appendChild(hch);s2w.appendChild(hh);
   ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
   renderBoardCards();
   // 2-1. 마스터 부품 검색 (CRM 부품재고관리·입출내역·중고 부품 기준)
@@ -3678,7 +3686,7 @@ function openPosterUpload(){
 }
 /* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
 let myLayout=null;
-const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",parts:"부품 검색",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
+const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",hist:"수리이력 검색",parts:"부품 검색",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
 const HCARD_DEF=Object.keys(HCARDS);
 function homeLayout(){const v=String(myLayout||"");const [o,h]=v.split("|");const order=(o||"").split(",").filter(k=>HCARDS[k]);HCARD_DEF.forEach(k=>{if(!order.includes(k))order.push(k);});
   return {order,hidden:myLayout?(h||"").split(",").filter(k=>HCARDS[k]):(isM()?["comm","sil","tech","video"]:[]),custom:!!myLayout};}   // 휴대폰 기본: 대화·기술 카드는 각 탭에
@@ -5979,7 +5987,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
