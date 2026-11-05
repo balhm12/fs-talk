@@ -97,6 +97,46 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
 .gate{max-width:420px;margin:60px auto;text-align:center;color:var(--sub)}
 .gate h2{color:var(--pri)}
 #sent{height:1px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px}
+.stat{flex:1 1 120px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;min-width:0}
+.stat span{display:block;font-size:11.5px;color:var(--sub)}
+.stat b{display:block;font-size:16px;color:var(--tx);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat b.ld{color:var(--warn)}.stat b.ok2{color:var(--ok)}
+.exs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 0;font-size:12.5px;color:var(--sub)}
+.exs .chip{min-height:30px;padding:3px 11px}
+.chip.rc{display:inline-flex;align-items:center;gap:6px;padding-right:6px;cursor:pointer}
+.chip.rc .x{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:14px;line-height:1;color:var(--sub)}
+.chip.rc .x:hover{background:var(--soft);color:var(--bad)}
+.topics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.topics .sc{display:flex;flex-direction:column;gap:2px}
+.topics .sc em{font-size:19px}
+.kwrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.kwrow::-webkit-scrollbar{display:none}
+.kwrow .chip{min-height:30px;padding:3px 11px}
+.active{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}
+.active .lb{font-size:12px;color:var(--sub)}
+.active .chip{background:var(--soft);border-color:transparent;color:var(--pri);font-weight:600;min-height:30px;padding:3px 6px 3px 11px}
+.active .chip .x{margin-left:4px;opacity:.7;font-weight:700}
+.zl{margin:6px 0 10px 20px;padding:0;color:var(--sub);font-size:13.5px}
+.sugs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px}
+.tag.ec{background:#FDEDEC;color:#A32622}.tag.sy{background:var(--card);border:1px solid var(--line);color:var(--sub);font-weight:500}.tag.un{background:transparent;border:1px dashed var(--line);color:var(--sub);font-weight:500}.tag.rel{background:#E3F6FC;color:#00668A}
+@media(prefers-color-scheme:dark){.tag.ec{background:#4A1D1B;color:#F5A19E}.tag.rel{background:#103847;color:#7FD6F2}}
+.case{border:1px solid var(--line);border-left:4px solid var(--sec);background:var(--card);border-radius:12px;padding:10px 12px;margin:10px 0}
+.case .ch{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:12px;color:var(--sub)}
+.case .ch .dt{color:var(--tx);font-weight:600}
+.legend{font-size:11.5px;color:var(--sub);margin:2px 0 4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 3px 0 8px;vertical-align:-1px}
+.ctx.hit{border:1.5px solid var(--pri);background:var(--bg)}
+.ctx.rel{border:1px dashed var(--line);background:transparent;color:var(--sub)}
+.ctx.sys{opacity:.7;font-size:12.5px;padding:3px 10px;border-style:dotted}
+.ctx .tx{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.ctx .tx.open{display:block}
+.ctx .fu{display:inline-block;margin-left:6px;font-size:11px;color:var(--ok);font-weight:700}
+.relbox{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
+.relbox .note{margin:0 0 4px}
+.dtools{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.dtools .btn{font-size:12.5px;padding:5px 10px;min-height:34px}
+@media(max-width:520px){.stat b{font-size:14.5px}.topics{grid-template-columns:1fr 1fr}.stat{flex:1 1 44%}}
 </style>
 </head>
 <body>
@@ -120,14 +160,16 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
 
     <!-- HOME -->
     <section id="vHome">
-      <div class="srow big"><input id="hq" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="장비·증상·에러코드를 입력하세요  예) XN-550 water leak"><button class="btn pri" id="hgo">검색</button></div>
-      <div id="hRecentW" style="display:none"><h2 class="sec">최근 검색어 <small><button class="chip" id="hRecentClr" style="min-height:24px;padding:1px 8px;font-size:11px">지우기</button></small></h2><div class="chips wrapc" id="hRecent"></div></div>
-      <h2 class="sec">자주 등장하는 키워드 <small>이 보관 자료에서 건수가 많은 단어 (조회수 기준 아님)</small></h2>
-      <div class="chips wrapc" id="hKw"></div>
+      <div class="stats" id="stats"></div>
+      <div class="srow big"><input id="hq" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="장비·증상·에러코드 검색  예) XN-550 water leak"><button class="btn pri" id="hgo">검색</button></div>
+      <div class="exs" id="hEx" style="display:none"></div>
+      <div id="hRecentW" style="display:none"><h2 class="sec">최근 검색어 <small><button class="chip" id="hRecentClr" style="min-height:24px;padding:1px 8px;font-size:11px">모두 지우기</button></small></h2><div class="chips wrapc" id="hRecent"></div></div>
+      <h2 class="sec">주제별 탐색 <small>유형별 실제 건수</small></h2>
+      <div class="topics" id="hTopics"></div>
       <h2 class="sec">장비별 빠른 검색 <small>장비명이 언급된 글 수</small></h2>
       <div class="chips wrapc" id="hFam"></div>
-      <h2 class="sec">바로가기</h2>
-      <div class="cards4" id="hCards"></div>
+      <h2 class="sec">자주 등장하는 키워드 <small>건수 기준 (조회수 아님)</small></h2>
+      <div class="kwrow" id="hKw"></div>
       <h2 class="sec">최근 등록된 메시지 <small>가장 최근 기술·방문·마무리 보고</small></h2>
       <div id="hRecentMsg"></div>
     </section>
@@ -142,6 +184,7 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
       <div class="opts">
         <select id="ord" aria-label="정렬"><option value="r">관련도순</option><option value="d">최신순</option><option value="a">오래된순</option></select>
         <button class="btn" id="adv">상세 조건</button>
+        <select id="viewm" aria-label="보기 방식"><option value="msg">메시지별 보기</option><option value="case">연관 대화로 묶어 보기</option></select>
         <button class="btn" id="rst">필터 초기화</button>
       </div>
       <div class="f" id="advp">
@@ -155,6 +198,7 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
           <div><label for="attf">첨부파일</label><select id="attf"><option value="">전체</option><option value="1">첨부 있음</option></select></div>
         </div>
       </div>
+      <div class="active" id="act" style="display:none"></div>
       <div class="status" id="st"></div>
       <div class="yrs" id="yrs"></div>
       <div id="tip" class="tip">띄어쓰기로 여러 단어를 넣으면 모두 들어간 글만 나옵니다. <b>-단어</b>는 제외, <b>"water leak"</b>처럼 따옴표는 문구 그대로 찾습니다. 단어 일부만 넣어도 찾고, 대소문자·하이픈·띄어쓰기(XN-550 / xn550)는 구분하지 않아요.</div>
@@ -192,7 +236,7 @@ const E=window.__HIST_EMBED||null;
 let META=null,CH=[];
 const NZ=9;                           // 검색 제외(이동·파일 알림 등) 행 표시값
 const TYPE_CLS=["","t1","t2","t3","",""];
-const state={q:"",fam:new Set(),typ:new Set(),who:"",ord:"r",yr:null,from:null,to:null,room:"",att:"",model:"",err:"",shown:0};
+const state={q:"",fam:new Set(),typ:new Set(),who:"",ord:"r",yr:null,from:null,to:null,room:"",att:"",model:"",err:"",shown:0,famAny:false,kind:"",mode:"msg"};
 let HITS=[],TOTAL=0,FAMCNT=[],LASTQ=null,REL=null,IT=null,RELPOS=0,HS=null,view="home";
 const MODEL_RE=/\b(?:XN|XR|XE|XT|XS|XP|KX|UF|UC|UN|SP|CS|CA|CN|DI|DM|HISCL|RF|BC|CV|HST|PA)[- ]?\d{1,5}[A-Za-z]{0,2}\b/gi;
 
@@ -267,6 +311,7 @@ function loadedSearchable(){let n=0;for(const c of CH)for(let i=0;i<c.n;i++)if(c
 function renderSub(loading){
   const n=CH.reduce((a,c)=>a+c.n,0);
   $("#sub").innerHTML=(META.from||"").slice(0,7).replace("-",".")+" ~ "+(META.to||"").slice(0,7).replace("-",".")+"<br>"+N(META.total||n)+"건 검색 대상"+(loading?" · 불러오는 중":"");
+  if(view==="home"&&$("#stats"))updateStats();
 }
 
 /* ---------- 검색 ---------- */
@@ -309,6 +354,8 @@ function runSearch(){
       if(f1!==null&&c.ts[i]>=f1)return false;
       if(roomN>=0&&c.rm[i]!==roomN)return false;
       if(state.att&&!c.att.has(i))return false;
+      if(state.famAny&&!c.fm[i])return false;
+      if(state.kind==="err"&&!ERR_TOPIC.test(txtAt(c,i)))return false;
       return true;
     };
     const rest=i=>{
@@ -356,6 +403,27 @@ function buildRel(P){
   arr.sort((a,b)=>b[0]-a[0]);REL=arr;
 }
 
+/* ---------- 분류 사전(규칙 기반). 동의어는 확인된 것만 DICT.syn 에 나중에 추가 ---------- */
+const DICT={
+  eqGroups:[["CBC",["XN","XR"]],["Coagulation",["CS","CA","CN"]],["Urinalysis",["UF","UC"]],["Slide Maker / Stainer",["SP"]],["Digital Imaging",["DI"]],["Immunochemistry",["HISCL"]],["기타",["RF","BC","CV"]]],
+  symptoms:["water leak","leak","누수","pressure","압력","소음","noise","clog","막힘","aspiration","흡인","carry over","carryover","drift","bubble","기포","vacuum","온도","temperature"],
+  syn:{}
+};
+const SYM_RE=new RegExp(DICT.symptoms.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/ /g,"[ _-]?")).join("|"),"gi");
+const ERR_TOPIC=/에러|error(?!\s*\/\s*증상)|alarm|알람|오류|\berr[- ]?\d/i;   // 기술요청 양식의 「Error/증상」 항목 이름은 에러 언급으로 세지 않음
+const ERRW=/에러|error|\berr\b|alarm|알람|오류|fail|abnormal|이상/i;
+const CODE_RE=/(?<![\d.])(\d{1,2}\.\d{3})(?![\d.])|\b(?:E|ERR|Err|err)[- ]?\d{2,5}\b/g;
+const RESULT_RE=/교체|세정|조치|해결|양호|정상|완료|재설치|조정/;
+const GAP=30;   // 연관 대화: 같은 대화방에서 앞뒤 메시지 간격이 이 분 이하일 때만 이어 붙임
+function codesOf(t){const s=new Set();CODE_RE.lastIndex=0;let m;
+  while((m=CODE_RE.exec(t))&&s.size<3){
+    if(m[1]){const a=t.slice(Math.max(0,m.index-40),m.index+40);if(!ERRW.test(a)&&!/MPa|kPa|압력|pressure/i.test(a))continue;}
+    s.add(m[0].replace(/\s+/,""));}
+  return [...s];}
+function symsOf(t){const f=new Map();SYM_RE.lastIndex=0;let m;
+  while((m=SYM_RE.exec(t))&&f.size<6){const k=m[0].toLowerCase().replace(/[ _-]/g,"");if(!f.has(k))f.set(k,m[0].toLowerCase());}
+  const v=[...f.entries()];return v.filter(([k])=>!v.some(([k2])=>k2!==k&&k2.includes(k))).map(x=>x[1]).slice(0,3);}
+
 /* ---------- 카드 ---------- */
 function titleOf(t){
   const segs=t.split(/ \/ |\n/).map(s=>s.trim());
@@ -365,18 +433,33 @@ function titleOf(t){
   return s.length>72?s.slice(0,72)+"…":s;
 }
 function modelsOf(t){const set=new Set();let m;MODEL_RE.lastIndex=0;while((m=MODEL_RE.exec(t))&&set.size<3)set.add(m[0].toUpperCase().replace(/\s+/,"-"));return [...set];}
+function tagsHtml(c,i,t){   // 장비 · 에러코드 · 증상 · 유형을 따로 표시. 못 찾으면 만들어 넣지 않고 「미분류」
+  const mods=modelsOf(t),codes=codesOf(t),syms=symsOf(t);
+  let h=(c.ty[i]?'<span class="tag '+TYPE_CLS[c.ty[i]]+'">'+META.typ[c.ty[i]]+'</span>':(mods.length||codes.length||syms.length?'':'<span class="tag un" title="유형을 확실히 알 수 없어 분류하지 않았습니다">미분류</span>'));
+  h+=mods.map(f=>'<span class="tag" title="장비(원문에서 추출)">'+esc(f)+'</span>').join("");
+  h+=codes.map(f=>'<span class="tag ec" title="에러코드로 보이는 값(추정)">코드 '+esc(f)+'</span>').join("");
+  h+=syms.map(f=>'<span class="tag sy" title="증상 사전 일치(규칙 기반)">'+esc(f)+'</span>').join("");
+  return h;
+}
 function card(c,i,hl){
   const t=txtAt(c,i);
   const d=document.createElement("div");d.className="card";
-  const mods=modelsOf(t);
   const body=hlHtml(t.replace(/ \/ /g,"\n").replace(/\n{3,}/g,"\n\n"),hl);
-  d.innerHTML='<div class="meta"><span class="dt">'+fmtDate(c.ts[i])+'</span><span>'+esc(META.senders[c.sd[i]]||"")+'</span>'+
-    (c.ty[i]?'<span class="tag '+TYPE_CLS[c.ty[i]]+'">'+META.typ[c.ty[i]]+'</span>':'')+
-    mods.map(f=>'<span class="tag">'+esc(f)+'</span>').join("")+
-    (c.att.has(i)?'<span class="tag at">첨부 있음</span>':'')+'</div>'+
-    '<h3>'+hlHtml(titleOf(t),hl)+'</h3><div class="txt">'+body+'</div><div class="acts"><button class="btn" data-a="ctx">대화 흐름 보기</button><button class="btn" data-a="cp">복사</button></div>';
+  const rn=((META.rooms||[])[c.rm[i]]||{}).name;
+  d.innerHTML='<div class="meta"><span class="dt">'+fmtDate(c.ts[i])+'</span><span>'+esc(META.senders[c.sd[i]]||"")+'</span>'+tagsHtml(c,i,t)+
+    (c.att.has(i)?'<span class="tag at">첨부 있음</span>':'')+(rn&&META.rooms.length>1?'<span class="note" style="margin:0">'+esc(rn.replace(/^방 \d+ · /,""))+'</span>':'')+'</div>'+
+    '<h3>'+hlHtml(titleOf(t),hl)+'</h3><div class="txt">'+body+'</div><div class="acts"><button class="btn" data-a="ctx">대화 흐름 보기</button><button class="btn" data-a="rel">연관 대화</button><button class="btn" data-a="cp">복사</button></div>';
   d.querySelector('[data-a="ctx"]').onclick=()=>{saveRecent(state.q);openDetail(c,i);};
   d.querySelector('[data-a="cp"]').onclick=e=>{navigator.clipboard&&navigator.clipboard.writeText(t).then(()=>{e.target.textContent="복사됨";setTimeout(()=>e.target.textContent="복사",1200);});};
+  const rb=d.querySelector('[data-a="rel"]');
+  rb.onclick=()=>{
+    let box=d.querySelector(".relbox");
+    if(box){box.remove();rb.textContent="연관 대화";return;}
+    box=document.createElement("div");box.className="relbox";
+    box.innerHTML='<div class="note"><span class="tag rel">연관 대화</span> 같은 대화방에서 '+GAP+'분 이내로 이어진 앞뒤 메시지입니다. 같은 문제라고 단정한 것은 아닙니다.</div><div class="legend">'+legendHtml()+'</div>';
+    box.appendChild(ctxList(chainAround(c,i,4,4),new Map([[c.k+":"+i,"me"]]),hl));
+    d.appendChild(box);rb.textContent="연관 대화 접기";
+  };
   return d;
 }
 function hlFor(P){return P.pos.length?new RegExp(P.pos.map(t=>tokRe(t,"").source).join("|"),"gi"):null;}
@@ -386,9 +469,122 @@ function overflowBtns(root){
       b.onclick=()=>{e.classList.toggle("open");b.textContent=e.classList.contains("open")?"접기":"펼치기";};e.parentNode.querySelector(".acts").prepend(b);}}));
 }
 
+/* ---------- 연관 대화(같은 방 · 간격 GAP분 이내) ---------- */
+function legendHtml(){return '<i style="background:var(--pri)"></i>기준 메시지<i style="border:1.5px solid var(--pri)"></i>검색어 포함<i style="border:1px dashed var(--sub)"></i>연관 메시지(검색어 없음)<i style="border:1px dotted var(--sub)"></i>시스템 알림';}
+function nbGap(c,i,dir,room){const r=nb(c,i,dir,room);if(!r)return null;return Math.abs(r[0].ts[r[1]]-c.ts[i])<=GAP?r:null;}
+function chainAround(c,i,bef,aft){
+  const room=c.rm[i],prev=[],next=[];let p=[c,i];
+  for(let k=0;k<bef;k++){p=nbGap(p[0],p[1],-1,room);if(!p)break;prev.unshift(p);}
+  p=[c,i];for(let k=0;k<aft;k++){p=nbGap(p[0],p[1],1,room);if(!p)break;next.push(p);}
+  return prev.concat([[c,i]],next);
+}
+function chainSpan(c,i0,i1,cap){   // i0~i1(같은 청크, 같은 방) 사이 메시지를 모두 + 앞 2개 · 뒤 3개
+  const room=c.rm[i0];let p=[c,i0];const out=[[c,i0]];let truncated=false;
+  const pre=[];let q=[c,i0];for(let k=0;k<2;k++){q=nbGap(q[0],q[1],-1,room);if(!q)break;pre.unshift(q);}
+  while(!(p[0]===c&&p[1]>=i1)){p=nbGap(p[0],p[1],1,room);if(!p)break;out.push(p);if(out.length>=cap){truncated=true;break;}}
+  let a=0;if(!truncated){for(;a<3;a++){p=nbGap(p[0],p[1],1,room);if(!p)break;out.push(p);}}
+  return {list:pre.concat(out),truncated};
+}
+function ctxList(list,marks,hl){   // marks: key(청크:인덱스) → "me" | "hit"
+  const wrap=document.createElement("div");let anchorTs=null;
+  for(const [cc,ii] of list){if(marks.get(cc.k+":"+ii)==="me"){anchorTs=cc.ts[ii];break;}}
+  for(const [cc,ii] of list){
+    const mk=marks.get(cc.k+":"+ii),sys=cc.ty[ii]===NZ;
+    const d=document.createElement("div");d.className="ctx "+(mk==="me"?"me":mk==="hit"?"hit":sys?"sys":"rel");
+    const t=txtAt(cc,ii);
+    const fu=anchorTs!==null&&cc.ts[ii]>anchorTs&&!mk&&!sys&&RESULT_RE.test(t)?'<span class="fu" title="규칙 기반 표시입니다. 실제 조치 결과는 원문으로 확인하세요">조치·결과 표현 포함</span>':"";
+    d.innerHTML='<div class="who">'+fmtDate(cc.ts[ii])+' · '+esc(META.senders[cc.sd[ii]]||"")+(cc.id[ii]?' · ID '+cc.id[ii]:'')+(sys?' · 시스템 알림(검색 제외)':'')+(mk==="me"?' · 기준 메시지':'')+fu+'</div><div class="tx">'+hlHtml(t.replace(/ \/ /g,"\n"),mk?hl:null)+'</div>'+(cc.att.has(ii)?'<div class="att">첨부: '+esc(cc.att.get(ii))+' (파일 미확보)</div>':'');
+    d.querySelector(".tx").onclick=e=>e.currentTarget.classList.toggle("open");
+    wrap.appendChild(d);
+  }
+  return wrap;
+}
 /* ---------- SEARCH 화면 ---------- */
 let timer=null;
 function scheduleSearch(ms){clearTimeout(timer);timer=setTimeout(doSearch,ms===undefined?220:ms);}
+function resetState(){
+  state.fam.clear();state.typ.clear();state.who="";state.yr=null;state.from=state.to=null;state.room="";state.att="";state.model="";state.err="";state.famAny=false;state.kind="";
+  ["who","dFrom","dTo","fModel","fErr"].forEach(i=>$("#"+i).value="");$("#room").value="";$("#attf").value="";
+}
+function probe(q){   // 화면 상태를 건드리지 않고 건수만 확인
+  const sv={HITS,TOTAL,FAMCNT,YC,q:state.q};state.q=q;let n=0;
+  try{runSearch();n=TOTAL;}finally{HITS=sv.HITS;TOTAL=sv.TOTAL;FAMCNT=sv.FAMCNT;YC=sv.YC;state.q=sv.q;}
+  return n;
+}
+function activeList(){
+  const a=[];const U=()=>scheduleSearch(0);
+  if(state.q.trim())a.push(["검색어: "+state.q.trim(),()=>{state.q="";$("#q").value="";}]);
+  if(state.model)a.push(["제품: "+state.model,()=>{state.model="";$("#fModel").value="";}]);
+  if(state.err)a.push(["에러코드·증상: "+state.err,()=>{state.err="";$("#fErr").value="";}]);
+  state.fam.forEach(i=>a.push([META.fam[i],()=>state.fam.delete(i)]));
+  if(state.famAny)a.push(["장비 언급 있음",()=>{state.famAny=false;}]);
+  state.typ.forEach(i=>a.push([i===0?"일반 대화":META.typ[i],()=>state.typ.delete(i)]));
+  if(state.kind==="err")a.push(["에러·알람 언급",()=>{state.kind="";}]);
+  if(state.yr)a.push([state.yr+"년",()=>{state.yr=null;}]);
+  if(state.from!==null||state.to!==null)a.push(["기간 "+($("#dFrom").value||"처음")+" ~ "+($("#dTo").value||"끝"),()=>{state.from=state.to=null;$("#dFrom").value=$("#dTo").value="";}]);
+  if(state.who)a.push(["작성자: "+state.who,()=>{state.who="";$("#who").value="";}]);
+  if(state.room!=="")a.push([(((META.rooms||[])[+state.room]||{}).name||"대화방"),()=>{state.room="";$("#room").value="";}]);
+  if(state.att)a.push(["첨부 있음",()=>{state.att="";$("#attf").value="";}]);
+  return a;
+}
+function drawActive(){
+  const box=$("#act");box.innerHTML="";const a=activeList();
+  if(!a.length){box.style.display="none";return;}
+  box.style.display="flex";const lb=document.createElement("span");lb.className="lb";lb.textContent="적용 중";box.appendChild(lb);
+  for(const [t,fn] of a){const b=document.createElement("button");b.className="chip";b.innerHTML=esc(t)+' <span class="x" aria-hidden="true">×</span>';b.setAttribute("aria-label",t+" 조건 해제");
+    b.onclick=()=>{fn();scheduleSearch(0);};box.appendChild(b);}
+}
+function zeroHelp(P){
+  let h='<div class="empty" style="padding-bottom:6px"><b>검색 결과가 없습니다.</b></div><ul class="zl"><li>검색어를 줄여보세요.</li><li>장비명 대신 에러코드를 검색해 보세요.</li><li>기간 및 유형 필터를 확인해 보세요.</li><li>유사 키워드로 검색해 보세요.</li></ul><div class="sugs" id="sugs"></div>';
+  $("#res").innerHTML=h;$("#more").style.display="none";
+  const box=$("#sugs");
+  const add=(label,fn)=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;box.appendChild(b);};
+  const rawQ=state.q;
+  if(P.pos.length>1){
+    const q0=P.pos.map(t=>/\s/.test(t)?'"'+t+'"':t);
+    P.pos.slice(0,4).forEach((t,j)=>{const rest=q0.filter((_,k)=>k!==j).concat(P.neg.map(n=>"-"+n)).join(" ");const n=probe(rest);
+      if(n>0)add("「"+t+"」 빼기 · "+N(n)+"건",()=>{state.q=rest;$("#q").value=rest;scheduleSearch(0);});});
+  }
+  const syn=[];P.pos.forEach(t=>{(DICT.syn[t.toLowerCase()]||[]).forEach(s=>syn.push([t,s]));});
+  syn.slice(0,4).forEach(([t,s])=>{add("「"+s+"」로 검색",()=>{state.q=state.q.replace(t,s);$("#q").value=state.q;scheduleSearch(0);});});
+  if(activeList().length>(rawQ.trim()?1:0))add("필터 모두 풀기",()=>{const q=state.q;resetState();state.q=q;scheduleSearch(0);});
+  if(!box.children.length)box.remove();
+}
+let CASES=[],CPOS=0;
+function buildCases(){
+  CASES=[];const groups=[];
+  for(const {c,hits} of HITS){
+    c._g=new Int32Array(c.n).fill(-1);
+    const byRoom=new Map();
+    for(const i of hits){const r=c.rm[i];if(!byRoom.has(r))byRoom.set(r,[]);byRoom.get(r).push(i);}
+    for(const arr of byRoom.values()){
+      arr.sort((a,b)=>c.ts[a]-c.ts[b]);let cur=[arr[0]];
+      const flush=()=>{const g=groups.length;groups.push({c,idx:cur,best:cur[0],g});for(const i of cur)c._g[i]=g;};
+      for(let k=1;k<arr.length;k++){if(c.ts[arr[k]]-c.ts[arr[k-1]]<=GAP)cur.push(arr[k]);else{flush();cur=[arr[k]];}}
+      flush();
+    }
+  }
+  if(REL){const seen=new Uint8Array(groups.length);
+    for(const [,c,i] of REL){const g=c._g[i];if(g>=0&&!seen[g]){seen[g]=1;groups[g].best=i;CASES.push(groups[g]);}}}
+  else{CASES=groups.slice().sort((a,b)=>state.ord==="a"?a.c.ts[a.idx[0]]-b.c.ts[b.idx[0]]:b.c.ts[b.idx[0]]-a.c.ts[a.idx[0]]);}
+}
+function caseCard(G,hl){
+  const c=G.c,i0=G.idx[0],i1=G.idx[G.idx.length-1];
+  const {list,truncated}=chainSpan(c,i0,i1,14);
+  const marks=new Map();G.idx.forEach(i=>marks.set(c.k+":"+i,"hit"));marks.set(c.k+":"+G.best,"me");
+  const t=txtAt(c,G.best);
+  const rn=((META.rooms||[])[c.rm[G.best]]||{}).name||"";
+  const d=document.createElement("div");d.className="case";
+  d.innerHTML='<div class="ch"><span class="tag rel">연관 대화</span><span class="dt">'+fmtDate(c.ts[i0])+'</span><span>'+esc(rn.replace(/^방 \d+ · /,""))+'</span><span>메시지 '+list.length+(truncated?'+':'')+'개 중 검색어 포함 '+G.idx.length+'개</span>'+tagsHtml(c,G.best,t)+'</div>'+
+    '<h3 style="margin:0 0 4px;font-size:15px">'+hlHtml(titleOf(t),hl)+'</h3><div class="legend">'+legendHtml()+'</div>';
+  d.appendChild(ctxList(list,marks,hl));
+  const a=document.createElement("div");a.className="acts";
+  a.innerHTML='<button class="btn" data-a="ctx">대화 흐름 보기</button><button class="btn" data-a="cp">대화 복사</button>'+(truncated?'<span class="note" style="align-self:center">대화가 더 이어집니다 — 흐름 보기에서 확인</span>':'');
+  a.querySelector('[data-a="ctx"]').onclick=()=>{saveRecent(state.q);openDetail(c,G.best);};
+  a.querySelector('[data-a="cp"]').onclick=e=>{navigator.clipboard&&navigator.clipboard.writeText(convoText(list)).then(()=>{e.target.textContent="복사됨";setTimeout(()=>e.target.textContent="대화 복사",1200);});};
+  d.appendChild(a);return d;
+}
+function convoText(list){return list.map(([cc,ii])=>"["+fmtDate(cc.ts[ii])+"] "+(META.senders[cc.sd[ii]]||"")+(cc.id[ii]?" (ID "+cc.id[ii]+")":"")+"\n"+txtAt(cc,ii).replace(/ \/ /g,"\n")).join("\n\n");}
 function doSearch(){
   if(!META||!CH.length)return;
   const P=runSearch();
@@ -398,15 +594,17 @@ function doSearch(){
     FAMCNT=new Array(META.fam.length).fill(0);
     for(const {c,hits} of HITS)for(const i of hits){const f=c.fm[i];if(f)for(let b=0;b<FAMCNT.length;b++)if(f&(1<<b))FAMCNT[b]++;}
   }
-  drawChips();drawYears(ycnt);
-  state.shown=0;$("#res").innerHTML="";
+  drawChips();drawYears(ycnt);drawActive();
+  state.shown=0;CPOS=0;$("#res").innerHTML="";
   const loading=CH.length<META.chunks.length;
-  $("#st").innerHTML="<b>"+N(TOTAL)+"건</b>"+(loading?" · 지금까지 불러온 기간 기준(최신부터 불러오는 중)":"");
-  $("#tip").style.display=(state.q||state.fam.size||state.typ.size||state.model||state.err)?"none":"block";
   const useRel=state.ord==="r"&&P.pos.length>0;
   REL=null;if(useRel)buildRel(P);
   IT=null;RELPOS=0;
-  if(!TOTAL){$("#res").innerHTML='<div class="empty">검색 결과가 없습니다.<br>철자를 줄이거나(예: <b>leak</b>) 필터를 풀어 보세요.</div>';$("#more").style.display="none";return;}
+  const caseMode=state.mode==="case"&&TOTAL>0;
+  if(caseMode)buildCases();
+  $("#st").innerHTML="<b>"+N(TOTAL)+"건</b>"+(caseMode?" → <b>"+N(CASES.length)+"개 연관 대화</b>로 묶음 <span class=\"note\" style=\"display:inline\">(같은 방 · "+GAP+"분 이내 · 검색 결과 건수는 그대로)</span>":"")+(loading?" · 지금까지 불러온 기간 기준(최신부터 불러오는 중)":"");
+  $("#tip").style.display=(state.q||state.fam.size||state.typ.size||state.model||state.err||state.kind||state.famAny)?"none":"block";
+  if(!TOTAL){zeroHelp(P);return;}
   more();
 }
 function* iterDate(){
@@ -417,8 +615,15 @@ function* iterDate(){
 }
 function more(){
   const P=allPos(),hl=hlFor(P);
-  if(!IT&&!REL)IT=iterDate();
   const frag=document.createDocumentFragment();let k=0;
+  if(state.mode==="case"){
+    while(k<30&&CPOS<CASES.length){frag.appendChild(caseCard(CASES[CPOS++],hl));k++;state.shown++;}
+    $("#res").appendChild(frag);
+    const left=CASES.length-CPOS;$("#more").style.display=left>0?"inline-block":"none";
+    if(left>0)$("#more").textContent="더 보기 ("+N(left)+"개 대화 남음)";
+    return;
+  }
+  if(!IT&&!REL)IT=iterDate();
   while(k<30){
     let c,i;
     if(REL){if(RELPOS>=REL.length)break;[,c,i]=REL[RELPOS++];}
@@ -454,9 +659,12 @@ function show(v){
 }
 function goSearch(q,opts){
   opts=opts||{};
-  if(opts.reset){state.fam.clear();state.typ.clear();state.who="";state.yr=null;state.from=state.to=null;state.room="";state.att="";state.model="";state.err="";["who","dFrom","dTo","fModel","fErr"].forEach(i=>$("#"+i).value="");$("#room").value="";$("#attf").value="";}
-  if(opts.fam!==undefined)state.fam=new Set([opts.fam]);
-  if(opts.typ!==undefined)state.typ=new Set([opts.typ]);
+  if(opts.reset)resetState();
+  if(opts.fam!==undefined)state.fam=new Set([].concat(opts.fam));
+  if(opts.typ!==undefined)state.typ=new Set([].concat(opts.typ));
+  if(opts.famAny)state.famAny=true;
+  if(opts.kind)state.kind=opts.kind;
+  if(opts.who){state.who=opts.who;$("#who").value=opts.who;}
   state.q=q||"";$("#q").value=state.q;
   state.ord=state.q.trim()?"r":"d";$("#ord").value=state.ord;
   show("search");scheduleSearch(0);window.scrollTo(0,0);
@@ -465,26 +673,60 @@ function goSearch(q,opts){
 function saveRecent(q){q=(q||"").trim();if(!q)return;const a=lsGet("fs-hist-recent",[]).filter(x=>x!==q);a.unshift(q);lsSet("fs-hist-recent",a.slice(0,8));}
 function homeStats(){
   if(HS)return HS;
-  const fam=new Array(META.fam.length).fill(0),typ=new Array(META.typ.length).fill(0);let tot=0;
-  for(const c of CH)for(let i=0;i<c.n;i++){if(c.ty[i]===NZ)continue;tot++;typ[c.ty[i]]++;const f=c.fm[i];if(f)for(let b=0;b<fam.length;b++)if(f&(1<<b))fam[b]++;}
-  HS={fam,typ,tot};return HS;
+  const nf=META.fam.length,fam=new Array(nf).fill(0),typ=new Array(META.typ.length).fill(0);let tot=0,caseCnt=0,errCnt=0;
+  const gmask=DICT.eqGroups.map(([,names])=>names.reduce((a,n)=>{const k=META.fam.indexOf(n);return k>=0?a|(1<<k):a;},0)),gcnt=new Array(gmask.length).fill(0);
+  for(const c of CH){
+    for(let i=0;i<c.n;i++){if(c.ty[i]===NZ)continue;tot++;typ[c.ty[i]]++;const f=c.fm[i];
+      if(f){for(let b=0;b<nf;b++)if(f&(1<<b))fam[b]++;gmask.forEach((m,g)=>{if(f&m)gcnt[g]++;});if(c.ty[i]===1||c.ty[i]===3)caseCnt++;}}
+    const re=new RegExp(ERR_TOPIC.source,"gi");let m;
+    while((m=re.exec(c.S))){const i=bsearch(c.offs,m.index,c.n);re.lastIndex=c.offs[i+1];if(c.ty[i]!==NZ)errCnt++;}
+  }
+  HS={fam,typ,tot,caseCnt,errCnt,gmask,gcnt};return HS;
+}
+const TOPICS=[
+  ["장비별 기술 사례","장비명이 언급된 기술요청·마무리 보고",{famAny:true,typ:[1,3]},s=>s.caseCnt],
+  ["에러 및 알람","에러·알람·오류가 언급된 글",{kind:"err"},s=>s.errCnt],
+  ["기술 요청","기술요청 형식의 문의·회신",{typ:[1]},s=>s.typ[1]],
+  ["고객 문의","방문요청으로 접수된 내용",{typ:[2]},s=>s.typ[2]],
+  ["설치 및 점검","설치·PM·정기점검 관련 보고",{typ:[4]},s=>s.typ[4]],
+  ["마무리 보고","현장 작업 마무리 보고",{typ:[3]},s=>s.typ[3]]];
+function updateStats(){
+  const n=CH.reduce((a,c)=>a+c.n,0),done=CH.length>=META.chunks.length;
+  const total=META.rows_total||(META.audit&&META.audit.loaded_rows)||n,srch=META.total||loadedSearchable();
+  const per=(META.from||"").replace(/-/g,".")+" ~ "+(META.to||"").replace(/-/g,".");
+  $("#stats").innerHTML='<div class="stat"><span>데이터 보관 기간</span><b style="font-size:14px">'+per+'</b></div><div class="stat"><span>전체 메시지</span><b>'+N(total)+'건</b></div><div class="stat"><span>검색 대상</span><b>'+N(srch)+'건</b></div><div class="stat"><span>데이터 로딩</span><b class="'+(done?"ok2":"ld")+'">'+(done?"완료 · "+META.chunks.length+"구간":"불러오는 중 "+CH.length+"/"+META.chunks.length)+'</b></div>';
 }
 function drawHome(){
   if(!META)return;
+  updateStats();
   const rc=lsGet("fs-hist-recent",[]);$("#hRecentW").style.display=rc.length?"block":"none";
-  $("#hRecent").innerHTML="";rc.forEach(q=>{const b=document.createElement("button");b.className="chip";b.textContent=q;b.onclick=()=>goSearch(q,{reset:true});$("#hRecent").appendChild(b);});
-  $("#hKw").innerHTML="";(META.home_kw||[]).forEach(([w,n])=>{const b=document.createElement("button");b.className="chip";b.innerHTML=esc(w)+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch(w,{reset:true});$("#hKw").appendChild(b);});
+  $("#hRecent").innerHTML="";rc.forEach(q=>{const b=document.createElement("span");b.className="chip rc";b.tabIndex=0;b.setAttribute("role","button");
+    b.innerHTML="<span></span><b class=\"x\" role=\"button\" aria-label=\"검색어 삭제\" title=\"이 검색어 삭제\">×</b>";b.firstChild.textContent=q;
+    b.onclick=e=>{if(e.target.classList.contains("x")){e.stopPropagation();lsSet("fs-hist-recent",lsGet("fs-hist-recent",[]).filter(x=>x!==q));drawHome();return;}goSearch(q,{reset:true});};
+    b.onkeydown=e=>{if(e.key==="Enter")goSearch(q,{reset:true});};
+    $("#hRecent").appendChild(b);});
+  $("#hKw").innerHTML="";(META.home_kw||[]).slice(0,10).forEach(([w,n])=>{const b=document.createElement("button");b.className="chip";b.innerHTML=esc(w)+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch(w,{reset:true});$("#hKw").appendChild(b);});
   if(!CH.length)return;
   const s=homeStats();
-  $("#hFam").innerHTML="";META.fam.map((f,i)=>[f,i,s.fam[i]]).filter(x=>x[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,10).forEach(([f,i,n])=>{
-    const b=document.createElement("button");b.className="chip";b.innerHTML=f+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch("",{reset:true,fam:i});$("#hFam").appendChild(b);});
-  const cards=[["기술 요청",1,"기술요청 형식으로 올라온 문의·회신"],["고객 문의",2,"방문요청 접수 내용"],["전화·학술 문의",5,"전화 안내·학술 문의 기록"],["설치·점검 일정",4,"설치·PM·정기점검 관련 보고"],["마무리 보고",3,"현장 작업 마무리 보고"]];
-  $("#hCards").innerHTML="";cards.forEach(([n,t,d])=>{const b=document.createElement("button");b.className="sc";b.innerHTML="<b>"+n+"</b><em>"+N(s.typ[t])+"</em><span>"+d+"</span>";b.onclick=()=>goSearch("",{reset:true,typ:t});$("#hCards").appendChild(b);});
-  // 최근 메시지
+  $("#hTopics").innerHTML="";TOPICS.forEach(([n,d,o,f])=>{const cnt=f(s);if(!cnt)return;
+    const b=document.createElement("button");b.className="sc";b.innerHTML="<b>"+n+"</b><em>"+N(cnt)+"건</em><span>"+d+"</span>";b.onclick=()=>goSearch("",Object.assign({reset:true},o));$("#hTopics").appendChild(b);});
+  $("#hFam").innerHTML="";
+  DICT.eqGroups.forEach(([name,names],g)=>{const n=s.gcnt[g];if(!n)return;
+    const idx=names.map(x=>META.fam.indexOf(x)).filter(x=>x>=0);
+    const b=document.createElement("button");b.className="chip";b.title=names.join(" · ");b.innerHTML=esc(name)+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch("",{reset:true,fam:idx});$("#hFam").appendChild(b);});
   const rm=$("#hRecentMsg");rm.innerHTML="";let k=0;
   const newest=CH.slice().sort((a,b)=>a.k<b.k?1:-1);
   outer:for(const c of newest){for(let i=c.n-1;i>=0;i--){const ty=c.ty[i];if(ty===NZ||ty===0||ty===4)continue;if(c.S.length&&c.offs[i+1]-c.offs[i]<45)continue;rm.appendChild(card(c,i,null));if(++k>=5)break outer;}}
   overflowBtns(rm);
+}
+let EXDONE=false;
+function drawExamples(){   // 실제로 결과가 나오는 예시만 보여 줌
+  if(EXDONE||!META||CH.length<META.chunks.length)return;EXDONE=true;
+  const cand=["XN-550 water leak","UF-5000 소음","pressure 0.105","IMI 교체","HISCL 시약","SP-50 슬라이드","CAL 요청 -XN"];
+  const ok=[];for(const q of cand){const n=probe(q);if(n>0)ok.push([q,n]);if(ok.length>=4)break;}
+  if(!ok.length)return;
+  const box=$("#hEx");box.style.display="flex";box.innerHTML="<span>검색 예시</span>";
+  ok.forEach(([q,n])=>{const b=document.createElement("button");b.className="chip";b.innerHTML=esc(q)+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch(q,{reset:true});box.appendChild(b);});
 }
 
 /* ---------- 대화 상세 ---------- */
@@ -503,18 +745,23 @@ function openDetail(c,i,before,after){
   for(let k=0;k<before;k++){p=nb(p[0],p[1],-1,room);if(!p)break;prev.unshift(p);}
   p=[c,i];for(let k=0;k<after;k++){p=nb(p[0],p[1],1,room);if(!p)break;next.push(p);}
   const rowsAll=prev.concat([[c,i]],next);
-  const t=txtAt(c,i),mods=modelsOf(t);
-  let h='<dl class="kv"><dt>메시지 ID</dt><dd>'+(c.id[i]||"–")+'</dd><dt>작성일시</dt><dd>'+fmtDate(c.ts[i])+'</dd><dt>작성자</dt><dd>'+esc(META.senders[c.sd[i]]||"")+'</dd>'+
+  const t=txtAt(c,i),mods=modelsOf(t),codes=codesOf(t),syms=symsOf(t);
+  const who=META.senders[c.sd[i]]||"";
+  let h='<dl class="kv"><dt>메시지 ID</dt><dd>'+(c.id[i]||"–")+'</dd><dt>작성자</dt><dd>'+esc(who)+'</dd><dt>작성일시</dt><dd>'+fmtDate(c.ts[i])+'</dd>'+
     '<dt>대화방</dt><dd>'+esc(((META.rooms||[])[c.rm[i]]||{}).name||("방 "+c.rm[i]))+'</dd>'+
-    '<dt>유형</dt><dd>'+(c.ty[i]?META.typ[c.ty[i]]:"일반 대화")+' <span class="note">(규칙 기반 분류, 원문 확인 필요)</span></dd>'+
-    '<dt>제품</dt><dd>'+(mods.length?mods.map(esc).join(", "):"–")+'</dd>'+
+    '<dt>제품·장비</dt><dd>'+(mods.length?mods.map(esc).join(", "):"–")+'</dd>'+
+    '<dt>에러코드</dt><dd>'+(codes.length?codes.map(esc).join(", ")+' <span class="note">(추정)</span>':"–")+'</dd>'+
+    '<dt>증상</dt><dd>'+(syms.length?syms.map(esc).join(", ")+' <span class="note">(사전 일치)</span>':"–")+'</dd>'+
+    '<dt>유형</dt><dd>'+(c.ty[i]?META.typ[c.ty[i]]:(mods.length||codes.length||syms.length?"일반 대화":"미분류"))+' <span class="note">(글자 규칙 기반 분류, 원문 확인 필요)</span></dd>'+
     '<dt>첨부</dt><dd>'+(c.att.has(i)?esc(c.att.get(i))+' <span class="note">— 파일 원본은 이 보관 자료에 없어 파일명만 표시됩니다 (미확보)</span>':"없음")+'</dd></dl>';
+  h+='<div class="dtools"><button class="btn" id="dCopy">대화 내용 전체 복사</button>'+(c.id[i]?'<button class="btn" id="dLink2">메시지 링크 복사</button>':'')+'<button class="btn" id="dWho">'+esc(who)+' 님의 다른 메시지 검색</button></div>';
+  h+='<div class="legend">'+legendHtml().replace('연관 메시지(검색어 없음)','같은 방 이전·이후 대화')+'</div>';
   h+='<div class="more2"><button class="btn" id="dPrev">이전 대화 더 보기</button></div>';
   let lastDay=-1;const hl=hlFor(allPos());
   for(const [cc,ii] of rowsAll){
     const dd=dayOf(cc.ts[ii]);if(dd!==lastDay){lastDay=dd;h+='<div class="dsep">'+fmtDate(cc.ts[ii]).slice(0,10)+'</div>';}
     const me=cc===c&&ii===i,nz=cc.ty[ii]===NZ;
-    h+='<div class="ctx'+(me?' me':'')+(nz?' nz':'')+'"'+(me?' id="dMe"':'')+'><div class="who">'+fmtDate(cc.ts[ii]).slice(11)+' · '+esc(META.senders[cc.sd[ii]]||"")+(cc.id[ii]?' · ID '+cc.id[ii]:'')+(nz?' · 검색 제외 메시지':'')+'</div>'+
+    h+='<div class="ctx'+(me?' me':'')+(nz?' sys':'')+'"'+(me?' id="dMe"':'')+'><div class="who">'+fmtDate(cc.ts[ii]).slice(11)+' · '+esc(META.senders[cc.sd[ii]]||"")+(cc.id[ii]?' · ID '+cc.id[ii]:'')+(nz?' · 시스템 알림(검색 제외)':' · 원본 메시지')+(me?' · 선택한 메시지':'')+'</div>'+
       hlHtml(txtAt(cc,ii).replace(/ \/ /g,"\n"),me?hl:null)+(cc.att.has(ii)?'<div class="att">첨부: '+esc(cc.att.get(ii))+' (파일 미확보)</div>':'')+'</div>';
   }
   h+='<div class="more2"><button class="btn" id="dNext">다음 대화 더 보기</button></div>';
@@ -522,7 +769,12 @@ function openDetail(c,i,before,after){
   $("#dPrev").onclick=()=>openDetail(c,i,before+15,after);
   $("#dNext").onclick=()=>openDetail(c,i,before,after+15);
   if(before===8&&after===8){const me=$("#dMe");if(me)me.scrollIntoView({block:"center"});}
-  $("#dLink").onclick=e=>{const u=location.href.split("#")[0]+"#m="+c.id[i];navigator.clipboard&&navigator.clipboard.writeText(u).then(()=>{e.target.textContent="복사됨";setTimeout(()=>e.target.textContent="링크 복사",1200);});};
+  const flash=(el,t0)=>{const o=el.textContent;el.textContent="복사됨";setTimeout(()=>el.textContent=o,1200);};
+  const link=()=>location.href.split("#")[0]+"#m="+c.id[i];
+  $("#dCopy").onclick=e=>{navigator.clipboard&&navigator.clipboard.writeText(convoText(rowsAll)).then(()=>flash(e.target));};
+  const l2=$("#dLink2");if(l2)l2.onclick=e=>{navigator.clipboard&&navigator.clipboard.writeText(link()).then(()=>flash(e.target));};
+  $("#dWho").onclick=()=>{$("#detail").classList.remove("on");goSearch("",{reset:true,who:who});};
+  $("#dLink").onclick=e=>{navigator.clipboard&&navigator.clipboard.writeText(link()).then(()=>flash(e.target));};
   $("#dLink").style.display=c.id[i]?"":"none";
 }
 
@@ -562,6 +814,7 @@ function openAudit(){
 function refreshAll(loading){
   if(view==="home")drawHome();
   if(view==="search")scheduleSearch(loading?1200:0);
+  if(!loading)drawExamples();
   applyHash(true);
 }
 let hashDone="";
@@ -586,7 +839,8 @@ function initStatic(){
   $("#clr").onclick=()=>{$("#q").value="";state.q="";scheduleSearch(0);$("#q").focus();};
   $("#ord").onchange=e=>{state.ord=e.target.value;state.ordManual=true;scheduleSearch(0);};
   $("#adv").onclick=()=>$("#advp").classList.toggle("on");
-  $("#rst").onclick=()=>{state.fam.clear();state.typ.clear();state.who="";state.yr=null;state.from=state.to=null;state.room="";state.att="";state.model="";state.err="";["who","dFrom","dTo","fModel","fErr"].forEach(i=>$("#"+i).value="");$("#room").value="";$("#attf").value="";scheduleSearch(0);};
+  $("#rst").onclick=()=>{resetState();scheduleSearch(0);};
+  $("#viewm").onchange=e=>{state.mode=e.target.value;scheduleSearch(0);};
   $("#fModel").addEventListener("input",e=>{state.model=e.target.value;scheduleSearch();});
   $("#fErr").addEventListener("input",e=>{state.err=e.target.value;scheduleSearch();});
   $("#who").addEventListener("input",e=>{state.who=e.target.value;scheduleSearch();});
@@ -607,15 +861,53 @@ function adminUI(parent){
   const f=document.createElement("input");f.type="file";f.accept=".json";f.style.display="none";document.body.appendChild(f);
   b.onclick=()=>f.click();
   f.onchange=async()=>{
-    const file=f.files[0];if(!file)return;
-    if(!confirm("「"+file.name+"」을 올립니다. 같은 기간(반년) 자료는 덮어쓰고, 전체 목록(meta)을 새 파일 기준으로 바꿉니다. 계속할까요?"))return;
+    const file=f.files[0];f.value="";if(!file)return;
+    const reset=()=>{b.disabled=false;b.textContent="데이터 올리기";};
+    const done=[];   // 이번에 덮어쓴 구간(실패 시 되돌릴 이전 값)
     try{
-      b.disabled=true;b.textContent="파일 읽는 중…";
-      const B=JSON.parse(await file.text());const keys=Object.keys(B.chunks);let n=0;
-      for(const k of keys){b.textContent="올리는 중 "+(++n)+"/"+keys.length;await db.ref("talk/hist/c/"+k).set(B.chunks[k]);}
-      B.meta.at=Date.now();await db.ref("talk/hist/meta").set(B.meta);
-      alert("올리기 완료. 다른 기기는 다음에 열 때 바뀐 기간만 새로 받습니다.");location.reload();
-    }catch(e){alert("올리기 실패: "+e.message);b.disabled=false;b.textContent="데이터 올리기";}
+      b.disabled=true;b.textContent="파일 확인 중…";
+      const B=JSON.parse(await file.text());
+      // 1) 올리기 전 검증 — 하나라도 어긋나면 아무것도 쓰지 않는다
+      if(!B||!B.meta||!Array.isArray(B.meta.chunks)||!B.chunks)throw new Error("올바른 수리이력 번들이 아닙니다 (meta·chunks 없음)");
+      const keys=B.meta.chunks.map(c=>c.k);
+      for(const k of keys){if(!/^[0-9]{4}[ab]$/.test(k))throw new Error("구간 이름이 올바르지 않습니다: "+k);
+        if(typeof B.chunks[k]!=="string"||!B.chunks[k])throw new Error("meta에 있는 구간 자료가 번들에 없습니다: "+k);
+        if(B.chunks[k].length>4000000)throw new Error("구간이 너무 큽니다: "+k);}
+      if(!B.meta.from||!B.meta.to||!(B.meta.total>0))throw new Error("기간 또는 건수 정보가 없습니다");
+      // 2) 올리기 전 · 후 비교를 보여 주고 확인
+      const cur=META||{},ca=cur.audit,na=B.meta.audit;
+      const cmp="현재 → 새 파일\n기간: "+(cur.from||"–")+" ~ "+(cur.to||"–")+"  →  "+B.meta.from+" ~ "+B.meta.to+
+        "\n검색 대상: "+N(cur.total||0)+"건  →  "+N(B.meta.total)+"건"+
+        "\n전체 메시지: "+N(cur.rows_total||(ca&&ca.loaded_rows)||0)+"건  →  "+N(B.meta.rows_total||(na&&na.loaded_rows)||0)+"건"+
+        "\n구간: "+(cur.chunks?cur.chunks.length:0)+"개  →  "+keys.length+"개";
+      const shrink=(cur.chunks&&keys.length<cur.chunks.length)||(cur.total&&B.meta.total<cur.total)||(cur.from&&B.meta.from>cur.from)||(cur.to&&B.meta.to<cur.to);
+      const warn=shrink?"⚠ 주의: 새 파일이 현재보다 기간·구간·건수가 적습니다. 올리면 목록에서 빠지는 구간은 더 이상 검색되지 않습니다. 전체 자료 번들이 맞는지 확인하세요.\n\n":"";
+      if(!confirm(warn+"「"+file.name+"」을 올립니다.\n\n"+cmp+"\n\n같은 구간은 덮어쓰고 마지막에 전체 목록(meta)을 바꿉니다. 도중에 실패하면 이미 바꾼 구간을 이전 값으로 되돌립니다. 계속할까요?")){reset();return;}
+      // 3) 구간 올리기 (덮어쓰기 전 이전 값을 보관)
+      let n=0;
+      for(const k of keys){
+        b.textContent="올리는 중 "+(++n)+"/"+keys.length;
+        const old=(await db.ref("talk/hist/c/"+k).get()).val();
+        await db.ref("talk/hist/c/"+k).set(B.chunks[k]);done.push([k,old]);
+        const back=(await db.ref("talk/hist/c/"+k).get()).val();
+        if(!back||back.length!==B.chunks[k].length)throw new Error("올린 뒤 확인이 맞지 않습니다: "+k);
+      }
+      b.textContent="목록 갱신 중…";
+      const meta=Object.assign({},B.meta,{at:Date.now()});
+      await db.ref("talk/hist/meta").set(meta);
+      const m2=(await db.ref("talk/hist/meta").get()).val();
+      if(!m2||m2.total!==B.meta.total||m2.chunks.length!==keys.length)throw new Error("meta 확인이 맞지 않습니다");
+      alert("올리기 완료 · 기간 "+m2.from+" ~ "+m2.to+" · 검색 대상 "+N(m2.total)+"건 · 구간 "+keys.length+"개\n다른 기기는 다음에 열 때 바뀐 구간만 새로 받습니다.");location.reload();
+    }catch(e){
+      let msg="올리기 실패: "+e.message;
+      if(done.length){
+        try{b.textContent="되돌리는 중…";
+          for(const [k,old] of done.reverse()){if(old)await db.ref("talk/hist/c/"+k).set(old);else await db.ref("talk/hist/c/"+k).remove();}
+          msg+="\n\n이미 바꾼 "+done.length+"개 구간을 이전 값으로 되돌렸습니다. 기존 자료는 그대로입니다.";
+        }catch(e2){msg+="\n\n되돌리기도 실패했습니다("+e2.message+"). 같은 파일로 다시 올려 주세요.";}
+      }else msg+="\n\n아무것도 바꾸지 않았습니다. 기존 자료는 그대로입니다.";
+      alert(msg);reset();
+    }
   };
 }
 
