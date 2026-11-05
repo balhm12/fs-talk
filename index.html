@@ -1672,7 +1672,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-05.186";
+const APP_VERSION="2026-11-05.187";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2868,7 +2868,7 @@ const fmtMD=ts=>(d=>(d.getMonth()+1)+"/"+d.getDate())(new Date(ts||0));
 function boardRow(x,admin){
   const r=el("div","hbrow");const b=el("button","hbi");b.title=x.u;
   if(x.d)b.appendChild(el("span","hbd",x.d));
-  const t=el("span","hbt");const tl=el("b",null,(x.f&&x.f.id?"📎 ":"")+(x.no?x.no+" · ":"")+x.t);t.appendChild(tl);
+  const t=el("span","hbt");const tl=el("b",null,(x.f&&x.f.id?"📎 ":"")+(x.no?x.no+(x.ecr?" (ECR "+x.ecr.split(",")[0]+(x.ecr.includes(",")?" 외":"")+")":"")+" · ":"")+x.t);t.appendChild(tl);
   const sub=[x.c&&BCAT[x.c]?BCAT[x.c]:"",x.n&&x.n.length>60?x.n.slice(0,58)+"…":x.n,"등록 "+fmtMD(x.ts)+(x.by?" "+x.by:""),x.ru&&x.ru>(x.ts||0)?"개정 "+fmtMD(x.ru)+(x.rv?" ("+x.rv+")":""):""].filter(Boolean).join(" · ");t.appendChild(el("small",null,sub));b.appendChild(t);
   if(boardNew(x))b.appendChild(el("span","hbn",x.ru&&x.ru>(x.ts||0)&&x.ru>boardSeen(x.k)?"개정":"새"));
   b.onclick=()=>boardOpenItem(x);r.appendChild(b);
@@ -3024,7 +3024,7 @@ function boardDetail(x){
   const tags=el("div","bdtags");[x.c&&BCAT[x.c]?BCAT[x.c]:"",x.d||""].filter(Boolean).forEach(t=>tags.appendChild(el("span","hbd",t)));if(tags.children.length)c.appendChild(tags);
   c.appendChild(el("h3",null,x.t));
   const tb=el("div","bdinfo");const row=(k,v)=>{if(!v)return;const r=el("div","bdr");r.appendChild(el("span","bdk",k));r.appendChild(el("span","bdv",v));tb.appendChild(r);};
-  row(x.c==="fca"?"FCA 번호":"ECR 번호",x.no);row("분류",x.c&&BCAT[x.c]);row("장비",x.d);row("등록",fmtMD(x.ts)+(x.by?" · "+x.by:""));
+  row(x.c==="fca"?"FCA 번호":"ECR 번호",x.no);if(x.ecr)row("관련 ECR",x.ecr.replace(/,/g,", "));row("분류",x.c&&BCAT[x.c]);row("장비",x.d);row("등록",fmtMD(x.ts)+(x.by?" · "+x.by:""));
   if(x.ru&&x.ru>(x.ts||0))row("개정",fmtMD(x.ru)+(x.rv?" ("+x.rv+")":"")+(x.rby?" · "+x.rby:""));
   let host="";try{host=new URL(x.u).hostname.replace(/^www\./,"");}catch(e){}if(!(x.f&&x.f.id&&x.u===driveView(x.f.id)))row("연결",/kcenter\.usu\.com/.test(x.u)?"KnowledgeCenter"+(x.no?" (열 때 번호 복사)":""):/sharepoint\.com/.test(x.u)?"SharePoint":/drive\.google|docs\.google/.test(x.u)?"구글 드라이브":host);
   c.appendChild(tb);
@@ -3096,9 +3096,10 @@ function boardForm(k,ed){
   let cat=null;if(k==="tech"){cat=fld("분류",el("select"));Object.entries(BCAT).forEach(([v,l])=>{const o=el("option",null,l);o.value=v;cat.appendChild(o);});cat.value=(ed&&BCAT[ed.c]?ed.c:"")||"manual";}
   const NOC={ecr:"ECR 번호",fca:"FCA 번호"};   /* 166: ECR·FCA는 번호 입력, 링크는 비우면 KnowledgeCenter */
   const no=fld("번호",el("input"));no.maxLength=40;no.value=ed&&ed.no||"";const noF=no.parentNode;
+  const ecr=fld("관련 ECR 번호 (선택)",el("input"));ecr.maxLength=40;ecr.placeholder="예: W3CI00764 (여러 개면 쉼표)";ecr.value=ed&&ed.ecr||"";const ecrF=ecr.parentNode;   /* 187: FCA는 관련 ECR 번호도 */
   const t=fld("제목",el("input"));t.maxLength=200;t.placeholder=k==="tech"?"예: XN-1000 WB 채널 개선 TB":"예: XR-9100 일일 점검";t.value=ed?ed.t:"";
   const u=fld("링크 (https://…)",el("input"));u.type="url";u.placeholder="https://";u.value=ed?ed.u:"";const uL=u.parentNode.querySelector("label");
-  const syncNo=()=>{const ck=cat&&NOC[cat.value];noF.hidden=!ck;if(ck){noF.querySelector("label").textContent=NOC[cat.value]+" (필수)";no.placeholder=cat.value==="ecr"?"예: W3CI00764":"예: FCA 번호";uL.textContent="링크 (비우면 KnowledgeCenter — 열 때 번호 복사)";u.placeholder="비워도 됨";}else{uL.textContent="링크 (https://…)";u.placeholder="https://";}};
+  const syncNo=()=>{const ck=cat&&NOC[cat.value];noF.hidden=!ck;ecrF.hidden=!(cat&&cat.value==="fca");if(ck){noF.querySelector("label").textContent=NOC[cat.value]+" (필수)";no.placeholder=cat.value==="ecr"?"예: W3CI00764":"예: FCA 번호";uL.textContent="링크 (비우면 KnowledgeCenter — 열 때 번호 복사)";u.placeholder="비워도 됨";}else{uL.textContent="링크 (https://…)";u.placeholder="https://";}};
   if(cat)cat.addEventListener("change",syncNo);syncNo();
   /* 173: 첨부 파일(기술정보만) — 대화 첨부와 같은 방식으로 드라이브 「FS Talk 첨부」에 올리고 board 항목에 f={id,name,size,mime} */
   let fi=null,keepF=ed&&ed.f?ed.f:null;
@@ -3127,11 +3128,11 @@ function boardForm(k,ed){
       catch(e){ok.disabled=false;ok.textContent=ed?"저장":"등록";toast("파일 올리기 실패: "+e.message);return;}}
     if(uv==="__file__")uv=fobj?driveView(fobj.id):"";
     if(!/^https:\/\/[^\s]+$/.test(uv)){ok.disabled=false;ok.textContent=ed?"저장":"등록";toast("링크를 넣거나 파일을 올려 주세요.");u.focus();return;}
-    const v={t:tv,u:uv,ts:ed?ed.ts:SV,by:ed?ed.by:me.name};if(fobj)v.f=fobj;if(ed?ed.bk:true)v.bk=ed?ed.bk:myKey;if(d.value)v.d=d.value;const nv=n.value.replace(/\s+/g," ").trim();if(nv)v.n=nv.slice(0,300);if(cat)v.c=cat.value;if(isNo)v.no=nov.slice(0,40);
+    const v={t:tv,u:uv,ts:ed?ed.ts:SV,by:ed?ed.by:me.name};if(fobj)v.f=fobj;if(ed?ed.bk:true)v.bk=ed?ed.bk:myKey;if(d.value)v.d=d.value;const nv=n.value.replace(/\s+/g," ").trim();if(nv)v.n=nv.slice(0,300);if(cat)v.c=cat.value;if(isNo)v.no=nov.slice(0,40);{const ev=ecr.value.replace(/\s+/g,"").replace(/[，、]/g,",").trim();if(cat&&cat.value==="fca"&&ev)v.ecr=ev.slice(0,40);}
     if(ed){if(ed.ru)v.ru=ed.ru;if(ed.rby)v.rby=ed.rby;if(rv&&rv.value.trim())v.rv=rv.value.trim().slice(0,30);if(rc&&rc.checked){v.ru=SV;v.rby=me.name;}}
     ok.disabled=true;const ref=ed?R("board/"+k+"/"+ed.id):R("board/"+k).push();
     ref.set(v).then(async()=>{
-      if(nc.checked){const txt=(k==="tech"?"📄 ["+(rc&&rc.checked?"기술정보 개정":"기술정보")+"] ":"🎬 [동영상 교육] ")+(v.d?v.d+" · ":"")+(v.no?"["+v.no+"] ":"")+tv+(v.rv?" ("+v.rv+")":"")+(v.n?"\n"+v.n:"")+"\n"+uv+"\n\n포털 첫 화면 「"+B.title+"」에서도 볼 수 있습니다.";
+      if(nc.checked){const txt=(k==="tech"?"📄 ["+(rc&&rc.checked?"기술정보 개정":"기술정보")+"] ":"🎬 [동영상 교육] ")+(v.d?v.d+" · ":"")+(v.no?"["+v.no+(v.ecr?" · ECR "+v.ecr:"")+"] ":"")+tv+(v.rv?" ("+v.rv+")":"")+(v.n?"\n"+v.n:"")+"\n"+uv+"\n\n포털 첫 화면 「"+B.title+"」에서도 볼 수 있습니다.";
         try{const r2=await R("msgs/notice").push({uid,name:me.name,text:txt.slice(0,4000),ts:SV});afterSend("notice",r2.key);}catch(e){toast("공지 올리기 실패: "+(e.code||e.message));}}
       toast(ed?"저장했습니다.":"등록했습니다.");openBoard(k);}).catch(e=>{ok.disabled=false;toast("실패: "+e.message);});};
   $("pOv").hidden=false;setTimeout(()=>t.focus(),50);
@@ -3141,7 +3142,7 @@ function renderExt(q){
   const box=$("extBox");if(!box)return;q=String(q||"").trim().toLowerCase();box.textContent="";
   if(q.length<2){box.hidden=true;return;}
   const ws=q.split(/\s+/).filter(Boolean),hit=s=>{s=String(s||"").toLowerCase();return ws.every(w=>s.includes(w));};
-  const bl=boardList("tech").concat(boardList("video")).filter(x=>hit([x.t,x.d,x.n,x.no].join(" ")));
+  const bl=boardList("tech").concat(boardList("video")).filter(x=>hit([x.t,x.d,x.n,x.no,x.ecr].join(" ")));
   const ev=schData?schData.ev.filter(e=>hit([e.title,e.device,e.team,e.assignee].join(" "))):[];
   if(!bl.length&&!ev.length){box.hidden=true;return;}
   box.hidden=false;
@@ -4139,7 +4140,7 @@ function renderTechPage(){
       extLinks();return;}
     let total=0;
     // 1 기술정보·교육 (내부 자료)
-    if(techF!=="sil"){const L=B.filter(x=>(techF===""||techF==="fav"?true:techF==="video"?x.k==="video":x.k==="tech"&&x.c===techF)&&(techF!=="fav"||bfav[x.id])&&devOk(x.d)&&(!ws.length||hit([x.t,x.d,x.n,x.no,BCAT[x.c],x.rv].join(" "))));
+    if(techF!=="sil"){const L=B.filter(x=>(techF===""||techF==="fav"?true:techF==="video"?x.k==="video":x.k==="tech"&&x.c===techF)&&(techF!=="fav"||bfav[x.id])&&devOk(x.d)&&(!ws.length||hit([x.t,x.d,x.n,x.no,x.ecr,BCAT[x.c],x.rv].join(" "))));
       if(L.length||techF){const bx=sec("기술정보·교육 자료","doc",L.length);total+=L.length;if(!L.length)bx.appendChild(el("p","hp","맞는 자료가 없습니다."));L.slice(0,30).forEach(x=>bx.appendChild(boardRow(x,true)));}}
     // 2 실마리 에러
     if(techF===""||techF==="sil"){const bx=sec("실마리 에러·조치","compass",null);
