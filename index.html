@@ -400,6 +400,7 @@ html[data-theme=dark] .ncic{background:#16273A;color:#8CC4F5}
 .appnote{font-size:12.5px;color:#7A4E00;background:#FFF6E5;padding:6px 14px}
 .hscanhint{display:flex;align-items:center;gap:6px;background:none;border:0;padding:0 4px;margin:-6px 0 2px;color:var(--sub);font:inherit;font-size:13px;text-align:left;cursor:pointer}.hscanhint .ico{flex:none;color:#005BAC}
 .swl{display:flex;flex-direction:column;gap:3px}.swl .swi{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;line-height:1.45}.swl .swi b{font-weight:600}.swl .swi b.me{color:#005BAC}.swl .swk{color:var(--sub)}.swl .swi i{font-style:normal;font-size:12px;color:var(--sub);opacity:.8}.swmore{align-self:flex-start;background:none;border:0;padding:2px 0;color:#005BAC;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+@keyframes pnudge{0%,100%{transform:none}30%{transform:scale(1.015)}60%{transform:scale(.995)}}#pCard.nudge{animation:pnudge .25s ease}
 .appwin{background:none;border:0;color:#005BAC;font:inherit;font-weight:600;text-decoration:underline;padding:2px 0;cursor:pointer}
 .appframes{flex:1;min-height:0;position:relative}.appframes iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
 .rail a.rlink.on{background:rgba(255,255,255,.18)}
@@ -1671,7 +1672,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-04.185";
+const APP_VERSION="2026-11-05.186";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -5596,7 +5597,11 @@ renderInstall();
 /* ---------- 프로필 (연락처·메일) ---------- */
 let profiles={};
 function closeProfile(){if(profReq&&profMissing()){toast("연락처 세 칸을 입력해야 사용할 수 있어요.");return;}profReq=false;scanStop();if(typeof vRec!=="undefined"&&vRec){vRec.cancel=true;try{vRec.rec.stop();}catch(e){}}$("pOv").hidden=true;$("pCard").querySelectorAll("iframe").forEach(f=>f.remove());$("pCard").classList.remove("wide","drawer","cmdk");if(view==="settings")renderSettings();}
-$("pOv").addEventListener("click",e=>{if(e.target===$("pOv"))closeProfile();});
+/* 186: 창 바깥을 눌러도 입력 창(등록·고치기 등 입력칸이 있는 창)은 닫지 않음 — 쓰던 내용이 날아가던 것(사용자 지적). 보기 전용 창만 바깥 누르면 닫힘. 글자 선택하다 바깥에서 손을 떼도 닫히지 않게 누른 곳도 바깥이어야 함 */
+let pOvDown=null;$("pOv").addEventListener("pointerdown",e=>{pOvDown=e.target;});
+$("pOv").addEventListener("click",e=>{const ov=$("pOv");if(e.target!==ov||pOvDown!==ov)return;
+  if($("pCard").querySelector("input:not([type=checkbox]):not([type=radio]):not([type=search]),textarea,select")){const c=$("pCard");c.classList.remove("nudge");void c.offsetWidth;c.classList.add("nudge");return;}
+  closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
 /* 팀방은 그 팀(사무소방은 그 사무소) 사람·그룹장·부문장·관리자만 (159, 규칙과 같은 기준) */
