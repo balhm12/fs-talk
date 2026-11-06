@@ -1546,6 +1546,40 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .vlog{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px;max-height:46vh;overflow:auto}.vlr{display:flex;gap:10px;font-size:14px;line-height:1.45}.vld{flex:0 0 42px;color:var(--sub);font-variant-numeric:tabular-nums}
 .bdfile{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.bdfile .ico{color:var(--blue)}
 .bdfn{flex:1;min-width:0;display:flex;flex-direction:column}.bdfn b{font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bdfn small{font-size:12px;color:var(--sub)}
+/* Slack 요청함(198) */
+.slkadd{margin-left:auto;display:inline-flex;align-items:center;gap:6px;width:auto;padding:9px 14px}
+.slkcn{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:1.5;color:var(--sub)}.slkcn>span:nth-child(2){flex:1;min-width:0}.slkcn .hmore{margin-left:auto;flex:0 0 auto}
+.slkdot{width:8px;height:8px;border-radius:50%;background:#9E9E9E;flex:0 0 auto;margin-top:6px}.slkdot.on{background:#3FBA46}
+.slkbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.slkbar .seg{flex:0 0 auto}.slkch{margin-left:auto}
+.slklist{display:flex;flex-direction:column;gap:8px}
+.slkrow{display:flex;flex-direction:column;align-items:stretch;gap:3px;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:11px 14px;cursor:pointer;font-family:var(--font);color:var(--text);box-shadow:var(--sh-card)}
+.slkrow:hover{border-color:var(--blue)}
+.slktop{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+.slkst{font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;background:var(--soft);color:var(--sub)}
+.slkst.new{background:#FDECEC;color:#B42318}.slkst.doing{background:#FDF3E1;color:#8A5A00}.slkst.done{background:#E9F7EA;color:#1E7A24}
+html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}html[data-theme=dark] .slkst.doing{background:rgba(230,158,11,.16);color:#F0B847}html[data-theme=dark] .slkst.done{background:rgba(63,186,70,.18);color:#7DD383}
+.slksrc{font-weight:600;color:var(--strong)}.slktm{border:1px solid var(--line);border-radius:6px;padding:0 6px}.slkago{margin-left:auto}
+.slkh{font-size:15px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slkq{font-size:13.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.slkft{font-size:12px;color:var(--sub)}.slkft.none{color:#B42318;font-weight:600}html[data-theme=dark] .slkft.none{color:#F59A98}.slkft em{font-style:normal;color:#1E7A24}
+.slkempty{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;padding:28px 16px;border:1px dashed var(--line);border-radius:14px;color:var(--sub);font-size:13px}.slkempty b{color:var(--strong);font-size:15px}
+.slkdt{margin:-4px 0 6px}.slkdt .slkago{margin-left:0}
+.slkwho{margin:0 0 10px;font-size:13.5px;color:var(--strong);font-weight:600}
+.slkf{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.slkf .bdv{white-space:pre-wrap;flex:1;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.slkf .bdk{flex-basis:76px}
+.slktel{flex:0 0 auto;align-self:flex-start;font-size:12.5px;font-weight:700;color:var(--link);border:1px solid var(--line);border-radius:8px;padding:2px 10px;text-decoration:none}
+.slkfin{display:flex;flex-direction:column;gap:2px;background:var(--soft);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:13px}.slkfin b{font-size:12.5px;color:#1E7A24}
+.slkgo{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:10px}.slkgo .hmore{margin:0;padding-left:0;padding-right:0}
+.slkh2{font-size:12.5px;font-weight:700;color:var(--sub);margin:4px 0}
+.slkth{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:30vh;overflow:auto}
+.slkm{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--line);padding:2px 10px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}.slkm b{font-size:12px;color:var(--sub);font-weight:600}.slkm.me{border-left-color:#005BAC}
+.slkog{margin-bottom:10px;font-size:13px}.slkog summary{cursor:pointer;color:var(--sub);padding:4px 0}.slkog pre{white-space:pre-wrap;word-break:break-word;font-family:var(--font);font-size:12.5px;background:var(--soft);border-radius:10px;padding:10px;max-height:34vh;overflow:auto;margin:6px 0 0}
+.slkre,.slktx{width:100%;box-sizing:border-box;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel);color:var(--text);resize:vertical}
+.slkbt{margin-top:6px}.slknote{margin:8px 0 0;font-size:12px}
+.slkpv{display:flex;flex-direction:column;gap:6px;margin:4px 0 12px}.slkpn{font-size:12.5px;font-weight:700;color:var(--strong)}
+.slkpi{display:flex;flex-direction:column;gap:1px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--sub)}.slkpi b{font-size:14px;color:var(--strong)}.slkpi.dup{opacity:.55}.slkpi.dup b::after{content:" · 이미 있음";font-weight:400;font-size:12px;color:var(--sub)}
+.slkpe{font-size:13px;color:#B42318;background:#FDECEC;border-radius:10px;padding:8px 12px}html[data-theme=dark] .slkpe{background:rgba(231,65,62,.16);color:#F59A98}
+@media (max-width:820px){.slkbar{flex-direction:column;align-items:stretch}.slkbar .seg{display:flex}.slkbar .seg button{flex:1}.slkch{margin-left:0;flex-wrap:nowrap;overflow-x:auto}.slkadd{margin-left:0;width:100%;justify-content:center}.slkf .bdr{flex-wrap:wrap}}
+@media (pointer:coarse){.slkbar .seg button,.slkch .hchip,.slkgo .hmore,.slkcn .hmore,.slktel{min-height:44px}.slktel{display:inline-flex;align-items:center}}
 </style>
 
 </head>
@@ -1717,6 +1751,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
     </section>
 
     <section class="view" id="teamView"><div class="home ob" id="teamBody"></div></section>
+    <section class="view" id="reqView"><div class="home ob" id="reqBody"></div></section>
     <section class="view" id="techView"><div class="home ob" id="techBody"></div></section>
     <section class="view" id="orgView"><div class="home ob" id="orgBody"></div></section>
     <section class="view" id="menuView"><div class="home ob" id="menuBody"></div></section>
@@ -1770,7 +1805,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.197";
+const APP_VERSION="2026-11-06.198";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2132,6 +2167,7 @@ function start(){
   setTimeout(()=>{if(!schData&&!schP)schLoad();},3500);   // 대화 속 병원 일정 칩·조직도 상태용
   setTimeout(()=>{silRecall().then(k=>{silChecked=true;if(k){silKey=k;silLoad().catch(()=>{});}else{silErr="locked";silStatus();}}).catch(e=>{silChecked=true;silErr=e.message||"연결 실패";silStatus();});},2500);   // 실마리 비밀번호가 이 기기에 있으면 조용히 연결
   try{const k="fstalk-seen-day",d=ymd(new Date());if(localStorage.getItem(k)!==d){R("seen/"+uid).set(SV).then(()=>{try{localStorage.setItem(k,d);}catch(e){}}).catch(()=>{});}}catch(e){}   // 관리 화면의 「마지막 사용」 (하루 한 번)
+  setTimeout(slkWatch,1200);   // 198: Slack 요청함 (새 요청 수 → 브리핑·메뉴)
   R("board").on("value",s=>{board=s.val()||{};renderBoardCards();if(view==="tech")renderTechPage();if(view==="search")renderExt($("q").value);},()=>{});
   R("acks").on("value",s=>{acks=s.val()||{};schedule();if(!acksLoaded){acksLoaded=true;setTimeout(maybeNoticePrompt,2500);}},()=>{});
   R("lockreset/"+myKey).on("value",s=>{const v=+s.val()||0;const c=lockCfg();
@@ -3636,6 +3672,7 @@ function renderBrief(){try{renderStart();}catch(e){}
   const pn=pendingNotices().length,lim=Date.now()-7*864e5,mn=msgs.filter(m=>shown(m)&&m.ts>lim&&!isMine(m)&&mentionsMe(m)&&!(notiState.ids||{})["m_"+m.id]&&m.ts>(notiState.all||0)).length;
   if(pn||mn)it("bell",[["확인할 것 "],[(pn?"공지 "+pn+"건":"")+(pn&&mn?" · ":"")+(mn?"나를 언급 "+mn+"건":""),1]],()=>pn?go("room-notice"):openNotiCenter(),"warn");
   else it("bell",[["확인할 공지·언급 없음"]],()=>openNotiCenter());
+  {const n=slkNewCount();if(n)it("headset",[["Slack 새 요청 "],[n+"건",1]],()=>go("req"),"warn");}
   {const P=latestPoster();if(P&&!posterSeen(P)&&(!P.at||Date.now()-P.at<14*864e5))it("star",[["새 게시물 "],[P.title,1]],()=>openPosterViewer(P));}
   if((isAdmin||myLead())&&vocData){const vs=vocSummary();if(vs){const all=myRole()==="group"||!myField(),tm=myTeamU(),open=vs.R.filter(vocLow).filter(r=>all||String(r.team||"").toUpperCase()===tm).filter(r=>(vocFu[vocKey(r)]||{}).s!=="done").length;
     if(open)it("flag",[["3점 이하 미조치 "],[open+"건",1]],openVocLow,"warn");}}
@@ -3691,6 +3728,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const L=[["home","홈",()=>go("home")],["chat","대화",()=>{listTab="rooms";go("");}],["users","조직도",()=>go("org")],["search","통합 검색",()=>go("search")],["bookmark","저장한 글",()=>go("saved")],["bell","알림 센터",()=>setTimeout(openNotiCenter,50)]]
     .concat(isAdmin?[["shield","관리",()=>go("admin")]]:[]).concat([["gear","설정",()=>go("settings")],["info","사용 안내 · 새 기능",()=>setTimeout(openCoach,0)],["info","버전 정보",()=>setTimeout(openVersion,0)],["home","홈 화면 순서·표시",()=>{go("home");setTimeout(openLayoutEditor,0);}]]);
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
+  L.splice(3,0,["headset","Slack 요청",()=>go("req")]);
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
   grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(k=>HLINKS[k]));
@@ -3709,6 +3747,7 @@ function renderMenuPage(){
   const grid=(title,items)=>{if(!items.length)return;b.appendChild(el("div","mnh",title));const g=el("div","mngrid");
     items.forEach(([ic,t,fn,badge,tone,tip])=>{const x=el("button","mnapp");if(tip)x.title=tip;const i=el("span","mnic"+(tone?" "+tone:""));i.appendChild(icEl(ic,"",24));x.appendChild(i);x.appendChild(el("span","mnl",t));if(badge){x.appendChild(el("span","dot",String(badge)));}x.onclick=fn;g.appendChild(x);});b.appendChild(g);};
   const mine=[["search","통합 검색",()=>go("search"),0,"b"],["bookmark","저장한 글",()=>go("saved"),0,"b"],["bell","알림 센터",()=>openNotiCenter(),0,"b"]];
+  mine.push(["headset","Slack 요청",()=>go("req"),slkNewCount(),"b"]);
   if(isAdmin||myLead())mine.push(["users","팀 현황",()=>go("team"),0,"b"]);
   if(isAdmin)mine.push(["shield","관리",()=>go("admin"),pendingCount||0,"r"]);
   grid("자주 쓰는 것",mine);
@@ -3726,6 +3765,198 @@ function renderMenuPage(){
   b.appendChild(L);
   b.appendChild(el("div","mnver","FS 포털 · "+APP_VERSION));
 }
+/* ===== Slack 요청함 (198): CSO 기술요청·야간 접수(CS쉐어링) 인계를 포털에서 담당·회신·완료 =====
+   자료 talk/slack/req/{id}: 서버(Slack 앱 연결 후 1분마다, id = cso_…·night_…) 또는 직원의 「Slack 글 붙여넣기」(id = p_…)
+   아래 slkClean_·slkPerson_·slkParse_ 는 apps-script/notify.gs 와 글자 그대로 같아야 한다(tests/slack_parse.js 가 비교) */
+let slkReq={},slkMeta=null,slkScope=null,slkSt="new",slkOn=false;
+function slkClean_(t){
+  return String(t||'')
+    .replace(/<tel:[^|>]*\|([^>]*)>/g,'$1').replace(/<mailto:[^|>]*\|([^>]*)>/g,'$1')
+    .replace(/<@[A-Z0-9]+\|([^>]*)>/g,'@$1').replace(/<!subteam\^[A-Z0-9]+(\|[^>]*)?>/g,'').replace(/<!(here|channel|everyone)>/g,'')
+    .replace(/<(https?:[^|>]*)\|([^>]*)>/g,'$2 ($1)').replace(/<(https?:[^>]*)>/g,'$1')
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').trim();
+}
+function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/\s+/g,' ').trim(); }
+function slkParse_(text){
+  const t = String(text||'');
+  const f = {};
+  const tm = /<\s*인계\s*:\s*([^>]+?)\s*>/.exec(t) || /\[\s*인계\s*:\s*([^\]]+?)\s*\]/.exec(t);
+  if(tm){ const v = tm[1].trim(); if(/^L\d/i.test(v)) f.lvl = v.toUpperCase(); else f.team = v.replace(/\s+/g,' ').toUpperCase().replace(/^FS(?=\S)/,'FS '); }
+  const KEYS = [['hosp',/^기관명/],['eq',/^장비명/],['req',/^요청사항/],['sym',/^(error|에러)\/?증상/i],['act',/^확인\/?조치/],['contact',/^회신처|^회신고객|^접수처/],['when',/^회신기간/],['back',/^회신여부/]];
+  let cur = null;
+  t.split(/\n/).forEach(function(line){
+    const m = /^\s*(?:\d+\s*[).:]|[-•·]|)\s*([가-힣A-Za-z\/ (),]{2,24}?)\s*(?:\[[^\]]*\])?\s*[:：]\s*(.*)$/.exec(line);
+    if(m){
+      const key = m[1].replace(/\s+/g,'').replace(/\(지역\)/,'');
+      const hit = KEYS.filter(function(k){ return k[1].test(key); })[0];
+      if(hit){ cur = hit[0]; if(f[cur] && cur==='contact'){ f[cur] += ' / ' + m[2].trim(); } else f[cur] = m[2].trim(); return; }
+    }
+    if(/^\s*\d+\s*[).]/.test(line) || /^\s*=+\s*$/.test(line) || /^\s*\[CS/.test(line)) { cur = null; return; }
+    if(cur && line.trim()) f[cur] = ((f[cur]||'') + (f[cur] ? '\n' : '') + line.trim()).slice(0,600);
+  });
+  const rb = /회신여부\s*\[\s*([YN])\s*\]/i.exec(t); if(rb) f.back = rb[1].toUpperCase();
+  if(f.hosp){ const rg = /\(([^)]+)\)\s*$/.exec(f.hosp); if(rg && rg[1].length <= 4){ f.area = rg[1]; f.hosp = f.hosp.replace(/\s*\([^)]+\)\s*$/,''); } }
+  Object.keys(f).forEach(function(k){ f[k] = String(f[k]).replace(/[ \t]+/g,' ').trim().slice(0,600); if(!f[k]) delete f[k]; });
+  return (f.hosp && (f.eq || f.req)) ? f : null;
+}
+const SLK_SRC={cso:"CSO 기술요청",night:"야간 접수",etc:"기타 요청"};
+const SLK_ST={new:"새 요청",doing:"처리 중",done:"완료"};
+function slkWatch(){if(slkOn||!me)return;slkOn=true;
+  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
+  R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();},()=>{});}
+function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
+function slkSrc(r){return r.kind==="paste"?(r.src||"etc"):r.kind;}
+function slkTeam(r){const f=r.f||{};if(f.team)return String(f.team).toUpperCase();const p=r.mention&&rosterList().find(x=>x.name===r.mention);return p?String(p.team).toUpperCase():"";}
+function slkMine(r){return !!me&&(r.who===me.name||r.mention===me.name);}
+function slkDefScope(){return myField()&&myRole()!=="group"?"team":"all";}
+function slkIn(r,sc){return sc==="all"||(sc==="me"?slkMine(r):slkTeam(r)===myTeamU()||slkMine(r));}
+function slkList(){return Object.keys(slkReq).map(id=>Object.assign({id},slkReq[id])).filter(r=>r.f&&r.at);}
+function slkNewCount(){const sc=slkDefScope();return slkList().filter(r=>r.st==="new"&&slkIn(r,sc)).length;}
+function slkLive(r){return !!(slkMeta&&slkMeta.ok&&r.ch&&r.ts&&slkMeta.chans&&slkMeta.chans[r.ch]&&!r.multi);}
+function slkUrl(r){if(r.u)return r.u;if(!r.ch||!r.ts||!slkMeta||!slkMeta.url)return "";return slkMeta.url.replace(/\/?$/,"/")+"archives/"+r.ch+"/p"+String(r.ts).replace(".","");}
+function slkAgo(t){const m=Math.round((Date.now()-t)/6e4);if(m<1)return "방금";if(m<60)return m+"분 전";const h=Math.round(m/60);if(h<24)return h+"시간 전";const d=new Date(t);return (d.getMonth()+1)+"/"+d.getDate();}
+function slkFirst(s,n){s=String(s||"").split("\n").map(x=>x.replace(/^[-•·\s]+/,"").trim()).filter(Boolean).join(" · ");return s.length>n?s.slice(0,n)+"…":s;}
+function slkTel(s){const m=/0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}/.exec(String(s||""));return m?m[0].replace(/\D/g,""):"";}
+/* 붙여 넣은 글을 양식 한 건씩 — 양식 앞 줄(@담당자·한 줄 요약)은 다음 양식에 붙임 */
+function slkSplit(text){const out=[];let carry="";
+  slkClean_(text).split(/(?=\[CS쉐어링 접수\]|<\s*기술\s*요청\s*>)/).forEach(p=>{
+    let own=p,tail="";const re=/\n[ \t]*(?:=+[ \t]*)?\n/g;let m;   // 빈 줄·구분선 뒤가 양식 칸 없이 「이름 오후 3:21」「@담당자」「=====」뿐이면 다음 글의 머리
+    while((m=re.exec(p))){const t=p.slice(m.index);if(/기\s*관\s*명/.test(t)||/^\s*(\d+\s*[).]|[•·-])\s*[가-힣A-Za-z\/ ]{2,24}\s*(\[[^\]]*\])?\s*[:：]/m.test(t))continue;
+      if(/(오전|오후|AM|PM)\s*\d{1,2}:\d{2}/i.test(t)||/@\S/.test(t)||/^\s*=+\s*$/m.test(t)){own=p.slice(0,m.index);tail=t.replace(/^\s*(=+\s*)?/,"");break;}}
+    const f=slkParse_(own);if(!f){carry=(carry+p).slice(-300);return;}
+    const b=(carry+own).trim(),head=b.split(/\[CS쉐어링 접수\]|<\s*기술\s*요청\s*>/)[0],mm=/@([^\s@]{2,24})/.exec(head);carry=tail.slice(-300);
+    out.push({b,f,src:/CS쉐어링/.test(b)?"night":/기술\s*요청/.test(b)?"cso":"etc",mention:mm?slkPerson_(mm[1]):""});});
+  return out;}
+function slkDupOf(f){const k=[f.hosp,f.eq,f.req].join("|");return slkList().find(r=>[r.f.hosp,r.f.eq,r.f.req].join("|")===k);}
+function renderReqPage(){
+  const b=$("reqBody");if(!b||!me)return;slkWatch();b.textContent="";
+  if(!slkScope)slkScope=slkDefScope();
+  const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"Slack 요청"));tt.appendChild(el("span",null,"CSO 기술요청 · 야간 접수 인계"));hd.appendChild(tt);
+  const ad=el("button","btn pri slkadd");ad.appendChild(icEl("plus","",16));ad.appendChild(el("span",null,"Slack 글 붙여넣기"));ad.onclick=openSlkPaste;hd.appendChild(ad);b.appendChild(hd);
+  const cn=el("div","slkcn");const live=slkMeta&&slkMeta.ok&&Date.now()-(slkMeta.at||0)<15*6e4;
+  cn.appendChild(el("span","slkdot"+(live?" on":"")));
+  cn.appendChild(el("span",null,live?"Slack 자동 연결됨 · "+new Date(slkMeta.at).toTimeString().slice(0,5)+" 확인":"Slack 자동 연결 전 — Slack 글의 ⋮ → 「텍스트 복사」 후 「Slack 글 붙여넣기」"));
+  if(isAdmin){const t=el("button","hmore","연결 시험");t.onclick=slkTest;cn.appendChild(t);}
+  b.appendChild(cn);
+  const all=slkList(),wk=Date.now()-7*864e5;
+  const sc=el("div","obchips slkch");(myField()?[["team","우리 팀"]]:[]).concat([["me","내 담당"],["all","전체"]]).forEach(([k,l])=>{const x=el("button","hchip sm"+(slkScope===k?" on":""),l);x.setAttribute("aria-pressed",slkScope===k);x.onclick=()=>{slkScope=k;renderReqPage();};sc.appendChild(x);});
+  const inS=all.filter(r=>slkIn(r,slkScope)&&(r.st!=="done"||(r.doneAt||r.at)>wk));
+  const sg=el("div","seg slkseg");["new","doing","done"].forEach(k=>{const n=inS.filter(r=>r.st===k).length;const x=el("button",slkSt===k?"on":null,SLK_ST[k]+" "+n);x.setAttribute("aria-pressed",slkSt===k);x.onclick=()=>{slkSt=k;renderReqPage();};sg.appendChild(x);});
+  const bar=el("div","slkbar");bar.appendChild(sg);bar.appendChild(sc);b.appendChild(bar);
+  const L=inS.filter(r=>r.st===slkSt).sort((a,c)=>(slkSt==="done"?(c.doneAt||c.at)-(a.doneAt||a.at):c.at-a.at));
+  const box=el("div","slklist");
+  if(!L.length){const e=el("div","slkempty");
+    e.appendChild(el("b",null,slkSt==="new"?"새 요청이 없습니다":slkSt==="doing"?"처리 중인 요청이 없습니다":"최근 7일 완료한 요청이 없습니다"));
+    if(!all.length)e.appendChild(el("span",null,"Slack #handover-cso-fsg · #handover-cssharing-fsg 의 요청 글을 복사해 「Slack 글 붙여넣기」로 넣으면 기관·장비·요청·증상·회신처로 나눠 보여 줍니다."));
+    else if(slkScope!=="all")e.appendChild(el("span",null,"다른 팀 요청은 「전체」에서 볼 수 있어요."));
+    box.appendChild(e);}
+  L.forEach(r=>{const f=r.f,row=el("button","slkrow"),tp=el("span","slktop");
+    tp.appendChild(el("span","slkst "+r.st,SLK_ST[r.st]||r.st));
+    tp.appendChild(el("span","slksrc",SLK_SRC[slkSrc(r)]||"요청"));
+    const tm=slkTeam(r)||f.lvl||"";if(tm)tp.appendChild(el("span","slktm",tm.replace(/^FS /,"")));
+    tp.appendChild(el("span","slkago",slkAgo(r.at)));row.appendChild(tp);
+    row.appendChild(el("b","slkh",[f.hosp+(f.area?" ("+f.area+")":""),f.eq].filter(Boolean).join(" · ")));
+    const q=slkFirst(f.req||f.sym,80);if(q)row.appendChild(el("span","slkq",q));
+    const who=r.st==="done"?(r.doneBy?"완료 "+r.doneBy:"완료"):r.who?"담당 "+r.who:r.mention?"@"+r.mention:"담당자 없음";
+    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention?" none":""),who);if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));row.appendChild(ft);
+    row.onclick=()=>openSlkReq(r.id);box.appendChild(row);});
+  b.appendChild(box);
+}
+function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign({id},r0),f=r.f||{};track("slk_v");
+  const c=$("pCard");c.textContent="";c.classList.remove("drawer");c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,(f.hosp||"요청")+(f.area?" ("+f.area+")":"")));
+  const sub=el("div","slktop slkdt");sub.appendChild(el("span","slkst "+r.st,SLK_ST[r.st]||r.st));sub.appendChild(el("span","slksrc",SLK_SRC[slkSrc(r)]||"요청"));
+  const tm=slkTeam(r)||f.lvl;if(tm)sub.appendChild(el("span","slktm",tm));
+  sub.appendChild(el("span","slkago",new Date(r.at).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})+(r.by?" · "+r.by:r.pb?" · "+r.pb+" 님이 붙여 넣음":"")));c.appendChild(sub);
+  const who=r.who?(r.st==="done"?"완료 "+(r.doneBy||r.who):"담당 "+r.who):r.mention?"지정 @"+r.mention+" (아직 담당 표시 없음)":"아직 담당자가 없습니다";
+  c.appendChild(el("p","slkwho",who));
+  const tb=el("div","slkf");const row=(k,v,lnk)=>{if(!v)return;const d=el("div","bdr");d.appendChild(el("span","bdk",k));const vv=el("span","bdv",v);d.appendChild(vv);if(lnk)d.appendChild(lnk);tb.appendChild(d);};
+  row("장비",f.eq);row("요청사항",f.req);row("Error/증상",f.sym);row("확인/조치",f.act);
+  {const tel=slkTel(f.contact);let a=null;if(tel){a=el("a","slktel","전화");a.href="tel:"+tel;a.setAttribute("aria-label","회신처에 전화");}row("회신처",f.contact,a);}
+  row("회신",[f.back==="Y"?"회신 필요":f.back==="N"?"회신 불필요":"",f.when].filter(Boolean).join(" · "));
+  c.appendChild(tb);
+  if(r.fin){const fb=el("div","slkfin");fb.appendChild(el("b",null,"마무리 보고 · "+(r.fin.n||"")+" · "+slkAgo(r.fin.at)));fb.appendChild(el("span",null,slkFirst(r.fin.t,160)));c.appendChild(fb);}
+  const go2=el("div","slkgo");const lk=(t,fn)=>{const a=el("button","hmore",t);a.onclick=()=>{closeProfile();fn();};go2.appendChild(a);};
+  const eqk=String(f.eq||"").split(/[\s,/]+/)[0];
+  if(eqk||f.sym)lk("수리이력에서 찾기 ›",()=>goHist([eqk,slkFirst(f.sym,20)].filter(Boolean).join(" ")));
+  if(eqk)lk("실마리 ›",()=>silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(eqk)));
+  if(f.hosp)lk("길찾기 ›",()=>openMap(f.hosp));
+  const url=slkUrl(r);if(url){const a=el("button","hmore","Slack에서 열기 ›");a.onclick=()=>openUrl(url);go2.appendChild(a);}
+  c.appendChild(go2);
+  const th=Object.keys(r.th||{}).map(k=>r.th[k]).filter(t=>t&&t.t).sort((a,b)=>a.at-b.at);
+  if(th.length){c.appendChild(el("div","slkh2","스레드 "+th.length));const tl=el("div","slkth");th.forEach(t=>{const m=el("div","slkm"+(t.p?" me":""));m.appendChild(el("b",null,(t.n||"")+" · "+slkAgo(t.at)+(t.p&&!slkLive(r)?" · 포털 기록":"")));m.appendChild(el("span",null,t.t));tl.appendChild(m);});c.appendChild(tl);}
+  const og=el("details","slkog");og.appendChild(el("summary",null,"원문 보기"));og.appendChild(el("pre",null,r.t||""));c.appendChild(og);
+  const live=slkLive(r),canRe=!r.multi;
+  if(canRe){const fd=el("div","f");const lb=el("label",null,live?"Slack 스레드에 회신":"회신 문구 (복사해서 Slack 스레드에 붙여 넣기)");const ta=el("textarea","slkre");ta.id="slkRe";ta.rows=3;ta.maxLength=1500;ta.placeholder="예) 내일 오전 방문 예정입니다. 고객께 연락드렸습니다.";lb.htmlFor="slkRe";fd.appendChild(lb);fd.appendChild(ta);c.appendChild(fd);}
+  const bt=el("div","lebtns wrap slkbt");const B=(t,cls,fn)=>{const x=el("button","btn"+(cls?" "+cls:""),t);x.onclick=fn;bt.appendChild(x);return x;};
+  const txt=()=>{const t=$("slkRe");return t?t.value.trim():"";};
+  if(canRe)B(live?"회신 보내기":"회신 복사",null,async()=>{const t=txt();if(!t){toast("회신 내용을 적어 주세요.");$("slkRe").focus();return;}
+    if(live){if(await slkDo(id,"reply",t))openSlkReq(id);return;}
+    await copyText(t);await slkDo(id,"reply",t);if(url)openUrl(url);else toast("복사했습니다 — Slack 원래 글의 스레드에 붙여 넣으세요.");openSlkReq(id);});
+  if(r.st==="new")B("내가 담당",r.st==="new"?"pri":null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
+  else if(r.st==="doing"&&r.who!==me.name)B("내가 담당",null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
+  if(r.st!=="done")B("완료",r.st==="doing"?"pri":null,async()=>{if(await slkDo(id,"done",txt()))openSlkReq(id);});
+  else B("다시 열기",null,async()=>{if(await slkDo(id,"reopen",""))openSlkReq(id);});
+  if(r.kind==="paste"&&(r.pu===uid||isAdmin))B("삭제","bad",async()=>{if(!confirm("이 요청을 요청함에서 지울까요? (Slack 글은 그대로)"))return;try{await R("slack/req/"+id).remove();closeProfile();toast("지웠습니다.");}catch(e){toast("지우지 못했습니다.");}});
+  c.appendChild(bt);
+  if(!live&&r.st!=="done")c.appendChild(el("p","hp slknote","Slack 자동 연결 전이라 담당·완료는 포털에만 기록됩니다. Slack 원래 글의 확인·완료 반응은 직접 눌러 주세요."));
+  $("pOv").hidden=false;
+}
+async function slkDo(id,op,text){const r=slkReq[id];if(!r||!me)return false;track("slk_act");
+  if(slkLive(r)){try{const idToken=await auth.currentUser.getIdToken();
+      const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slack",idToken,op,id,text})});
+      const j=await res.json().catch(()=>null);if(!j||!j.ok){toast((j&&j.err)||"Slack에 보내지 못했습니다.");return false;}
+      toast({claim:"담당으로 표시하고 Slack 스레드에 알렸습니다.",reply:"Slack 스레드에 보냈습니다.",done:"완료로 표시하고 Slack 스레드에 알렸습니다.",reopen:"다시 열었습니다."}[op]);return true;}
+    catch(e){toast("연결하지 못했습니다.");return false;}}
+  if(r.kind!=="paste"){toast("Slack 연결이 끊겨 지금은 바꿀 수 없습니다.");return false;}
+  const now=Date.now(),p={};
+  if(op==="claim"){p.st="doing";p.who=me.name;p.whoAt=now;}
+  else if(op==="done"){p.st="done";p.doneAt=now;p.doneBy=me.name;if(!r.who)p.who=me.name;}
+  else if(op==="reopen"){p.st="doing";p.doneAt=null;p.doneBy=null;}
+  else if(op==="reply"){p["th/"+now]={n:me.name,t:text.slice(0,1500),at:now,p:true};if(r.st==="new"){p.st="doing";p.who=r.who||me.name;p.whoAt=now;}}
+  if(op!=="reply"&&text)p["th/"+now]={n:me.name,t:text.slice(0,1500),at:now,p:true};
+  try{await R("slack/req/"+id).update(p);if(op!=="reply")toast({claim:"담당으로 표시했습니다.",done:"완료로 표시했습니다.",reopen:"다시 열었습니다."}[op]);return true;}
+  catch(e){toast("저장하지 못했습니다.");return false;}}
+function openSlkPaste(){track("slk_paste");
+  const c=$("pCard");c.textContent="";c.classList.remove("drawer");c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"Slack 글 붙여넣기"));
+  c.appendChild(el("p","hp","Slack에서 요청 글의 ⋮ → 「텍스트 복사」 후 아래에 붙여 넣으세요. 기술요청(CSO)·CS쉐어링 접수 양식을 기관·장비·요청·증상·회신처로 나눕니다. 여러 건을 한 번에 붙여도 됩니다."));
+  const f1=el("div","f");const l1=el("label",null,"Slack 글");l1.htmlFor="slkTx";const ta=el("textarea","slktx");ta.id="slkTx";ta.rows=7;ta.maxLength=20000;ta.placeholder="<기술요청><인계 : FS …>\n1) 기 관 명 : …";f1.appendChild(l1);f1.appendChild(ta);c.appendChild(f1);
+  const f2=el("div","f");const l2=el("label",null,"Slack 글 링크 (선택 · ⋮ → 「링크 복사」)");l2.htmlFor="slkU";const u=el("input");u.type="url";u.id="slkU";u.placeholder="https://….slack.com/archives/…";f2.appendChild(l2);f2.appendChild(u);c.appendChild(f2);
+  const pv=el("div","slkpv");pv.setAttribute("aria-live","polite");c.appendChild(pv);
+  const bt=el("div","lebtns");const cc=el("button","btn","취소");cc.onclick=closeProfile;const ok=el("button","btn pri","요청함에 넣기");ok.disabled=true;bt.appendChild(cc);bt.appendChild(ok);c.appendChild(bt);
+  let items=[];
+  const draw=()=>{items=slkSplit(ta.value);pv.textContent="";
+    if(!ta.value.trim()){ok.disabled=true;return;}
+    if(!items.length){pv.appendChild(el("div","slkpe","요청 양식(기관명·장비명·요청사항)을 찾지 못했습니다. 기술요청·CS쉐어링 접수 글 전체를 복사했는지 확인해 주세요."));ok.disabled=true;return;}
+    const fresh=items.filter(it=>!slkDupOf(it.f));
+    pv.appendChild(el("div","slkpn",items.length+"건 찾음"+(fresh.length<items.length?" · 이미 있는 "+(items.length-fresh.length)+"건은 건너뜀":"")));
+    items.forEach(it=>{const d=el("div","slkpi"+(slkDupOf(it.f)?" dup":""));d.appendChild(el("b",null,[it.f.hosp,it.f.eq].filter(Boolean).join(" · ")));
+      d.appendChild(el("span",null,[SLK_SRC[it.src],it.f.team||it.f.lvl,it.mention?"@"+it.mention:"",slkFirst(it.f.req||it.f.sym,50)].filter(Boolean).join(" · ")));pv.appendChild(d);});
+    ok.disabled=!fresh.length;ok.textContent=fresh.length?"요청함에 넣기 ("+fresh.length+"건)":"모두 이미 있음";};
+  ta.addEventListener("input",draw);
+  ok.onclick=async()=>{const fresh=items.filter(it=>!slkDupOf(it.f));if(!fresh.length)return;ok.disabled=true;
+    const lk=/^https:\/\/[^\s]+\/archives\/(C[A-Z0-9]+)\/p(\d{10})(\d{6})/.exec(u.value.trim());
+    try{for(const it of fresh){const id="p_"+slkH([it.f.hosp,it.f.eq,it.f.req].join("|"));
+        const rec={kind:"paste",src:it.src,at:Date.now(),t:it.b.slice(0,4000),f:it.f,st:"new",pu:uid,pb:me.name};
+        if(it.mention)rec.mention=it.mention.slice(0,40);
+        if(lk&&fresh.length===1){rec.u=u.value.trim().slice(0,300);rec.ch=lk[1];rec.ts=lk[2]+"."+lk[3];}
+        await R("slack/req/"+id).set(rec);}
+      closeProfile();slkSt="new";if(view!=="req")go("req");else renderReqPage();toast(fresh.length+"건을 요청함에 넣었습니다.");}
+    catch(e){ok.disabled=false;toast("넣지 못했습니다: "+(e.message||e));}};
+  $("pOv").hidden=false;setTimeout(()=>ta.focus(),30);
+}
+async function slkTest(){toast("Slack 연결 확인 중…");
+  try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackTest",idToken,pull:true})});
+    const j=await res.json().catch(()=>null);const c=$("pCard");c.textContent="";c.classList.remove("drawer","wide");
+    const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);c.appendChild(el("h3",null,"Slack 연결 시험"));
+    if(!j||!j.ok){c.appendChild(el("p","hp",(j&&j.err)||"서버 응답이 없습니다."));c.appendChild(el("p","hp","Slack 앱을 만들고 Apps Script 스크립트 속성 SLACK_BOT_TOKEN 을 넣은 뒤 다시 시험하세요."));}
+    else{c.appendChild(el("p","hp","워크스페이스 "+j.team+" · 봇 "+j.bot+" · 1분 가져오기 "+(j.trigger?"켜짐":"꺼짐 (Apps Script에서 installSlackTrigger 실행)")));
+      (j.chans||[]).forEach(ch=>{const d=el("div","bdr");d.appendChild(el("span","bdk","#"+ch.name));d.appendChild(el("span","bdv",ch.member?"초대됨":"초대 필요 — 채널에서 /invite @fs-portal"));c.appendChild(d);});}
+    $("pOv").hidden=false;}
+  catch(e){toast("연결하지 못했습니다.");}}
 function kptwSync(w){if(w&&w.isConnected)w.classList.toggle("end",w.scrollLeft+w.clientWidth>=w.scrollWidth-4);}
 document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("kptw"))kptwSync(t);},true);
 window.addEventListener("resize",()=>document.querySelectorAll(".kptw").forEach(kptwSync));
@@ -3938,7 +4169,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={v_req:"Slack 요청함",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
@@ -4175,6 +4406,7 @@ function cmdItems(){
   const L=[];const add=(ic,t,sub,fn,kw)=>L.push({ic,t,sub,fn,kw:(t+" "+(sub||"")+" "+(kw||"")).toLowerCase()});
   add("home","홈","화면",()=>go("home"));add("chat","대화","화면",()=>{listTab="rooms";go("");});add("users","조직도","화면",()=>go("org"));
   add("doc","기술정보 검색","화면",()=>go("tech"),"tb 회보 매뉴얼 부품");add("scan","바코드·QR 스캔","할 일",()=>setTimeout(openScan,0),"카메라 부품번호 시리얼 sn pn");add("search","통합 검색","화면",()=>go("search"));add("bookmark","저장한 글","화면",()=>go("saved"));
+  add("headset","Slack 요청","화면",()=>go("req"),"slack 슬랙 cso 기술요청 야간 인계 cs쉐어링");
   if(isAdmin||myLead())add("users","팀 현황","화면",()=>go("team"),"팀장");if(isAdmin)add("shield","관리","화면",()=>go("admin"));add("gear","설정","화면",()=>go("settings"));
   Object.keys(APPS).filter(k=>(!APPS[k].lead||isAdmin||myLead())&&(!APPS[k].po||poOk())&&!APPS[k].side).forEach(k=>add(APPS[k].ic,APPS[k].t,"업무 앱",()=>openApp(k)));
   add("bell","알림 센터","할 일",()=>openNotiCenter());add("plus","내 근무 등록 (휴가·교육)","할 일",()=>openWorkForm(),"휴가 교육 회의");add("plus","설치·평가 일정 등록","할 일",()=>openInstallForm(),"설치 이전 평가");
@@ -4424,8 +4656,8 @@ $("infoBtn").onclick=()=>{
 };
 document.addEventListener("click",e=>{if(infoOpen&&!$("info").contains(e.target)&&!$("infoBtn").contains(e.target)){infoOpen=false;renderInfo();}});
 function showView(){
-  ["chatView","searchView","savedView","settingsView","adminView","homeView","appView","orgView","techView","teamView","menuView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
-  $("app").classList.toggle("v-home",view==="home"||view==="app"||view==="org"||view==="tech"||view==="team"||view==="menu");$("app").classList.toggle("v-app",view==="app");
+  ["chatView","searchView","savedView","settingsView","adminView","homeView","appView","orgView","techView","teamView","menuView","reqView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
+  $("app").classList.toggle("v-home",view==="home"||view==="app"||view==="org"||view==="tech"||view==="team"||view==="menu"||view==="req");$("app").classList.toggle("v-app",view==="app");
   document.querySelectorAll("[data-app]").forEach(a=>a.classList.toggle("on",view==="app"&&a.dataset.app===appKey));
   $("rTech").classList.toggle("on",view==="tech");
   if(view==="app")showApp();
@@ -4440,6 +4672,7 @@ function showView(){
       try{localStorage.setItem("fstalk-tip-lp","1");}catch(e){}toast("메시지를 길게 누르면 답장·반응·저장 메뉴가 열려요");},900);}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
   else if(view==="search"){$("title").textContent="대화 검색";$("desc").textContent="모든 방의 대화를 찾습니다";renderSearch();}
   else if(view==="settings"){$("title").textContent="설정";$("desc").textContent="내 정보 · 알림 · 화면 · 보안 · 앱 정보";renderSettings();}
+  else if(view==="req"){$("title").textContent="Slack 요청";$("desc").textContent="";renderReqPage();}
   else if(view==="team"){$("title").textContent="팀 현황";$("desc").textContent="";renderTeamPage();}
   else if(view==="tech"){$("title").textContent="기술정보";$("desc").textContent="";renderTechPage();}
   else if(view==="menu"){$("title").textContent="전체";$("desc").textContent="";renderMenuPage();}
@@ -4469,6 +4702,7 @@ function route(){setTimeout(()=>{if(started)track("v_"+(view==="chat"?(room?"cha
   else if(h==="org"){view="org";mList=false;}
   else if(h==="menu"){view="menu";mList=false;}
   else if(h==="team"&&(isAdmin||myLead())){view="team";mList=false;}
+  else if(h==="req"){view="req";mList=false;}
   else if(h==="tech"||h.indexOf("tech~")===0){view="tech";mList=false;if(h.indexOf("tech~")===0)techQ=decodeURIComponent(h.slice(5));}
   else if(h.indexOf("room-")===0&&ROOMS.some(r=>r.id===h.slice(5))&&!canRoom(h.slice(5))){toast("이 팀방은 그 팀 사람만 볼 수 있어요.");view="home";mList=false;try{history.replaceState(null,"","#home");}catch(e){}}
   else if(h.indexOf("room-")===0&&(ROOMS.some(r=>r.id===h.slice(5))||dmOther(h.slice(5))||(isGroup(h.slice(5))&&(myGroup(h.slice(5))||gidx[h.slice(5)])))){
@@ -6138,7 +6372,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){

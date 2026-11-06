@@ -30,6 +30,8 @@ function doPost(e){
     if(req.type === 'voice') return out_(voice_(req));
     if(req.type === 'link') return out_(link_(req));
     if(req.type === 'adminsync') return out_(adminSync_(req));
+    if(req.type === 'slack') return out_(slackAct_(req));
+    if(req.type === 'slackTest') return out_(slackTest_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -100,7 +102,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v23';
+const NOTIFY_VER = 'v24';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -685,4 +687,230 @@ function installDigestTrigger(){
 }
 function removeDigestTrigger(){
   ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction()==='morningDigest') ScriptApp.deleteTrigger(t); });
+}
+
+
+/* =====================================================================
+ * v24: Slack 요청함 — Slack 채널의 요청을 포털로 가져와 처리하고, 처리 내용을 Slack 스레드로 되돌림
+ *  - 비밀값: 스크립트 속성 SLACK_BOT_TOKEN (xoxb-…, Slack 앱 「FS 포털」) — 코드·저장소·채팅에 두지 않음
+ *  - installSlackTrigger() 한 번 실행 → 1분마다 slackPull() (새 글 가져오기 + 5분마다 열린 요청의 스레드·반응 맞추기)
+ *  - DB: talk/slack/meta · req/{id} · feed/{ts}  (읽기 = 승인된 직원, 쓰기 = 이 서버만)
+ *  - 포털 → Slack: doPost type 'slack' (op: claim·reply·done·reopen) — 승인된 직원만, 그 사람 이름으로 스레드에 씀
+ * ===================================================================== */
+const SLACK_CH = {
+  C0AT8RP3QDN: {k:'cso',   name:'handover-cso-fsg',      type:'req'},   // CSO → FSG 기술 문의 이관
+  C0AHFJGKMTL: {k:'night', name:'handover-cssharing-fsg', type:'req'},   // 야간 전화 접수(CS쉐어링) 인계
+  C0C6U7RQ44D: {k:'talk',  name:'group-sysmex-talk',      type:'feed'}   // 현장 마무리 보고
+};
+const SLK_FEED_KEEP_DAYS = 30;
+
+function slackApi_(method, params, post){
+  const tok = P_('SLACK_BOT_TOKEN'); if(!tok) throw new Error('SLACK_BOT_TOKEN 없음');
+  let r;
+  if(post){
+    r = UrlFetchApp.fetch('https://slack.com/api/'+method,{method:'post',contentType:'application/json; charset=utf-8',
+      headers:{Authorization:'Bearer '+tok},payload:JSON.stringify(params||{}),muteHttpExceptions:true});
+  }else{
+    const q = Object.keys(params||{}).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]); }).join('&');
+    r = UrlFetchApp.fetch('https://slack.com/api/'+method+(q?'?'+q:''),{headers:{Authorization:'Bearer '+tok},muteHttpExceptions:true});
+  }
+  const j = JSON.parse(r.getContentText()||'{}');
+  if(!j.ok && ['already_reacted','no_reaction'].indexOf(j.error) < 0) throw new Error('Slack '+method+': '+(j.error||r.getResponseCode()));
+  return j;
+}
+function slkKey_(ts){ return String(ts).replace('.','_'); }
+function slkClean_(t){
+  return String(t||'')
+    .replace(/<tel:[^|>]*\|([^>]*)>/g,'$1').replace(/<mailto:[^|>]*\|([^>]*)>/g,'$1')
+    .replace(/<@[A-Z0-9]+\|([^>]*)>/g,'@$1').replace(/<!subteam\^[A-Z0-9]+(\|[^>]*)?>/g,'').replace(/<!(here|channel|everyone)>/g,'')
+    .replace(/<(https?:[^|>]*)\|([^>]*)>/g,'$2 ($1)').replace(/<(https?:[^>]*)>/g,'$1')
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').trim();
+}
+/* 「이준호(Juno)」 → 「이준호」 — 포털 명단 이름과 맞추기 */
+function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/\s+/g,' ').trim(); }
+function slkUser_(uid, cacheObj){
+  if(!uid) return '';
+  if(cacheObj[uid] !== undefined) return cacheObj[uid];
+  const c = CacheService.getScriptCache(), hit = c.get('slu:'+uid);
+  if(hit !== null){ cacheObj[uid] = hit; return hit; }
+  let n = '';
+  try{ const j = slackApi_('users.info',{user:uid}); const u = j.user||{}; n = (u.profile && (u.profile.real_name || u.profile.display_name)) || u.real_name || u.name || ''; }catch(e){}
+  c.put('slu:'+uid, n, 21600); cacheObj[uid] = n; return n;
+}
+/* 양식 글(CSO 기술요청·CS쉐어링 접수)을 칸으로 나눔 — 칸이 없으면 null */
+function slkParse_(text){
+  const t = String(text||'');
+  const f = {};
+  const tm = /<\s*인계\s*:\s*([^>]+?)\s*>/.exec(t) || /\[\s*인계\s*:\s*([^\]]+?)\s*\]/.exec(t);
+  if(tm){ const v = tm[1].trim(); if(/^L\d/i.test(v)) f.lvl = v.toUpperCase(); else f.team = v.replace(/\s+/g,' ').toUpperCase().replace(/^FS(?=\S)/,'FS '); }
+  const KEYS = [['hosp',/^기관명/],['eq',/^장비명/],['req',/^요청사항/],['sym',/^(error|에러)\/?증상/i],['act',/^확인\/?조치/],['contact',/^회신처|^회신고객|^접수처/],['when',/^회신기간/],['back',/^회신여부/]];
+  let cur = null;
+  t.split(/\n/).forEach(function(line){
+    const m = /^\s*(?:\d+\s*[).:]|[-•·]|)\s*([가-힣A-Za-z\/ (),]{2,24}?)\s*(?:\[[^\]]*\])?\s*[:：]\s*(.*)$/.exec(line);
+    if(m){
+      const key = m[1].replace(/\s+/g,'').replace(/\(지역\)/,'');
+      const hit = KEYS.filter(function(k){ return k[1].test(key); })[0];
+      if(hit){ cur = hit[0]; if(f[cur] && cur==='contact'){ f[cur] += ' / ' + m[2].trim(); } else f[cur] = m[2].trim(); return; }
+    }
+    if(/^\s*\d+\s*[).]/.test(line) || /^\s*=+\s*$/.test(line) || /^\s*\[CS/.test(line)) { cur = null; return; }
+    if(cur && line.trim()) f[cur] = ((f[cur]||'') + (f[cur] ? '\n' : '') + line.trim()).slice(0,600);
+  });
+  const rb = /회신여부\s*\[\s*([YN])\s*\]/i.exec(t); if(rb) f.back = rb[1].toUpperCase();
+  if(f.hosp){ const rg = /\(([^)]+)\)\s*$/.exec(f.hosp); if(rg && rg[1].length <= 4){ f.area = rg[1]; f.hosp = f.hosp.replace(/\s*\([^)]+\)\s*$/,''); } }
+  Object.keys(f).forEach(function(k){ f[k] = String(f[k]).replace(/[ \t]+/g,' ').trim().slice(0,600); if(!f[k]) delete f[k]; });
+  return (f.hosp && (f.eq || f.req)) ? f : null;
+}
+function slkHash_(s){ return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)).replace(/[=_-]/g,'').slice(0,14); }
+
+/* 1분마다: 새 글 가져오기. 5분마다(또는 force): 열린 요청의 스레드·반응 맞추기 */
+function slackPull(force){
+  if(!P_('SLACK_BOT_TOKEN')) return;
+  const lock = LockService.getScriptLock(); if(!lock.tryLock(1000)) return;
+  try{
+    const props = PropertiesService.getScriptProperties(), names = {}, now = Date.now();
+    const meta = db_('talk/slack/meta') || {};
+    if(!meta.team){ try{ const a = slackApi_('auth.test',{}); meta.team = a.team_id; meta.teamName = a.team; meta.url = a.url; }catch(e){} }
+    let added = 0;
+    Object.keys(SLACK_CH).forEach(function(ch){
+      const C = SLACK_CH[ch];
+      const last = props.getProperty('SLK_TS_'+ch) || String((now - 3*864e5)/1000);
+      let cursor = '', maxTs = last, page = 0;
+      do{
+        const prm = {channel:ch, oldest:last, limit:200}; if(cursor) prm.cursor = cursor;
+        let j; try{ j = slackApi_('conversations.history', prm); }catch(e){ meta.err = String(e.message||e).slice(0,200); break; }
+        (j.messages||[]).forEach(function(m){
+          if(+m.ts <= +last) return;
+          if(+m.ts > +maxTs) maxTs = m.ts;
+          if(m.subtype && ['bot_message','thread_broadcast'].indexOf(m.subtype) < 0) return;   // 들어옴·나감·파일 알림 등
+          if(m.bot_id && m.app_id && m.username && /FS 포털/.test(m.username)) return;          // 우리가 보낸 글
+          const raw = String(m.text||''), text = slkClean_(raw);
+          const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
+          const men = /<@([A-Z0-9]+)\|([^>]*)>/.exec(raw);
+          const mention = men ? slkPerson_(men[2]) : (/<@([A-Z0-9]+)>/.exec(raw) ? slkPerson_(slkUser_(/<@([A-Z0-9]+)>/.exec(raw)[1], names)) : '');
+          const at = Math.round(+m.ts*1000);
+          if(C.type === 'feed'){
+            dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
+            slkFinHint_(text, slkPerson_(who), at);
+            return;
+          }
+          // 요청 채널: 양식 블록마다 요청 1건 (야간 인계 요약 글은 여러 건 — 같은 내용은 같은 id 라 두 번 들어오지 않음)
+          const blocks = /\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1
+            ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
+          blocks.forEach(function(b, i){
+            const f = slkParse_(b); if(!f) return;
+            const id = blocks.length > 1 ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : C.k+'_'+slkKey_(m.ts);
+            const cur = db_('talk/slack/req/'+id);
+            const base = {ch:ch, ts:m.ts, kind:C.k, by:slkPerson_(who), at:(cur&&cur.at)||at, t:b.slice(0,4000), f:f, mention:mention||null, multi:blocks.length>1||null};
+            if(!cur){ base.st = 'new'; added++; }
+            dbPatch_('talk/slack/req/'+id, base);
+          });
+        });
+        cursor = j.response_metadata && j.response_metadata.next_cursor || '';
+      }while(cursor && ++page < 3);
+      props.setProperty('SLK_TS_'+ch, String(maxTs));
+    });
+    const min = new Date().getMinutes();
+    if(force || min % 5 === 0) slkSync_(names);
+    if(min % 30 === 0) slkTrimFeed_();
+    meta.at = now; meta.ok = true; if(!meta.err) delete meta.err; meta.chans = {}; Object.keys(SLACK_CH).forEach(function(c){ meta.chans[c] = SLACK_CH[c].name; });
+    meta.added = added;
+    dbPut_('talk/slack/meta', meta);
+  }catch(e){
+    console.error(e);
+    try{ dbPatch_('talk/slack/meta',{ok:false, err:String(e.message||e).slice(0,200), at:Date.now()}); }catch(e2){}
+  }finally{ try{lock.releaseLock();}catch(e){} }
+}
+/* 열린 요청(7일 안)의 스레드 답글·반응을 읽어 상태를 맞춤 — Slack 에서 👀/답글 = 처리 중, ✅ = 완료 */
+function slkSync_(names){
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-7*864e5)) || {};
+  Object.keys(all).slice(-40).forEach(function(id){
+    const r = all[id]; if(!r || r.st === 'done' || r.multi) return;
+    let j; try{ j = slackApi_('conversations.replies',{channel:r.ch, ts:r.ts, limit:50}); }catch(e){ return; }
+    const msgs = j.messages || []; if(!msgs.length) return;
+    const parent = msgs[0], patch = {}, th = {};
+    msgs.slice(1).forEach(function(m){
+      const n = m.user ? slkPerson_(slkUser_(m.user, names)) : slkPerson_(String(m.username||'').replace(/\s*\(FS 포털\)\s*$/,''));
+      th[slkKey_(m.ts)] = {n:n, t:slkClean_(m.text).slice(0,1500), at:Math.round(+m.ts*1000), p:/FS 포털/.test(m.username||'')||null};
+    });
+    if(Object.keys(th).length) patch.th = th;
+    const rx = (parent.reactions||[]).map(function(x){ return x.name; });
+    if(rx.length) patch.rx = rx.join(',');
+    if(rx.some(function(n){ return /^(white_check_mark|heavy_check_mark|ballot_box_with_check|done|완료)$/.test(n); })){ patch.st = 'done'; patch.doneAt = patch.doneAt || Date.now(); }
+    else if(r.st === 'new'){
+      const rep = Object.keys(th).map(function(k){ return th[k]; }).filter(function(x){ return x.n && x.n !== r.by; })[0];
+      if(rep){ patch.st = 'doing'; patch.who = r.who || rep.n; patch.whoAt = rep.at; }
+      else if(rx.indexOf('eyes') >= 0){ patch.st = 'doing'; }
+    }
+    dbPatch_('talk/slack/req/'+id, patch);
+  });
+}
+/* 현장 마무리 보고(「○○병원 마칩니다」)에 열린 요청의 기관명이 있으면 요청에 표시 — 자동으로 닫지는 않음 */
+function slkFinHint_(text, who, at){
+  if(!/마칩니다|마쳤|마무리|완료|종료/.test(text)) return;
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {};
+  const flat = text.replace(/\s+/g,'');
+  Object.keys(all).forEach(function(id){
+    const r = all[id]; if(!r || r.st === 'done' || !r.f || !r.f.hosp) return;
+    const h = String(r.f.hosp).replace(/\s+/g,'').replace(/^(의료법인|재단법인|학교법인)/,'');
+    if(h.length >= 3 && (flat.indexOf(h) >= 0 || flat.indexOf(h.slice(0,4)) >= 0 && h.length >= 6))
+      dbPatch_('talk/slack/req/'+id, {fin:{n:who, t:text.slice(0,400), at:at}});
+  });
+}
+function slkTrimFeed_(){
+  const old = dbQuery_('talk/slack/feed','orderBy="at"&endAt='+(Date.now()-SLK_FEED_KEEP_DAYS*864e5)) || {};
+  Object.keys(old).slice(0,200).forEach(function(k){ dbDelete_('talk/slack/feed/'+k); });
+}
+
+/* 포털 → Slack: 담당·회신·완료·다시 열기 (승인된 직원, 그 사람 이름으로) */
+function slackAct_(req){
+  const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid); if(!me || me.status !== 'approved') return {ok:false,err:'승인된 직원만 할 수 있습니다',ver:NOTIFY_VER};
+  if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'Slack 연결 전입니다 (관리자가 SLACK_BOT_TOKEN 설정)',ver:NOTIFY_VER};
+  const id = String(req.id||''); if(!/^[a-z]+_[-\w]{6,40}$/.test(id)) return {ok:false,err:'bad id',ver:NOTIFY_VER};
+  const r = db_('talk/slack/req/'+id); if(!r || !SLACK_CH[r.ch]) return {ok:false,err:'요청이 없습니다',ver:NOTIFY_VER};
+  const op = String(req.op||''), name = String(me.name||'').slice(0,20), text = String(req.text||'').trim().slice(0,1500);
+  const post = function(t){ return slackApi_('chat.postMessage',{channel:r.ch, thread_ts:r.ts, text:t, username:name+' (FS 포털)', unfurl_links:false}, true); };
+  const now = Date.now(), patch = {};
+  if(r.multi && op !== 'claim' && op !== 'done' && op !== 'reopen') return {ok:false,err:'야간 인계 요약 글은 스레드 회신 대신 담당·완료만 할 수 있습니다',ver:NOTIFY_VER};
+  if(op === 'claim'){
+    if(!r.multi){ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'eyes'}, true); post('👀 '+name+'님이 담당합니다'+(text?'\n'+text:'')); }
+    patch.st = 'doing'; patch.who = name; patch.whoAt = now;
+  }else if(op === 'reply'){
+    if(!text) return {ok:false,err:'내용이 비었습니다',ver:NOTIFY_VER};
+    const j = post(text); patch['th/'+slkKey_(j.ts)] = {n:name, t:text, at:now, p:true};
+    if(r.st === 'new'){ patch.st = 'doing'; patch.who = r.who || name; patch.whoAt = now; }
+  }else if(op === 'done'){
+    if(!r.multi){ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); post('✅ 처리 완료 — '+name+(text?'\n'+text:'')); }
+    patch.st = 'done'; patch.doneAt = now; patch.doneBy = name; if(!r.who) patch.who = name;
+  }else if(op === 'reopen'){
+    if(!r.multi) try{ slackApi_('reactions.remove',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); }catch(e){}
+    patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null;
+  }else return {ok:false,err:'bad op',ver:NOTIFY_VER};
+  dbPatch_('talk/slack/req/'+id, patch);
+  return {ok:true,ver:NOTIFY_VER};
+}
+/* 관리 화면 「Slack 연결 시험」 — 관리자만. 토큰·채널 초대 상태와 마지막 가져오기 결과 */
+function slackTest_(req){
+  const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid);
+  if(!(db_('talk/admins/'+uid) === true && me && me.status === 'approved')) return {ok:false,err:'관리자만',ver:NOTIFY_VER};
+  if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'스크립트 속성 SLACK_BOT_TOKEN 이 없습니다',ver:NOTIFY_VER};
+  const a = slackApi_('auth.test',{});
+  const chans = Object.keys(SLACK_CH).map(function(ch){
+    try{ const j = slackApi_('conversations.info',{channel:ch}); return {id:ch, name:SLACK_CH[ch].name, member:!!(j.channel&&j.channel.is_member)}; }
+    catch(e){ return {id:ch, name:SLACK_CH[ch].name, member:false, err:String(e.message||e).slice(0,80)}; }
+  });
+  const trig = ScriptApp.getProjectTriggers().some(function(t){ return t.getHandlerFunction() === 'slackPull'; });
+  if(req.pull) slackPull(true);
+  return {ok:true, team:a.team, bot:a.user, chans:chans, trigger:trig, ver:NOTIFY_VER};
+}
+function installSlackTrigger(){
+  ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction() === 'slackPull') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('slackPull').timeBased().everyMinutes(1).create();
+  slackPull(true);
+  Logger.log('✅ 1분마다 Slack 요청 가져오기 시작');
+}
+function removeSlackTrigger(){
+  ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction() === 'slackPull') ScriptApp.deleteTrigger(t); });
+  Logger.log('Slack 가져오기 멈춤');
 }

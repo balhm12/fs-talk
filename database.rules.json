@@ -544,6 +544,103 @@
         "meta": {
           ".validate": "newData.hasChildren(['at'])"
         }
+      },
+      "slack": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        ".write": false,
+        "req": {
+          ".indexOn": [
+            "at"
+          ],
+          "$id": {
+            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $id.matches(/^p_[a-z0-9]{6,20}$/) && ((!data.exists() && newData.child('pu').val() === auth.uid && newData.child('st').val() === 'new') || (data.exists() && newData.exists() && newData.child('pu').val() === data.child('pu').val() && newData.child('t').val() === data.child('t').val() && newData.child('at').val() === data.child('at').val()) || (data.exists() && !newData.exists() && (data.child('pu').val() === auth.uid || (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'))))",
+            ".validate": "newData.hasChildren(['kind','src','at','t','f','st','pu','pb'])",
+            "kind": {
+              ".validate": "newData.val() === 'paste'"
+            },
+            "src": {
+              ".validate": "newData.isString() && newData.val().matches(/^(cso|night|etc)$/)"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "t": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000"
+            },
+            "f": {
+              "$k": {
+                ".validate": "$k.matches(/^(team|lvl|hosp|eq|req|sym|act|contact|when|back|area)$/) && newData.isString() && newData.val().length <= 600"
+              }
+            },
+            "st": {
+              ".validate": "newData.isString() && newData.val().matches(/^(new|doing|done)$/)"
+            },
+            "pu": {
+              ".validate": "newData.isString() && newData.val().length <= 128"
+            },
+            "pb": {
+              ".validate": "newData.isString() && newData.val().length <= 40 && (newData.val() === data.val() || newData.val() === root.child('talk/users/' + auth.uid + '/name').val())"
+            },
+            "mention": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().matches(/^https:\\/\\/[^ ]+$/)"
+            },
+            "ch": {
+              ".validate": "newData.isString() && newData.val().matches(/^C[A-Z0-9]{6,15}$/)"
+            },
+            "ts": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{10}\\.[0-9]{6}$/)"
+            },
+            "who": {
+              ".validate": "newData.isString() && newData.val().length <= 40 && (newData.val() === data.val() || newData.val() === root.child('talk/users/' + auth.uid + '/name').val())"
+            },
+            "whoAt": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "doneAt": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "doneBy": {
+              ".validate": "newData.isString() && newData.val().length <= 40 && newData.val() === root.child('talk/users/' + auth.uid + '/name').val()"
+            },
+            "fin": {
+              ".validate": "newData.val() === data.val()"
+            },
+            "rx": {
+              ".validate": "newData.val() === data.val()"
+            },
+            "th": {
+              "$m": {
+                ".validate": "newData.hasChildren(['n','t','at'])",
+                "n": {
+                  ".validate": "newData.isString() && newData.val().length <= 40 && (data.exists() || newData.val() === root.child('talk/users/' + auth.uid + '/name').val())"
+                },
+                "t": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1500"
+                },
+                "at": {
+                  ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+                },
+                "p": {
+                  ".validate": "newData.isBoolean()"
+                },
+                "$o": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "feed": {
+          ".indexOn": [
+            "at"
+          ]
+        }
       }
     }
   }
