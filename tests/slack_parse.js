@@ -43,4 +43,9 @@ eq(['FS EAST 윤테스트','SKR FS 테스트30','SKR FS Central 테스트31','FS
 {const rl=()=>{const out=[];Object.keys(RS).forEach(t=>{const g=RS[t];Object.keys(g).forEach(n=>{const v=g[n];out.push({team:t,name:n,office:typeof v==='string'?v:(v&&v.o)||''});});});return out;};
  const f=new Function('rosterList','ROOM_SCOPE','return ('+pickH('slkRoomForC')+')');const C=f(rl,ROOM_SCOPE);
  eq(['테스트2','테스트3','테스트4','테스트5','테스트6','테스트1','테스트99'].map(n=>C(n).id),['테스트2','테스트3','테스트4','테스트5','테스트6','테스트1','테스트99'].map(n=>slkRoomFor_(n,RS)),'미리보기 방 = 서버 방');}
+// 205: Slack 요청함 바꾸기(붙여넣기·담당·회신·완료·삭제)는 관리자만 — 규칙·서버·화면 세 곳
+{const rules=JSON.parse(require('fs').readFileSync(__dirname+'/../database.rules.json','utf8'));const w=rules.rules.talk.slack.req.$id['.write'];
+ eq(/talk\/admins\//.test(w)&&/status'\)\.val\(\) === 'approved'/.test(w),true,'규칙: 요청함 쓰기 = 승인된 관리자');
+ eq(/talk\/admins\/'\+uid\) !== true/.test(pick('slackAct_')),true,'서버 slackAct_: 관리자 확인');
+ eq(/if\(!isAdmin\)/.test(pickH('slkDo'))&&/if\(!isAdmin\)return/.test(pickH('openSlkPaste')),true,'화면: 직원은 확인만');}
 console.log(fail?fail+'개 실패':'모두 통과');process.exit(fail?1:0);
