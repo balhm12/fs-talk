@@ -31,4 +31,8 @@ eq(slkSplit('테스트병원 마칩니다').length,0,'붙여넣기 양식 아님
 const mixed=`테스트7  오후 2:10\n<기술요청><인계 : FS WEST >\n1) 기 관 명 : 테스트14병원\n2) 장 비 명 : XR-1000\n3) 요청사항 : QC 에러 문의\n6) 회 신 처 : 테스트15 010-2222-3333\n\n테스트10  오후 11:40\n@테스트6(Ray) XN 셧다운\n=====\n[CS쉐어링 접수] [인계 : L1]\n1. 기 관 명(지역) : 테스트16병원 (대전)\n2. 장 비 명 : XN-550\n3. 요청사항 : 셧다운 안 됨`;
 sp=slkSplit(mixed);
 eq(sp.map(x=>[x.src,x.f.hosp,x.f.contact||'',x.mention]),[['cso','테스트14병원','테스트15 010-2222-3333',''],['night','테스트16병원','','테스트6']],'Slack 복사본: 다음 글 머리(이름·시각·@담당자)는 다음 건으로');
+// 200: #group-sysmex-talk 글이 들어갈 방 (가명 명단)
+eval(/const ROOM_SCOPE = [^\n]*/.exec(src)[0].replace('const ','var '));eval(pick('slkRoomFor_'));
+const RS={"FS WEST":{"테스트1":{o:"",lead:true}},"FS CENTRAL":{"테스트2":{o:"대전"},"테스트3":"광주","테스트4":""},"FS SOUTH":{"테스트5":"부산"},"FSS Team":{"테스트6":""},"FSOM Team":{"테스트1":""}};
+eq(['테스트2','테스트3','테스트4','테스트5','테스트6','테스트1','테스트99'].map(n=>slkRoomFor_(n,RS)),['daejeon','gwangju','central','busan','fss','all','all'],'Slack 글 방: 사무소방 > 팀방, 동명이인·명단 없음은 전체방');
 console.log(fail?fail+'개 실패':'모두 통과');process.exit(fail?1:0);

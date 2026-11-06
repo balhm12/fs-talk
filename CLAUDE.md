@@ -24,7 +24,7 @@
 | 고객 만족도 | 같은 DB `voc-dashboard/data` (recs: month·fsr·team·org·ts·avg·q1~q3·comment) | 읽기만. 3점 이하 = min(q1,q2,q3) ≤ 3. 후속 조치는 포털 `talk/vocfu/{해시}` |
 | KPI | `fsg-kpi.html`(접근 코드 암호화) | **관리자 PC(코드 저장된 기기)에서 그 페이지를 숨은 iframe으로 열고 `curPeriod()/stats()/renderProd()` 결과를 읽어** `talk/kpisvc`(FSG)·`talk/kpime/{팀_이름}`(개인)에 올림. 계산 기준을 복제·변경하지 않음 |
 | 수리이력(시스멕스톡 2016~) | 포털 `talk/hist/{meta,c/{연도a|b}}` — 반년 단위 gzip+base64(청크당 ≤2.4MB, 규칙 ≤4,000,000자), 읽기 승인 직원·쓰기 관리자 | `hist.html`(같은 출처 iframe 앱 `#app-hist`)이 청크를 받아 이 기기 IndexedDB(`fs-hist`)에 저장(meta의 청크 해시가 바뀐 것만 다시), 메모리에서 검색. 올리기 = 관리자가 `hist.html`의 「데이터 올리기」로 `fs-hist-upload.json`(엑셀 4개 → 정제·마스킹·반년 청크로 만든 번들) 선택 |
-| Slack 요청(198) | 포털 `talk/slack/{meta,req,feed}` — 읽기 승인 직원. `req/{cso|night}_…`·`feed` 는 서버만 씀(Slack 앱 연결 후 `slackPull` 1분마다), `req/p_…` 는 직원의 「Slack 글 붙여넣기」(규칙: 만든 사람 `pu`, 원문·시각 고정, 지우기는 만든 사람·관리자) | 양식 나누기 `slkClean_`·`slkParse_`·`slkPerson_` 는 `notify.gs` 와 `index.html` 이 글자 그대로 같아야 함(`tests/slack_parse.js`). 봇 토큰은 스크립트 속성 `SLACK_BOT_TOKEN` 에만 |
+| Slack 요청(198) | 포털 `talk/slack/{meta,req,feed}` — 읽기 승인 직원. `req/{cso|night}_…`·`feed` 는 서버만 씀(Slack 앱 연결 후 `slackPull` 1분마다). **#group-sysmex-talk 글은 포털 대화방으로**(200, Slack → 포털 한쪽만): `talk/msgs/{방}/s{ts}` = `{uid:"slack",name,text,ts,slk:{ch,ts,cn}}`, 방 = 작성자 이름을 명단과 맞춰 사무소방 > 팀방, 명단에 없거나 동명이인이면 전체방(`slkRoomFor_`), 푸시 없음, Slack 수정·삭제·스레드 답글은 안 옮김, `req/p_…` 는 직원의 「Slack 글 붙여넣기」(규칙: 만든 사람 `pu`, 원문·시각 고정, 지우기는 만든 사람·관리자) | 양식 나누기 `slkClean_`·`slkParse_`·`slkPerson_` 는 `notify.gs` 와 `index.html` 이 글자 그대로 같아야 함(`tests/slack_parse.js`). 봇 토큰은 스크립트 속성 `SLACK_BOT_TOKEN` 에만 |
 | 실마리 | `https://balhm12.github.io/sysmex-ts/` 암호화 데이터 | 같은 출처라 비밀번호 키(`sysmex-ts-key`) 공유. 검색 인덱스·장비 상세(원인·조치·부품) 복호화 |
 
 ## 3. 권한·보는 기준
@@ -40,7 +40,7 @@
 - **첫 화면(가입)**: 로고 + 「처음 사용해요 / 쓰던 기기가 있어요」 두 갈래, 단계 표시(이름 선택→관리자 승인→사용 시작), 홈 화면 앱(standalone)은 연결 쪽이 기본. 승인 대기 화면에 누가 승인하는지·홈 화면 설치 안내
 - **처음 안내**: 새 기기 = 코치 마크 둘러보기(`openCoach`, 실제 탭을 하나씩 비춤), 쓰던 기기 = 「새로 바뀐 것」 1회(`GUIDE_NEW.k`), 홈 「처음 시작하기」 체크 카드(사진·휴대폰·홈 화면 설치/알림·우리 팀 방, 다 하거나 닫으면 사라짐 `fstalk-start-x`)
 - **홈**(휴대폰 기본 = 오늘 중심: 대화·기술 카드는 각 탭, 만족도·KPI는 한 줄 요약 펼침): 위쪽 바(검색·알림 센터·테마·프로필) → 요약 숫자 4개(역할별) → 오늘의 업무(일정·내 이번 주·7일 근무·일정 등록) | 업무 커뮤니케이션 → 기술지원(실마리·기술정보·동영상) → 서비스 현황(만족도·KPI) → 바로가기(편집 가능, `prefs/{나}/links`)
-- **대화**: 방·1:1·그룹, 전체공지 확인, AI 요약, 음성, 실마리 칩, 일정 칩, `/휴가 11/3` `/설치 11/10 병원 장비` 명령
+- **대화**: 방·1:1·그룹, 전체공지 확인, AI 요약, 음성, 실마리 칩, 일정 칩, `/휴가 11/3` `/설치 11/10 병원 장비` 명령, Slack #group-sysmex-talk 에서 옮겨 온 글은 이름 옆 「Slack」 표시(`m.slk`)
 - **조직도**: 보드형(팀 카드·팀장 위·사무소별·오늘 근무·검색·필터·목록 보기)
 - **포털 안 앱**: `#app-install|work|silmari|voc|kpi|system|po` iframe 탭(전국시스템은 다른 출처라 새 창 안내)
 - **알림 센터**: 공지·언급·신규 기술자료·개정·교육·내 일정 변경, 읽음 `prefs/{나}/noti`
@@ -81,18 +81,19 @@
 - **사람이 만든 것처럼 보이게 검토한다.** 만들거나 고친 화면은 글씨체·글자 크기 단계·표(정렬, 숫자 오른쪽 맞춤, 열 폭, 머리글)·구성(여백 간격, 정렬, 제목 계층)을 확인하고 어색한 곳을 고친다. 이모지 장식, 과한 그라디언트·그림자, 같은 크기 카드의 나열, 들쑥날쑥한 모서리·굵기를 쓰지 않는다. 기존 화면의 모양은 크게 바꾸지 않는다.
 - 확인은 PC 1280과 휴대폰 390의 실제 화면 캡처로 한다(실데이터·실명은 합성 데이터로 대체). 시안은 먼저 보여 주고 승인 뒤 머지한다.
 
-## 6. 현재 상태 (2026-11-06 기준, 버전 2026-11-06.199 + hist.html v2.1(2차 개선))
+## 6. 현재 상태 (2026-11-06 기준, 버전 2026-11-06.200 + hist.html v2.1(2차 개선))
 
 - 배포됨: 디자인 v3, 하단 탭 홈·조직도·대화·기술·메뉴(좌우 밀기), 오늘의 브리핑·다음 일정·길찾기, 기술정보 검색(#tech)·바코드 스캔, 팀 현황(#team), Ctrl+K·글자 크기, 스켈레톤·당겨서 새로고침, 마지막 받은 값 먼저 보여 주기(일정·만족도·KPI·실마리 — 빠른 첫 화면 용도), 1분 둘러보기·새 기능 안내, 접근성(터치 40~44px·대비), 사용 현황(관리), 아침 일정 브리핑(notify v18), KPI 1인당 생산성·사무소별 비교(실데이터 확인 00:04), 조직도 한 줄 행·바로 전화/1:1, 대화 목록 「우리 팀」 우선
 - 자동 개선 사이클 C1~C10 완료(2026-10-30 22:45 ~ 10-31 02:20)
 - **사용자 확인 필요**: ⓪ (188) 관리자 PC에서 「수리이력」 앱을 열고 「데이터 올리기」로 `fs-hist-upload.json`(약 35MB) 올리기 — 올리기 전에는 「아직 자료가 없습니다」가 보임(v2 자료는 번들을 다시 만들어 올려야 대화 상세·첨부·데이터 정보가 완전히 동작). 올린 뒤 휴대폰 첫 로딩(약 26MB 내려받기) 속도 확인, 새 기능 안내(`GUIDE_NEW`)는 자료를 올린 뒤에 묶음 날짜를 바꿔 알림 ① (완료) KPI 대시보드 1인당 생산성 비교 배포됨 ② 실제 라벨 바코드 스캔 ③ 아침 7시대 일정 브리핑 알림 수신 ④ 1~2주 뒤 사용 현황 보고 다음 개선 결정
 - **사용자 확인 필요(192, 머지 후)**: 규칙·Apps Script 가 자동 게시되므로 머지 뒤 Actions 결과(`deploy-rules`·`deploy-apps-script`)와 관리자 화면(명단·승인·관리자 지정) 동작, 대화 「AI 요약」이 본인 방에서 되고 남의 팀·사무소 방은 「이 방을 볼 수 없습니다」인지 확인. 문제가 생기면 규칙은 이전 커밋의 `database.rules.json` 으로 되돌려 다시 올리면 됨
 - **외부 일정 DB 규칙(2026-11-06 정리)**: `sysmex-system-schedule` 의 규칙 파일은 저장소 `balhm12/sysmex-schedule` 의 `firebase/`(1단계 `database.rules.stage1.json`: 통째 쓰기·삭제 금지·형식 검사, 2단계 `stage2`: KPI 쓰기는 관리자 계정만)에 있고 `tests/test_db_rules.js` 가 검사한다. 콘솔에 게시한 단계와 날짜는 그 저장소 `firebase/README.md` 기준이다. 포털은 이 DB 를 **공개 웹 키 + 익명 로그인**으로 읽고 위 두 경로(`work-schedule/{팀}/{날짜}/{본인}`·`schedule-overrides/custom/user-…`)에만 쓴다. 익명 로그인한 사람이 한 건씩 고치는 것은 규칙으로 못 막는다(남은 위험).
-- **Slack 연동(198 배포됨, 199 PC 레일 버튼)**: 1단계 = 붙여넣기 요청함(앱 없이). 자동 연결은 Slack 앱 「fs-portal」(JSON manifest, 회사 Slack 관리자 승인 필요) 설치 → 봇 토큰을 Apps Script 스크립트 속성 `SLACK_BOT_TOKEN` 에(채팅·저장소 금지) → #handover-cso-fsg·#handover-cssharing-fsg·#group-sysmex-talk 에 `/invite @fs-portal` → Apps Script 에서 `installSlackTrigger()` 1회 → 요청함 「연결 시험」
+- **Slack 연동(198 배포됨, 199 PC 레일 버튼, 200 #group-sysmex-talk → 대화방)**: 채널별 = 요청 채널 → 요청함, #group-sysmex-talk → 작성자 팀·사무소방. 1단계 = 붙여넣기 요청함(앱 없이). 자동 연결은 Slack 앱 「fs-portal」(JSON manifest, 회사 Slack 관리자 승인 필요) 설치 → 봇 토큰을 Apps Script 스크립트 속성 `SLACK_BOT_TOKEN` 에(채팅·저장소 금지) → #handover-cso-fsg·#handover-cssharing-fsg·#group-sysmex-talk 에 `/invite @fs-portal` → Apps Script 에서 `installSlackTrigger()` 1회 → 요청함 「연결 시험」
 - 남은 작업: 8장 「앞으로의 순서」 (Slack·Salesforce 연동, 회사 서버 이전 — 사용자가 시작을 말하면 착수)
 
 ## 7. 변경 이력 (최근 것 위)
 
+- 2026-11-06 · 200 Slack 채널 나눠 운영(사용자 결정): 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg) → Slack 요청함, **#group-sysmex-talk → 포털 대화방**(작성자 팀·사무소방만, 명단에 없거나 동명이인이면 전체방 — 사용자 선택 「작성자 팀·사무소방만」, 방향은 Slack → 포털만). notify v25 `slkRoomFor_`·`slkToRoom_`(키 `s{ts}` 로 중복 없음, 첨부는 「첨부 n개 — Slack 에서 보기」, 푸시 없음), 규칙 msgs `$id/slk`(서버가 만든 값만, 직원은 만들 수 없음), 화면은 이름 옆 「Slack」 표시. 시험: 방 고르기 7경우(`tests/slack_parse.js`), 휴대폰 다크·PC 화면·오류 0, 기존 22항목 통과. **Slack 앱 연결 전에는 아무 것도 옮겨지지 않음**
 - 2026-11-06 · 199 PC에서 Slack 요청함으로 가는 버튼이 없던 것(사용자 지적 「슬랙요청 위치」 — 메뉴 탭은 휴대폰에만 있음): 왼쪽 레일 「기술」 아래 「요청」(`#rReq`, 헤드셋 아이콘, 우리 팀 새 요청 수 배지 = `slkNewCount()`, 요청 자료가 바뀌면 `renderNav`로 갱신). 시험: PC 1280 라이트·다크(배지 1 → 처리 중으로 바꾸면 사라짐, 누르면 `#req`·선택 표시), 휴대폰은 레일 없음(그대로), 기존 22항목 통과·오류 0
 - 2026-11-06 · 198 Slack 요청함 1단계(사용자 결정 「앱 없이 ①붙여넣기부터」): 메뉴·Ctrl+K 「Slack 요청」(`#req`), 「Slack 글 붙여넣기」 — Slack에서 복사한 글(여러 건·`이름 오후 3:21` 머리·`@담당자` 포함)을 양식별로 나눠 미리보기 → `talk/slack/req/p_{해시}`(같은 기관·장비·요청은 건너뜀), 담당·회신(복사)·완료·다시 열기·삭제, 홈 브리핑 「Slack 새 요청 n건」(우리 팀 기준). 서버 쪽(notify v24, 아직 미배포·토큰 없으면 아무 일 안 함): `slackPull`(1분, CSO·야간 요청 채널 → req, #group-sysmex-talk → feed·「마칩니다」 기관명 일치 시 `fin`), `slkSync_`(5분, 스레드·반응 → 상태), `slackAct_`(포털에서 담당·회신·완료 → 그 사람 이름으로 스레드 글 + 확인/완료 반응), `slackTest_`(관리자 「연결 시험」), `installSlackTrigger()`. 규칙 `talk/slack` 추가. 시험(가명 데이터·Playwright, PC 1280·휴대폰 390/360·다크): 22항목 통과·콘솔 오류 0, `tests/slack_parse.js`(양식 12 + 포털·서버 함수 일치 + 붙여넣기 나누기). **남은 것**: Slack 앱(관리자 승인) → 토큰 → 세 채널 `/invite @fs-portal` → `installSlackTrigger` 실행
 - 2026-11-06 · 197 명단(`talk/roster`) 읽기를 **승인된 직원만**으로(코드 리뷰 High 2): 지금까지는 익명 로그인만으로 누구나 직원 이름·팀·사무소·팀장 여부를 내려받을 수 있었음(공개 웹 키 + 공개 저장소). ①`database.rules.json` roster `.read` = `auth != null && users/{uid}/status === 'approved'` ②가입 화면: 승인 전에는 명단을 읽을 수 없으므로(`rosterDenied`) 목록 대신 **이름·소속(·사무소) 직접 입력** — 접수 여부는 기존 서버 규칙(`users/$uid` `.validate`: pending 은 `roster/팀/이름` 이 있어야 함)이 판단하고, 없으면 「명단에 없는 이름·소속입니다」 안내 ③승인되는 순간 `users/{uid}` 리스너가 `watchRoster()` 를 다시 호출해 새로고침 없이 명단을 읽음 ④서버(Apps Script)는 서비스 계정이라 영향 없음. 시험(합성 데이터·Playwright, 명단 읽기 거부를 흉내 내는 목): 가입 직접 입력·검증 안내·승인 대기, 승인 직후 조직도(명단) 채움, 일반 사용자 13항목 통과(수정 전 코드는 가입 화면 항목에서 실패), `tests/roster_read.js` 추가. **남은 위험**: 명단에 있는 이름을 아는 사람이 그 이름으로 가입 요청을 낼 수는 있음(관리자 승인에서 걸러야 함, 승인 알림에 기기 정보 표시) — 가입 요청이 이름 존재 여부를 알려 주는 정도의 노출. **머지하면 규칙이 바로 배포됨**

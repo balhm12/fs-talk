@@ -111,6 +111,9 @@
             },
             "tn": {
               ".validate": "newData.isBoolean() && newData.val() === true && ($room.matches(/^(west|east|central|daejeon|gwangju|south|busan|daegu|fss|fsom)$/))"
+            },
+            "slk": {
+              ".validate": "data.exists() && newData.child('ts').val() === data.child('ts').val()"
             }
           }
         }
