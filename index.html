@@ -1664,6 +1664,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
     <button id="rSearch" title="검색"><span class="ri" data-ic="search"></span>검색</button>
     <button id="rSaved" title="저장한 글"><span class="ri" data-ic="bookmark"></span>저장</button>
     <button id="rTech" title="기술정보 검색"><span class="ri" data-ic="doc"></span>기술</button>
+    <button id="rReq" title="Slack 요청 — CSO 기술요청·야간 접수 인계"><span class="ri" data-ic="headset"></span>요청</button>
     <button id="rAdmin" title="관리" hidden><span class="ri" data-ic="shield"></span>관리</button>
     <div class="rsep"></div>
     <a class="rlink" data-app="install" href="https://balhm12.github.io/Sysmex-schedule/index.html" target="_blank" rel="noopener" title="설치일정"><span class="ri" data-ic="box"></span>설치</a>
@@ -1805,7 +1806,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.198";
+const APP_VERSION="2026-11-06.199";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2345,8 +2346,9 @@ function renderNav(){
   });
   $("rAdmin").hidden=!isAdmin;$("tAdmin").hidden=!isAdmin;
   $("tTech").classList.toggle("on",view==="tech");
+  {const r=$("rReq"),o=r.querySelector(".dot");if(o)o.remove();r.classList.toggle("on",view==="req");const n=slkNewCount();if(n)r.appendChild(el("span","dot",n>99?"99+":String(n)));r.setAttribute("aria-label","Slack 요청"+(n?" 새 요청 "+n+"건":""));}
   {const m=$("tMenu"),o=m.querySelector(".dot");if(o)o.remove();if(isAdmin&&pendingCount){m.appendChild(el("span","dot",String(pendingCount)));}
-   m.classList.toggle("on",isM()&&["search","saved","admin","settings","team","menu"].includes(view));}
+   m.classList.toggle("on",isM()&&["search","saved","admin","settings","team","menu","req"].includes(view));}
   $("rHome").classList.toggle("on",view==="home");$("tHome").classList.toggle("on",view==="home");
   const ma=$("meAv");ma.textContent="";if(me){const a=personAv(me.name,"s");a.title="내 정보·설정";a.classList.add("clickable");a.onclick=()=>go("settings");ma.appendChild(a);}
   $("rSettings").classList.toggle("on",view==="settings");
@@ -3802,7 +3804,7 @@ function slkParse_(text){
 const SLK_SRC={cso:"CSO 기술요청",night:"야간 접수",etc:"기타 요청"};
 const SLK_ST={new:"새 요청",doing:"처리 중",done:"완료"};
 function slkWatch(){if(slkOn||!me)return;slkOn=true;
-  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
+  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(started)try{renderNav();}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
   R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();},()=>{});}
 function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
 function slkSrc(r){return r.kind==="paste"?(r.src||"etc"):r.kind;}
@@ -4723,6 +4725,7 @@ $("rOrg").onclick=$("tOrg").onclick=()=>{$("lq").value="";go("org");};
 $("rSearch").onclick=$("tSearch").onclick=()=>{go("search");setTimeout(()=>$("q").focus(),30);};
 $("rSaved").onclick=$("tSaved").onclick=()=>go("saved");
 $("rTech").onclick=$("tTech").onclick=()=>go("tech");
+$("rReq").onclick=()=>go("req");
 $("tMenu").onclick=()=>go("menu");
 $("rSettings").onclick=()=>go("settings");
 $("rHome").onclick=$("tHome").onclick=$("rLogo").onclick=()=>go("home");
