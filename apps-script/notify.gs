@@ -100,7 +100,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v22';
+const NOTIFY_VER = 'v23';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -289,6 +289,19 @@ function deleteFile_(req){
  * 스크립트 속성 GROQ_API_KEY 필요 (console.groq.com → API Keys). 선택: GROQ_MODEL
  * 요청한 사람이 그 방을 읽을 수 있는지 서버에서 다시 확인한 뒤, 서버가 직접 대화를 읽어 요약함 */
 const FIXED_ROOMS = ['notice','ts','cs','west','east','central','daejeon','gwangju','south','busan','daegu','fss','fsom'];
+/* 고정 방(전체·공지·팀·사무소) 읽기 권한 — database.rules.json 의 talk/msgs/$room .read 와 같은 조건.
+ * 서버는 서비스 권한으로 대화를 읽으므로, 읽기 전에 요청한 사람이 그 방을 볼 수 있는지 다시 확인한다.
+ * (전체방·공지·FS·CS = 승인된 누구나, 팀·사무소 방 = 그 팀(+사무소)과 관리자) */
+function canReadFixedRoom_(uid, me, room){
+  if(['all','notice','ts','cs'].indexOf(room) >= 0) return true;
+  if(db_('talk/admins/'+uid) === true) return true;
+  const sc = ROOM_SCOPE[room];
+  if(!sc || !me || me.team !== sc[0]) return false;
+  if(!sc[1]) return true;
+  const r = db_('talk/roster/'+me.team+'/'+me.name);
+  const office = (r && typeof r === 'object') ? r.o : r;   // 명단: 사무소 문자열 또는 {o:사무소, lead:true}
+  return office === sc[1];
+}
 function summary_(req){
   const uid = verifyUser_(String(req.idToken||''));
   if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
@@ -301,6 +314,7 @@ function summary_(req){
   const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room), isGroup = /^g_[-\w]{10,40}$/.test(room);
   if(!(ROOM_NAME[room] || isDm || isGroup)) return {ok:false,err:'bad request',ver:NOTIFY_VER};
   if(isDm && room.slice(3).split('__').indexOf(myKey) < 0) return {ok:false,err:'이 방을 볼 수 없습니다',ver:NOTIFY_VER};
+  if(!isDm && !isGroup && !canReadFixedRoom_(uid, me, room)) return {ok:false,err:'이 방을 볼 수 없습니다',ver:NOTIFY_VER};
   let label = isDm ? '1:1 대화' : ROOM_NAME[room];
   if(isGroup){ const gr = db_('talk/groups/'+room) || {}; if(!(gr.members||{})[myKey]) return {ok:false,err:'이 방을 볼 수 없습니다',ver:NOTIFY_VER}; label = gr.name || '그룹 대화'; }
   // 너무 잦은 요청 막기 (한 사람당 15초)

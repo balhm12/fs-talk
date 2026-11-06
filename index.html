@@ -1672,7 +1672,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-05.191";
+const APP_VERSION="2026-11-06.192";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -5442,7 +5442,7 @@ async function setAdmin(id,on){
   catch(e){toast("변경 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 async function setStatus(id,status){
-  try{if(status==="approved")await R("users/"+id).update({status,approvedAt:SV});else await R("users/"+id+"/status").set(status);toast(status==="approved"?"승인했습니다.":status==="rejected"?"거절했습니다.":"변경했습니다.");}
+  try{if(status==="approved")await R("users/"+id).update({status,approvedAt:SV});else{await R("users/"+id+"/status").set(status);await R("admins/"+id).remove().catch(()=>{});}toast(status==="approved"?"승인했습니다.":status==="rejected"?"거절했습니다.":"변경했습니다.");}
   catch(e){toast("변경 실패: "+(e.code||e.message));}
 }
 function rosterText(){return rosterList().sort(byTeamLead).map(p=>p.team+","+p.name+(p.office||p.lead?","+p.office:"")+(p.lead?",팀장":"")).join("\n");}
@@ -5463,7 +5463,7 @@ async function saveRoster(text){
   const goneNames=[...new Set(gone.map(id=>users[id].name))];
   if(goneNames.length&&!confirm("명단에서 빠진 "+goneNames.length+"명("+goneNames.slice(0,8).join(", ")+(goneNames.length>8?" …":"")+")의 기기 "+gone.length+"대를 「사용 중지」합니다.\n계속할까요?"))return;
   try{await R("roster").set(n?out:null);
-    for(const id of gone){await R("users/"+id+"/status").set("rejected").catch(()=>{});}
+    for(const id of gone){await R("users/"+id+"/status").set("rejected").catch(()=>{});await R("admins/"+id).remove().catch(()=>{});}
     toast("명단 "+n+"명을 저장했습니다."+(gone.length?" 빠진 사람 기기 "+gone.length+"대를 사용 중지했습니다.":""));}catch(e){toast("저장 실패: "+(e.code||e.message)+" — DB 규칙이 최신인지 확인하세요.");}
 }
 function renderRosterEditor(body){
