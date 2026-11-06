@@ -1552,6 +1552,14 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .slkpvr{display:flex;flex-direction:column;gap:8px;margin:4px 0 12px}.slkpvs{display:flex;flex-wrap:wrap;gap:6px}.slkpvm{display:flex;flex-direction:column;gap:2px;background:#FDF3E1;border-radius:10px;padding:8px 12px;font-size:12.5px;color:#6B4600}.slkpvm b{font-size:13px}html[data-theme=dark] .slkpvm{background:rgba(230,158,11,.16);color:#F0B847}
 .slkpvl{display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow:auto}.slkpvi{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:2px}.slkpvh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.slkpvh b{font-size:13.5px;color:var(--strong)}.slkpvh small{font-size:12px;color:var(--sub)}.slkpvb{font-size:12.5px;color:var(--sub)}
 .slkpvt{font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px;background:#EAF2FB;color:#005BAC}.slkpvt.req{background:#E9F7EA;color:#1E7A24}.slkpvt.skip{background:var(--soft);color:var(--sub)}.slkpvt.all{background:#FDF3E1;color:#8A5A00}html[data-theme=dark] .slkpvt{background:#1D3550;color:#8CC4F5}html[data-theme=dark] .slkpvt.req{background:rgba(63,186,70,.18);color:#7DD383}html[data-theme=dark] .slkpvt.all{background:rgba(230,158,11,.16);color:#F0B847}
+/* 대화방 안 찾기(204) */
+.rsbar{display:flex;align-items:center;gap:6px;padding:6px 10px 6px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.rsbar .rsic{color:var(--sub);display:flex}.rsbar input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-size:16px;background:var(--bg);color:var(--text)}
+.rsn{font-size:12.5px;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:4px}
+.rsmore{border:0;background:none;color:var(--link);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 2px}
+.rsbar[hidden]{display:none}.rsbar .tb{background:none;border:0;color:var(--text);border-radius:10px;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}.rsbar .tb:hover{background:var(--soft)}
+@media (max-width:820px){.rsbar{padding:6px 6px 6px 10px}.rsbar .rsic{display:none}}
+@media (pointer:coarse){.rsbar .tb{min-width:44px;min-height:44px}.rsmore{min-height:44px}}
 /* Slack 요청함(198) */
 .slkadd{margin-left:auto;display:inline-flex;align-items:center;gap:6px;width:auto;padding:9px 14px}
 .slkcn{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:1.5;color:var(--sub)}.slkcn>span:nth-child(2){flex:1;min-width:0}.slkcn .hmore{margin-left:auto;flex:0 0 auto}
@@ -1703,6 +1711,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
       <div id="topAv"></div>
       <div><h2 id="title"></h2><div class="desc" id="desc"></div></div>
       <div class="grow"></div>
+      <button class="tb" id="rsBtn" title="이 방에서 찾기 (Ctrl+F)" aria-label="이 방에서 찾기" hidden data-ic="search"></button>
       <button class="tb" id="favBtn" title="즐겨찾기" aria-label="즐겨찾기" hidden data-ic="star"></button>
       <button class="tb" id="aiBtn" title="AI로 대화 요약" aria-label="AI로 대화 요약" hidden data-ic="sparkles"></button>
       <button class="tb" id="popBtn" title="이 대화방을 작은 새 창으로 열기" aria-label="새 창으로 열기" hidden data-ic="popout"></button>
@@ -1711,6 +1720,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
     <div class="banner" id="banner" hidden></div>
 
     <section class="view on" id="chatView">
+      <div class="rsbar" id="rsBar" hidden role="search"><label for="rsQ" class="vh">이 방에서 찾기</label><span class="rsic" data-ic="search"></span><input id="rsQ" type="text" placeholder="이 방에서 찾기 · 장비·에러·병원·이름" autocomplete="off" enterkeyhint="search"><span class="rsn" id="rsN" aria-live="polite"></span><button class="tb" id="rsUp" title="이전(더 오래된) 결과" aria-label="이전 결과" data-ic="up"></button><button class="tb" id="rsDn" title="다음(더 최근) 결과" aria-label="다음 결과" data-ic="down"></button><button class="tb" id="rsX" title="찾기 닫기" aria-label="찾기 닫기">×</button></div>
       <div class="pinbar" id="pinBar" hidden></div>
       <div class="msgs" id="msgs"></div>
       <button class="newmsg" id="newMsgBtn" hidden><span data-ic="down"></span><span id="newMsgTx">새 메시지</span></button>
@@ -1812,7 +1822,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.203";
+const APP_VERSION="2026-11-06.204";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1886,6 +1896,7 @@ const ICON={
   smile:'<circle cx="12" cy="12" r="9"/><path d="M8.2 14.2s1.4 2 3.8 2 3.8-2 3.8-2"/><circle cx="9" cy="9.5" r=".6" fill="currentColor"/><circle cx="15" cy="9.5" r=".6" fill="currentColor"/>',
   more:'<circle cx="5.5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18.5" cy="12" r="1.3" fill="currentColor"/>',
   down:'<path d="m6 9.5 6 6 6-6"/>',
+  up:'<path d="m6 14.5 6-6 6 6"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   logout:'<path d="M9 20.5H5.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2H9M16 16.5l4.5-4.5L16 7.5M20.5 12H9.5"/>',
   refresh:'<path d="M20 11a8 8 0 0 0-14.5-4.5L3.5 9M4 13a8 8 0 0 0 14.5 4.5l2-2.5"/><path d="M3.5 4v5h5M20.5 20v-5h-5"/>',
@@ -4230,7 +4241,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
@@ -4726,7 +4737,7 @@ function showView(){
   $("composer").hidden=view!=="chat"||!room;
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   $("popBtn").hidden=view!=="chat"||!room||isTouch();
-  $("aiBtn").hidden=view!=="chat"||!room;
+  $("aiBtn").hidden=view!=="chat"||!room;$("rsBtn").hidden=view!=="chat"||!room;if((view!=="chat"||!room||rsRoom!==room)&&!$("rsBar").hidden)rsClose(true);
   if(view==="chat"&&!room){$("title").textContent="FS 포털";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(icEl("chat","emptyic",44));e.appendChild(el("b",null,"대화방을 선택하세요"));e.appendChild(el("span",null,"왼쪽 목록에서 방을 고르거나 ＋ 새 방으로 대화를 시작하세요."));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}
     if(isTouch()&&!(()=>{try{return localStorage.getItem("fstalk-tip-lp");}catch(e){return 1;}})()){setTimeout(()=>{if(view!=="chat"||!room||(isM()&&mList)||!document.querySelector("#msgs .bubble"))return;   // 대화방을 실제로 보고 있을 때만 한 번
@@ -4862,7 +4873,7 @@ async function loadAllHistory(){
 }
 const RENDER_STEP=60,renderN={room:"",n:60};   // 처음엔 최근 60개(카톡처럼), 위로 올리면 자동으로 더
 const pending=new Set();   // 아직 서버에 저장 확인이 안 된 내 메시지
-let newBelow=0,lastRenderRoom="",lastRenderIds=new Set(),dividerScroll=false;
+let newBelow=0,lastRenderRoom="",lastRenderIds=new Set(),lastRenderMax=0,dividerScroll=false;
 function renderMsgs(scroll){
   const box=$("msgs"),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
   const prevTop=box.scrollTop;
@@ -4873,8 +4884,8 @@ function renderMsgs(scroll){
   let list=full.length>renderN.n?full.slice(-renderN.n):full;
   if(jumpId){const ji=full.findIndex(m=>m.id===jumpId);if(ji>=0&&ji<full.length-list.length){renderN.n=full.length-ji+20;list=full.slice(-renderN.n);}}
   // 아래에 새로 들어온 남의 글 세기 (위로 올려 보고 있을 때만)
-  if(lastRenderRoom!==room){newBelow=0;lastRenderIds=new Set(list.map(m=>m.id));lastRenderRoom=room;}
-  else{let add=0;list.forEach(m=>{if(!lastRenderIds.has(m.id)){lastRenderIds.add(m.id);if(!isMine(m))add++;}});if(!scroll&&!atBottom)newBelow+=add;}
+  if(lastRenderRoom!==room){newBelow=0;lastRenderIds=new Set(list.map(m=>m.id));lastRenderRoom=room;lastRenderMax=list.length?list[list.length-1].ts:0;}
+  else{let add=0;list.forEach(m=>{if(!lastRenderIds.has(m.id)){lastRenderIds.add(m.id);if(!isMine(m)&&m.ts>lastRenderMax)add++;}});if(list.length)lastRenderMax=Math.max(lastRenderMax,list[list.length-1].ts);if(!scroll&&!atBottom)newBelow+=add;}   // 204: 위로 펼쳐 그린 예전 글(찾기 이동·이전 대화 더 보기)은 「새 메시지」로 세지 않음
   const eu=entryUnread[room],divTs=eu&&eu.n?eu.since:0;let divPut=false;
   if(full.length>list.length){const mb=el("button","btn morebtn","이전 대화 더 보기");mb.onclick=()=>{const box2=$("msgs"),h0=box2.scrollHeight,t0=box2.scrollTop;renderN.n+=RENDER_STEP;renderMsgs(false);box2.scrollTop=box2.scrollHeight-h0+t0;};box.appendChild(mb);
     if("IntersectionObserver" in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)&&mb.isConnected&&box.scrollTop<box.scrollHeight-box.clientHeight-40){io.disconnect();mb.click();}},{root:box,rootMargin:"300px 0px 0px 0px"});setTimeout(()=>{if(mb.isConnected)io.observe(mb);},400);}}   // 위로 올리면 버튼을 누르지 않아도 이전 대화가 이어서
@@ -4967,6 +4978,27 @@ function jumpTo(id){
   /* 휴대폰에서 목록을 보고 있으면 방을 연 것이 아님 */ if(view==="chat"&&inRoom(m,room)&&!(isM()&&mList)){const e=document.getElementById("m-"+id);if(e){e.scrollIntoView({block:"center",behavior:"smooth"});e.classList.remove("hl");void e.offsetWidth;e.classList.add("hl");}return;}
   jumpId=id;jumpTerms=null;go("room-"+m.room);
 }
+
+/* ---------- 204: 대화방 안에서 찾기 (사용자 요청) — 이 방의 불러온 대화에서 찾고 ▲▼로 오갈 수 있음. 통합 검색과 같은 기준(띄어쓰기 무시·단어 모두 포함) ---------- */
+let rsHits=[],rsIdx=0,rsRoom="",rsT=0;
+function rsOpen(){if(view!=="chat"||!room)return;rsRoom=room;$("rsBar").hidden=false;const q=$("rsQ");setTimeout(()=>{q.focus();q.select();},20);track("room_find");if(q.value.trim())rsRun();}
+function rsClose(keep){$("rsBar").hidden=true;rsHits=[];rsIdx=0;$("rsN").textContent="";if(!keep){$("rsQ").value="";if(view==="chat"&&room)renderMsgs(false);}}
+function rsRun(){const ts=terms($("rsQ").value),n=$("rsN");rsRoom=room;
+  if(!ts.length){rsHits=[];n.textContent="";return;}
+  rsHits=msgs.filter(m=>inRoom(m,room)&&shown(m)&&ts.every(t=>squash(msgText(m)).c.includes(t))).sort((a,b)=>b.ts-a.ts).map(m=>m.id);rsIdx=0;
+  if(!rsHits.length){n.textContent=moreRooms(room).length?"없음 · ":"없음";if(moreRooms(room).length){const b=el("button","rsmore","이전 대화도 찾기");b.onclick=async()=>{b.disabled=true;b.textContent="불러오는 중…";await loadOlderFor(room,500);rsRun();};n.appendChild(b);}return;}
+  rsGo();}
+function rsGo(){const n=$("rsN");if(!rsHits.length)return;n.textContent=(rsIdx+1)+"/"+rsHits.length;
+  if(rsIdx===rsHits.length-1&&moreRooms(room).length){const b=el("button","rsmore","더 이전");b.title="이전 대화를 더 불러와서 찾기";b.onclick=async()=>{b.disabled=true;const cur=rsHits[rsIdx];await loadOlderFor(room,500);rsRun();const i=rsHits.indexOf(cur);if(i>=0&&i<rsHits.length-1){rsIdx=i+1;rsGo();}};n.appendChild(document.createTextNode(" "));n.appendChild(b);}
+  jumpId=rsHits[rsIdx];jumpTerms=terms($("rsQ").value);renderMsgs(false);}
+$("rsBtn").onclick=()=>{$("rsBar").hidden?rsOpen():rsClose();};
+$("rsX").onclick=()=>rsClose();
+$("rsUp").onclick=()=>{if(rsIdx<rsHits.length-1){rsIdx++;rsGo();}else if(rsHits.length)toast("가장 오래된 결과입니다.");};
+$("rsDn").onclick=()=>{if(rsIdx>0){rsIdx--;rsGo();}else if(rsHits.length)toast("가장 최근 결과입니다.");};
+$("rsQ").addEventListener("input",()=>{clearTimeout(rsT);rsT=setTimeout(rsRun,250);});
+$("rsQ").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(rsT);if(!rsHits.length||terms($("rsQ").value).join(" ")!==rsLastQ){rsLastQ=terms($("rsQ").value).join(" ");rsRun();}else (e.shiftKey?$("rsDn"):$("rsUp")).click();}else if(e.key==="Escape"){e.preventDefault();rsClose();}});
+let rsLastQ="";
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="f"&&view==="chat"&&room&&!(isM()&&mList)&&$("pOv").hidden){e.preventDefault();rsOpen();}});
 
 /* ---------- 첨부 보기 ---------- */
 const driveView=id=>"https://drive.google.com/file/d/"+encodeURIComponent(id)+"/view";
