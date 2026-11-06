@@ -57,7 +57,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .mlinks a{flex:none;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:16px;padding:6px 12px 6px 10px;font-size:13px;text-decoration:none;white-space:nowrap}
 .mlinks a svg{width:16px;height:16px;color:var(--blue)}
 .rail .meav{margin-top:6px}
-.dot{position:absolute;top:4px;right:4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#FF4D4F;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center}
+.dot{position:absolute;top:4px;right:4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#D93A3C;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center}
 /* 목록 패널 */
 .list{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0}
 .lhead{padding:16px 16px 10px}
@@ -86,7 +86,7 @@ html[data-theme=dark] .li.on .nm{color:var(--link)}
 .li .pv{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .li .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
 .li .tm{font-size:11px;color:#6B7685}
-.cnt{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#FF4D4F;color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center}
+.cnt{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#D93A3C;color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center}
 .lfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--sub);letter-spacing:.02em}
 /* 시스멕스 로고: 원본 비율(360×110) 고정 — 높이만 정하고 너비는 비율로 */
 .brandlogo,.splsys,.sfoot img{width:auto!important;aspect-ratio:360/110;object-fit:contain;flex:none;max-width:none}
@@ -295,7 +295,7 @@ html[data-theme=dark] .stag{background:#262A4A;color:#A5B4FC}html[data-theme=dar
 .htools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .htool{position:relative;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--strong);display:flex;align-items:center;justify-content:center}
 .htool:hover{border-color:var(--blue);color:var(--blue)}
-.hbadge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#E7413E;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box}
+.hbadge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#C62F34;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box}
 .hbadge:empty,.hbadge[hidden]{display:none}
 .hstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .hstat{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;column-gap:14px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;color:var(--text);min-width:0}
@@ -929,7 +929,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .chips .hint{display:inline}
   .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
   .app.m-chat .tabbar{display:none}
-  .tabbar button{flex:1;background:none;border:0;padding:7px 0 8px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;color:var(--sub);position:relative}
+  .tabbar button{flex:1;background:none;border:0;padding:7px 0 8px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px;color:var(--sub);position:relative}
   .tabbar button span.ri{font-size:21px}
   .tabbar button.on{color:var(--blue);font-weight:700}
   .tabbar .dot{right:calc(50% - 22px)}
@@ -970,7 +970,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid #BFDDF5;border-color:v
   .composer textarea,.filters input,.filters select{font-size:14px}
   .composer .btn{padding:7px 13px}
   .attach{width:34px;height:34px;font-size:19px}
-  .tabbar button{padding:5px 0 6px;font-size:10px}
+  .tabbar button{padding:5px 0 6px;font-size:11px}
   .tabbar button span.ri{font-size:17px}
 }
 /* 휴대폰 글자 크기: 카카오톡과 비슷하게 (본문 17 · 이름 14 · 시간 12) */
@@ -1055,6 +1055,19 @@ html[data-theme=dark] .rail button.on,html[data-theme=dark] .rail a.rlink.on{bac
 .hsearch:focus-within,.obsearch:focus-within,.hmini input:focus{border-color:#005BAC;box-shadow:0 0 0 3px rgba(0,91,172,.12)}
 .hlink{border-color:var(--line);box-shadow:var(--sh-1);font-weight:600}.hlink .ico{color:#005BAC}
 .hchip{font-weight:600}
+/* 194: 카드 종류별 색 — 위쪽 컬러바 + 제목 옆 아이콘 칩 (색만으로 구분하지 않게 아이콘·제목은 그대로) */
+.hcard[data-hk]{border-top:4px solid var(--cc,var(--line));padding-top:13px}
+.hcard[data-hk] .hcic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:9px;background:var(--ct,transparent);color:var(--cc,var(--blue))}
+/* 색은 쓰임새 3가지 — 업무=파랑, 찾기·자료=청록, 현황·교육=장미 (조직도의 팀 색과 의미가 겹치지 않게 카드마다 다른 색을 쓰지 않음. 구분은 아이콘이 함) */
+.hcard[data-hk=sched],.hcard[data-hk=comm]{--cc:#005BAC;--ct:#E3EEF9}
+.hcard[data-hk=sil],.hcard[data-hk=hist],.hcard[data-hk=parts],.hcard[data-hk=tech]{--cc:#0F766E;--ct:#DDF1EE}
+.hcard[data-hk=video],.hcard[data-hk=voc],.hcard[data-hk=kpi]{--cc:#B03060;--ct:#FBE6EE}
+html[data-theme=dark] .hcard[data-hk=sched],html[data-theme=dark] .hcard[data-hk=comm]{--cc:#8CC4F5;--ct:#1D3550}
+html[data-theme=dark] .hcard[data-hk=sil],html[data-theme=dark] .hcard[data-hk=hist],html[data-theme=dark] .hcard[data-hk=parts],html[data-theme=dark] .hcard[data-hk=tech]{--cc:#6FD0C4;--ct:#153431}
+html[data-theme=dark] .hcard[data-hk=video],html[data-theme=dark] .hcard[data-hk=voc],html[data-theme=dark] .hcard[data-hk=kpi]{--cc:#F29BB8;--ct:#3B1B27}
+.hscopes{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 4px;margin:-2px 0 4px}
+.hscopes .lb{font-size:12px;color:var(--sub);margin-right:2px}
+@media (pointer:coarse){.hscopes .hchip{height:44px;padding:0 14px}}
 .htool{border-color:var(--line);box-shadow:var(--sh-1)}
 .hht h1{font-size:25px;font-weight:800;letter-spacing:-.03em}
 .hdate{font-weight:500}
@@ -1084,6 +1097,19 @@ html[data-theme=dark] .hbi2.hot{background:#2E2614;border-color:#5A4A20}html[dat
 .schmap{flex:0 0 auto;align-self:center;display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:#005BAC;border:1px solid #C5DBF2;background:#fff;border-radius:8px;padding:3px 7px}
 .schmap:hover{background:#EAF2FB}html[data-theme=dark] .schmap{background:transparent;border-color:#2B4A6E;color:#8CC4F5}
 @media (max-width:820px){.hbrief{padding:8px 10px}.hbl{flex-basis:100%}.hbi2{font-size:12.5px}}
+/* 195: 휴대폰 첫 화면 정리 — 요약·브리핑을 한 줄 가로 스크롤로 줄여 「오늘의 업무」가 첫 화면에 보이게, 범위 칩 한 줄, 하단 줄바꿈 정리 */
+@media (max-width:820px){
+  .hht h1{word-break:keep-all}
+  .hscopes{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.hscopes::-webkit-scrollbar{display:none}.hscopes .lb,.hscopes .hchip{flex:none}
+  .hstats{display:flex;overflow-x:auto;gap:10px;scroll-snap-type:x proximity;scroll-padding:0 14px;scrollbar-width:none;margin:0 -14px;padding:0 14px}.hstats::-webkit-scrollbar{display:none}
+  .hstat{flex:0 0 172px;scroll-snap-align:start;padding:10px 12px;column-gap:10px}
+  .hsti{width:36px;height:36px}.hstv b{font-size:22px}
+  .hbrief{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.hbrief::-webkit-scrollbar{display:none}
+  .hbl{flex:none;flex-basis:auto;margin-right:2px}.hbi2{flex:none;max-width:none;white-space:nowrap}
+  .schft{flex-wrap:wrap;row-gap:4px}.schft .hmore{white-space:nowrap}
+}
+@media (max-width:380px){.hht h1{font-size:20px}}
+
 
 /* 팀 현황 */
 .tmwrap{overflow-x:auto;margin:0 -4px}
@@ -1178,6 +1204,14 @@ html[data-theme=dark] .hstl,html[data-theme=dark] .obpi{color:#6CB4F5}   /* 다�
   .pcard>.x,#pCard>.x{min-width:44px;min-height:44px;display:grid;place-items:center}
   .hav,.mehead{min-width:40px;min-height:40px}
   #inst .x,.npinx{min-width:40px;min-height:40px}
+}
+/* 195: 터치 기기에서 주요 버튼·칩은 44px (위의 40px 규칙보다 뒤에 두어야 이김) */
+@media (pointer:coarse){
+  .htool,.hav,.scanb,.obpi,.allbell{min-width:44px;min-height:44px}
+  .hsearch .btn{height:44px}
+  .hchip,.hchip.sm,.hbi2,.btn,.hmore,.seg button,.newroom,.lgrp,.lsearch{min-height:44px}
+  .hchip,.hchip.sm{min-width:44px}
+  .silfv{position:relative}.silfv::after{content:"";position:absolute;inset:-12px -6px}
 }
 .kpt2 td.good,.kpt2 td small.up{color:#2E8B35}.kpt2 td.low,.kpt2 td small.down{color:#C9302C}
 html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{color:#6FD675}html[data-theme=dark] .kpt2 td.low,html[data-theme=dark] .kpt2 td small.down{color:#FF7A7A}
@@ -1547,7 +1581,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
   <aside class="list" id="side">
     <div class="lhead">
       <div class="lhrow"><h2 id="lTitle">대화</h2><div class="lhbtns"><button class="allbell vbtn" id="voiceBtn" title="말로 보내기 — 「FS방에 ~라고 보내줘」" aria-label="말로 보내기" hidden><span class="bi" data-ic="mic"></span><span class="vbt">말로 보내기</span></button><button class="mehead" id="meHead" title="내 정보·설정" aria-label="내 정보·설정"></button><button class="allbell" id="newRoomBtn" title="새 그룹 대화방 만들기" aria-label="새 그룹 대화방 만들기" hidden><span class="bi" data-ic="plus"></span>새 방</button><button class="allbell" id="allBell" hidden></button></div></div>
-      <input type="search" class="lsearch" id="lq" placeholder="검색">
+      <input type="search" class="lsearch" id="lq" placeholder="검색" aria-label="대화 검색">
     </div>
     <div class="mlinks" id="mLinks">
       <a data-app="install" href="https://balhm12.github.io/Sysmex-schedule/index.html" target="_blank" rel="noopener"><span data-ic="box"></span>설치일정</a>
@@ -1674,7 +1708,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.193";
+const APP_VERSION="2026-11-06.195";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2122,7 +2156,7 @@ const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const hm=d=>{const h=d.getHours();return (h<12?"오전 ":"오후 ")+((h%12)||12)+":"+pad(d.getMinutes());};
 let pendingCount=0,listTab="rooms";
 /* 팀 색: 시스멕스 팔레트(파랑·하늘·녹색·주황·퍼플·마젠타)와 그 톤만 사용 */
-const TEAM_COLOR={"고객접점부문":"#2B3A4A","FSG":"#00457F","FS WEST":"#0094C6","FS EAST":"#D08A00","FS CENTRAL":"#7E49DC","FS SOUTH":"#2E9E35","FSS Team":"#C232CB","FSOM Team":"#3A78C2"};
+const TEAM_COLOR={"고객접점부문":"#2B3A4A","FSG":"#00457F","FS WEST":"#007FAE","FS EAST":"#D08A00","FS CENTRAL":"#7E49DC","FS SOUTH":"#2E9E35","FSS Team":"#C232CB","FSOM Team":"#3A78C2"};
 const ROOM_LOOK={all:["전체","#00457F","globe"],notice:["전체공지","#E7413E","megaphone"],ts:["FS","#005BAC","wrench"],cs:["CS","#0094C6","headset"],west:["W","#0094C6"],east:["E","#D08A00"],central:["C","#7E49DC"],daejeon:["대전","#9A70E3"],gwangju:["광주","#9A70E3"],south:["S","#2E9E35"],busan:["부산","#4DB353"],daegu:["대구","#4DB353"],fss:["FSS","#C232CB"],fsom:["OM","#3A78C2"]};
 const ROOM_SCOPE={west:["FS WEST"],east:["FS EAST"],central:["FS CENTRAL"],daejeon:["FS CENTRAL","대전"],gwangju:["FS CENTRAL","광주"],south:["FS SOUTH"],busan:["FS SOUTH","부산"],daegu:["FS SOUTH","대구"],fss:["FSS Team"],fsom:["FSOM Team"]};
 function personTeam(name){const p=rosterList().find(x=>x.name===name);return p||null;}
@@ -3066,7 +3100,7 @@ function openBoard(k,dev,opt){
   const c=$("pCard");c.textContent="";c.classList.add("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,B.title));
-  const L=boardList(k);const sf=el("div","obsearch bsrch");sf.appendChild(icEl("search","",18));const q=el("input");q.type="search";q.placeholder="제목·장비·설명 찾기";q.value=opt.q||"";sf.appendChild(q);c.appendChild(sf);
+  const L=boardList(k);const sf=el("div","obsearch bsrch");sf.appendChild(icEl("search","",18));const q=el("input");q.type="search";q.setAttribute("aria-label","제목·장비·설명 찾기");q.placeholder="제목·장비·설명 찾기";q.value=opt.q||"";sf.appendChild(q);c.appendChild(sf);
   const fr=el("div","hchips");const chip=(l,on,fn)=>{const b=el("button","hchip sm"+(on?" on":""),l);b.onclick=fn;fr.appendChild(b);};
   const st={dev:dev||"",cat:opt.cat||"",fav:!!opt.fav,rec:!!opt.rec};
   const redo=()=>openBoard(k,st.dev,{cat:st.cat,fav:st.fav,rec:st.rec,q:q.value});
@@ -3153,6 +3187,7 @@ function renderExt(q){
     ev.slice(0,5).forEach(e=>{const r=el("div","schev"+(e.start<=schData.today?" now":""));r.appendChild(el("span","schd",schDateLbl(e,schData.today).lb));const cc=SCH_CAT[e.category]||[e.category||"일정","#9E9E9E"];const tg=el("span","schc",cc[0]);tg.style.setProperty("--c",cc[1]);r.appendChild(tg);
       const t=el("span","scht");t.appendChild(el("b",null,String(e.title||"")));t.appendChild(el("small",null,[e.device,e.team,e.assignee].filter(Boolean).join(" · ")));r.appendChild(t);box.appendChild(r);});}
 }
+let homeScope="all";   /* 194: 홈 검색 범위(이 세션에서만 기억) */
 function hcard(title,ic,cls){const c=el("section","hcard"+(cls?" "+cls:""));const h=el("div","hch");h.appendChild(icEl(ic,"hcic",20));h.appendChild(el("h2",null,title));c.appendChild(h);c._head=h;return c;}
 function hmore(c,label,fn){const a=el("button","hmore",label+" ›");a.onclick=fn;c._head.appendChild(a);}
 /* ===== 홈 대시보드 (FS 포털 – Field Service Integrated Portal) =====
@@ -3194,7 +3229,13 @@ function renderHome(){
   const q=el("input");q.id="hq";q.type="search";q.placeholder=isM()?"장비·에러코드·부품번호·사람":"장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
   f.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";f.appendChild(sb);
-  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");$("q").value=v;go("search");};
+  const SCOPES=[["all","전체",q.placeholder],["hist","수리이력","에러코드·증상·장비 (시스멕스톡 2016~)"],["parts","부품","부품번호·ERP CODE·부품 이름·장비"],["tech","기술·실마리","장비·에러 이름·코드·부품번호·제목"]];
+  q.placeholder=(SCOPES.find(x=>x[0]===homeScope)||SCOPES[0])[2];
+  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");
+    if(homeScope==="hist"){goHist(v);return;}
+    if(homeScope==="parts"&&document.getElementById("hpq")){partsQuery(v);return;}   /* 카드를 숨긴 사람은 아래 전체 검색으로 */
+    if(homeScope==="tech"){silHistAdd(v);go("tech~"+encodeURIComponent(v));return;}
+    $("q").value=v;go("search");};
   hd.appendChild(f);
   const tools=el("div","htools");
   if(!isTouch()){const ck=el("button","htool hck");ck.title="빠른 이동 (Ctrl+K)";ck.setAttribute("aria-label","빠른 이동");ck.appendChild(el("span",null,/Mac/.test(navigator.platform)?"⌘K":"Ctrl K"));ck.onclick=openCmd;tools.appendChild(ck);}
@@ -3203,6 +3244,11 @@ function renderHome(){
   th.onclick=()=>{theme=document.documentElement.dataset.theme==="dark"?"light":"dark";try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();homeBuilt="";renderHome();};tools.appendChild(th);
   const av=el("button","hav");av.setAttribute("aria-label","내 정보·설정");av.appendChild(personAv(me.name,"s"));av.onclick=()=>go("settings");tools.appendChild(av);
   hd.appendChild(tools);b.appendChild(hd);
+  /* 194: 검색 범위 — 한 검색창에서 전체·수리이력·부품·기술/실마리로 보냄 (아래 카드별 검색창은 그대로) */
+  {const sc0=el("div","hscopes");sc0.setAttribute("role","group");sc0.setAttribute("aria-label","검색 범위");sc0.appendChild(el("span","lb","찾을 곳"));
+    SCOPES.forEach(([k,l,ph])=>{const c=el("button","hchip sm"+(homeScope===k?" on":""),l);c.type="button";c.setAttribute("aria-pressed",homeScope===k?"true":"false");
+      c.onclick=()=>{homeScope=k;q.placeholder=ph;sc0.querySelectorAll(".hchip").forEach(x=>{const on=x===c;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false");});q.focus();};sc0.appendChild(c);});
+    b.appendChild(sc0);}
   /* 180: 부품 바코드 입력 안내(사용자 요청) — 검색창 아래 한 줄, 누르면 바로 스캔 */
   {const hn=el("button","hscanhint");hn.type="button";hn.appendChild(icEl("scan","",14));hn.appendChild(el("span",null,isM()?"부품 바코드·QR은 스캔 버튼으로 찍으면 바로 검색":"부품 라벨 바코드·QR은 검색창 옆 스캔 버튼으로 찍거나, 바코드 스캐너로 검색창에 바로 입력하세요"));hn.onclick=openScan;b.appendChild(hn);}
   // ── 요약 숫자
@@ -4128,7 +4174,7 @@ function renderTechPage(){
   b.textContent="";
   const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"기술정보"));tt.appendChild(el("span",null,"에러코드·부품번호·장비로 자료·실마리·영상을 한 번에"));hd.appendChild(tt);b.appendChild(hd);
   const sf=el("form","hsearch tsearch");sf.setAttribute("role","search");sf.appendChild(icEl("search","",20));
-  const q=el("input");q.id="tq";q.type="search";q.placeholder=(isM()?"에러코드·부품번호·장비 (예: 37005)":"장비·에러 이름·코드·부품번호·제목 (예: XN WB, 37005, CY-772405)");q.value=techQ;q.autocomplete="off";sf.appendChild(q);
+  const q=el("input");q.id="tq";q.type="search";q.setAttribute("aria-label","기술정보 검색");q.placeholder=(isM()?"에러코드·부품번호·장비 (예: 37005)":"장비·에러 이름·코드·부품번호·제목 (예: XN WB, 37005, CY-772405)");q.value=techQ;q.autocomplete="off";sf.appendChild(q);
   sf.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";sf.appendChild(sb);
   let t0=0;q.oninput=()=>{clearTimeout(t0);t0=setTimeout(()=>{techQ=q.value.trim();drawRes();},200);};
@@ -4190,7 +4236,7 @@ function renderOrgBoard(){
   const teams=me&&teams0.includes(me.team)?[me.team].concat(teams0.filter(t=>t!==me.team)):teams0;   // 우리 팀을 맨 앞에
   // 머리
   const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"조직도"));tt.appendChild(el("span",null,"FS Group · "+all.length+"명"));hd.appendChild(tt);
-  const sf=el("div","obsearch");sf.appendChild(icEl("search","",18));const q=el("input");q.id="obq";q.type="search";q.placeholder="이름·팀·사무소 찾기";q.value=orgQ;q.oninput=()=>{orgQ=q.value.trim();renderOrgBoard();};sf.appendChild(q);hd.appendChild(sf);
+  const sf=el("div","obsearch");sf.appendChild(icEl("search","",18));const q=el("input");q.id="obq";q.type="search";q.setAttribute("aria-label","이름·팀·사무소 찾기");q.placeholder="이름·팀·사무소 찾기";q.value=orgQ;q.oninput=()=>{orgQ=q.value.trim();renderOrgBoard();};sf.appendChild(q);hd.appendChild(sf);
   const vw=el("div","seg");[["card","팀별 카드"],["list","목록"]].forEach(([k,l])=>{const x=el("button",orgView===k?"on":"",l);x.onclick=()=>{orgView=k;try{localStorage.setItem("fstalk-orgview",k);}catch(e){}renderOrgBoard();};vw.appendChild(x);});hd.appendChild(vw);
   b.appendChild(hd);
   // 팀 칩 + 오늘 근무 요약
