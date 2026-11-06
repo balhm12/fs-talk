@@ -1822,7 +1822,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.204";
+const APP_VERSION="2026-11-06.205";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3896,10 +3896,10 @@ function renderReqPage(){
   const b=$("reqBody");if(!b||!me)return;slkWatch();b.textContent="";
   if(!slkScope)slkScope=slkDefScope();
   const hd=el("div","obhd");const tt=el("div","obt");tt.appendChild(el("h1",null,"Slack 요청"));tt.appendChild(el("span",null,"CSO 기술요청 · 야간 접수 인계"));hd.appendChild(tt);
-  const ad=el("button","btn pri slkadd");ad.appendChild(icEl("plus","",16));ad.appendChild(el("span",null,"Slack 글 붙여넣기"));ad.onclick=openSlkPaste;hd.appendChild(ad);b.appendChild(hd);
+  const ad=el("button","btn pri slkadd");ad.appendChild(icEl("plus","",16));ad.appendChild(el("span",null,"Slack 글 붙여넣기"));ad.onclick=openSlkPaste;if(isAdmin)hd.appendChild(ad);b.appendChild(hd);   // 205: 바꾸기(붙여넣기·담당·회신·완료)는 관리자만, 직원은 확인만
   const cn=el("div","slkcn");const live=slkMeta&&slkMeta.ok&&Date.now()-(slkMeta.at||0)<15*6e4;
   cn.appendChild(el("span","slkdot"+(live?" on":"")));
-  cn.appendChild(el("span",null,live?"Slack 자동 연결됨 · "+new Date(slkMeta.at).toTimeString().slice(0,5)+" 확인":"Slack 자동 연결 전 — Slack 글의 ⋮ → 「텍스트 복사」 후 「Slack 글 붙여넣기」"));
+  cn.appendChild(el("span",null,live?"Slack 자동 연결됨 · "+new Date(slkMeta.at).toTimeString().slice(0,5)+" 확인":isAdmin?"Slack 자동 연결 전 — Slack 글의 ⋮ → 「텍스트 복사」 후 「Slack 글 붙여넣기」":"Slack 자동 연결 전 — 관리자가 올린 요청을 확인할 수 있습니다"));
   if(isAdmin){const pv=el("button","hmore","연결 전 미리보기");pv.onclick=openSlkPreview;cn.appendChild(pv);const t=el("button","hmore","연결 시험");t.onclick=slkTest;cn.appendChild(t);}
   b.appendChild(cn);
   const all=slkList(),wk=Date.now()-7*864e5;
@@ -3911,7 +3911,7 @@ function renderReqPage(){
   const box=el("div","slklist");
   if(!L.length){const e=el("div","slkempty");
     e.appendChild(el("b",null,slkSt==="new"?"새 요청이 없습니다":slkSt==="doing"?"처리 중인 요청이 없습니다":"최근 7일 완료한 요청이 없습니다"));
-    if(!all.length)e.appendChild(el("span",null,"Slack #handover-cso-fsg · #handover-cssharing-fsg 의 요청 글을 복사해 「Slack 글 붙여넣기」로 넣으면 기관·장비·요청·증상·회신처로 나눠 보여 줍니다."));
+    if(!all.length)e.appendChild(el("span",null,!isAdmin?"요청이 올라오면 여기에서 기관·장비·요청·증상·회신처를 확인할 수 있습니다.":"Slack #handover-cso-fsg · #handover-cssharing-fsg 의 요청 글을 복사해 「Slack 글 붙여넣기」로 넣으면 기관·장비·요청·증상·회신처로 나눠 보여 줍니다."));
     else if(slkScope!=="all")e.appendChild(el("span",null,"다른 팀 요청은 「전체」에서 볼 수 있어요."));
     box.appendChild(e);}
   L.forEach(r=>{const f=r.f,row=el("button","slkrow"),tp=el("span","slktop");
@@ -3959,13 +3959,14 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   const th=Object.keys(r.th||{}).map(k=>r.th[k]).filter(t=>t&&t.t).sort((a,b)=>a.at-b.at);
   if(th.length){c.appendChild(el("div","slkh2","스레드 "+th.length));const tl=el("div","slkth");th.forEach(t=>{const m=el("div","slkm"+(t.p?" me":""));m.appendChild(el("b",null,(t.n||"")+" · "+slkAgo(t.at)+(t.p&&!slkLive(r)?" · 포털 기록":"")));m.appendChild(el("span",null,t.t));tl.appendChild(m);});c.appendChild(tl);}
   const og=el("details","slkog");og.appendChild(el("summary",null,"원문 보기"));og.appendChild(el("pre",null,r.t||""));c.appendChild(og);
-  const live=slkLive(r),canRe=!r.multi;
+  const live=slkLive(r),canRe=!r.multi&&isAdmin;
   if(canRe){const fd=el("div","f");const lb=el("label",null,live?"Slack 스레드에 회신":"회신 문구 (복사해서 Slack 스레드에 붙여 넣기)");const ta=el("textarea","slkre");ta.id="slkRe";ta.rows=3;ta.maxLength=1500;ta.placeholder="예) 내일 오전 방문 예정입니다. 고객께 연락드렸습니다.";lb.htmlFor="slkRe";fd.appendChild(lb);fd.appendChild(ta);c.appendChild(fd);}
   const bt=el("div","lebtns wrap slkbt");const B=(t,cls,fn)=>{const x=el("button","btn"+(cls?" "+cls:""),t);x.onclick=fn;bt.appendChild(x);return x;};
   const txt=()=>{const t=$("slkRe");return t?t.value.trim():"";};
   if(canRe)B(live?"회신 보내기":"회신 복사",null,async()=>{const t=txt();if(!t){toast("회신 내용을 적어 주세요.");$("slkRe").focus();return;}
     if(live){if(await slkDo(id,"reply",t))openSlkReq(id);return;}
     await copyText(t);await slkDo(id,"reply",t);if(url)openUrl(url);else toast("복사했습니다 — Slack 원래 글의 스레드에 붙여 넣으세요.");openSlkReq(id);});
+  if(!isAdmin){c.appendChild(el("p","hp slknote","확인만 할 수 있습니다 — 담당·회신·완료 표시는 관리자가 합니다. 처리할 내용은 Slack 원래 글의 스레드나 회신처 전화로 이어 가세요."));$("pOv").hidden=false;return;}
   if(r.st==="new")B("내가 담당",r.st==="new"?"pri":null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
   else if(r.st==="doing"&&r.who!==me.name)B("내가 담당",null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
   if(r.st!=="done")B("완료",r.st==="doing"?"pri":null,async()=>{if(await slkDo(id,"done",txt()))openSlkReq(id);});
@@ -3975,7 +3976,7 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   if(!live&&r.st!=="done")c.appendChild(el("p","hp slknote","Slack 자동 연결 전이라 담당·완료는 포털에만 기록됩니다. Slack 원래 글의 확인·완료 반응은 직접 눌러 주세요."));
   $("pOv").hidden=false;
 }
-async function slkDo(id,op,text){const r=slkReq[id];if(!r||!me)return false;track("slk_act");
+async function slkDo(id,op,text){const r=slkReq[id];if(!r||!me)return false;if(!isAdmin){toast("관리자만 바꿀 수 있습니다.");return false;}track("slk_act");
   if(slkLive(r)){try{const idToken=await auth.currentUser.getIdToken();
       const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slack",idToken,op,id,text})});
       const j=await res.json().catch(()=>null);if(!j||!j.ok){toast((j&&j.err)||"Slack에 보내지 못했습니다.");return false;}
@@ -3990,7 +3991,7 @@ async function slkDo(id,op,text){const r=slkReq[id];if(!r||!me)return false;trac
   if(op!=="reply"&&text)p["th/"+now]={n:me.name,t:text.slice(0,1500),at:now,p:true};
   try{await R("slack/req/"+id).update(p);if(op!=="reply")toast({claim:"담당으로 표시했습니다.",done:"완료로 표시했습니다.",reopen:"다시 열었습니다."}[op]);return true;}
   catch(e){toast("저장하지 못했습니다.");return false;}}
-function openSlkPaste(){track("slk_paste");
+function openSlkPaste(){if(!isAdmin)return;track("slk_paste");
   const c=$("pCard");c.textContent="";c.classList.remove("drawer");c.classList.add("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"Slack 글 붙여넣기"));

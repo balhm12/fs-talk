@@ -556,7 +556,7 @@
             "at"
           ],
           "$id": {
-            ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && $id.matches(/^p_[a-z0-9]{6,20}$/) && ((!data.exists() && newData.child('pu').val() === auth.uid && newData.child('st').val() === 'new') || (data.exists() && newData.exists() && newData.child('pu').val() === data.child('pu').val() && newData.child('t').val() === data.child('t').val() && newData.child('at').val() === data.child('at').val()) || (data.exists() && !newData.exists() && (data.child('pu').val() === auth.uid || (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'))))",
+            ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved') && $id.matches(/^p_[a-z0-9]{6,20}$/) && ((!data.exists() && newData.child('pu').val() === auth.uid && newData.child('st').val() === 'new') || (data.exists() && newData.exists() && newData.child('pu').val() === data.child('pu').val() && newData.child('t').val() === data.child('t').val() && newData.child('at').val() === data.child('at').val()) || (data.exists() && !newData.exists()))",
             ".validate": "newData.hasChildren(['kind','src','at','t','f','st','pu','pb'])",
             "kind": {
               ".validate": "newData.val() === 'paste'"
