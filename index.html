@@ -1547,6 +1547,8 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .bdfile{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.bdfile .ico{color:var(--blue)}
 .bdfn{flex:1;min-width:0;display:flex;flex-direction:column}.bdfn b{font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bdfn small{font-size:12px;color:var(--sub)}
 .slksrcm{margin-left:6px;font-size:11px;font-weight:700;color:#4A154B;background:#F4EDF4;border-radius:5px;padding:1px 6px;vertical-align:1px}html[data-theme=dark] .slksrcm{color:#E3C6E4;background:rgba(160,90,160,.22)}
+.slksil{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px}.slksn{flex:1;min-width:0;display:flex;flex-direction:column}.slksn b{font-size:13.5px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slksn small{font-size:12px;color:var(--sub)}.slksil .hmore{margin:0;flex:0 0 auto}.slknone{margin:0 0 8px;font-size:12.5px}
+@media (pointer:coarse){.slksil .hmore{min-height:44px}}
 /* Slack 요청함(198) */
 .slkadd{margin-left:auto;display:inline-flex;align-items:center;gap:6px;width:auto;padding:9px 14px}
 .slkcn{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:1.5;color:var(--sub)}.slkcn>span:nth-child(2){flex:1;min-width:0}.slkcn .hmore{margin-left:auto;flex:0 0 auto}
@@ -1807,7 +1809,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.201";
+const APP_VERSION="2026-11-06.202";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3779,7 +3781,7 @@ function slkClean_(t){
     .replace(/<(https?:[^|>]*)\|([^>]*)>/g,'$2 ($1)').replace(/<(https?:[^>]*)>/g,'$1')
     .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').trim();
 }
-function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/\s+/g,' ').trim(); }
+function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/^\s*(?:SKR\s+)?FS(?:\s+(?:WEST|EAST|CENTRAL|SOUTH|SS|OM))?\s+/i,'').replace(/\s+/g,' ').trim(); }
 function slkParse_(text){
   const t = String(text||'');
   const f = {};
@@ -3809,7 +3811,7 @@ function slkWatch(){if(slkOn||!me)return;slkOn=true;
   R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();},()=>{});}
 function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
 function slkSrc(r){return r.kind==="paste"?(r.src||"etc"):r.kind;}
-function slkTeam(r){const f=r.f||{};if(f.team)return String(f.team).toUpperCase();const p=r.mention&&rosterList().find(x=>x.name===r.mention);return p?String(p.team).toUpperCase():"";}
+function slkTeam(r){const f=r.f||{};if(f.team){let t=String(f.team).toUpperCase().replace(/^(FS\s+(?:WEST|EAST|CENTRAL|SOUTH))\b.*/,"$1");if(/^FS(OM|S)$/.test(t))t+=" TEAM";return t;}const p=r.mention&&rosterList().find(x=>x.name===r.mention);return p?String(p.team).toUpperCase():"";}
 function slkMine(r){return !!me&&(r.who===me.name||r.mention===me.name);}
 function slkDefScope(){return myField()&&myRole()!=="group"?"team":"all";}
 function slkIn(r,sc){return sc==="all"||(sc==="me"?slkMine(r):slkTeam(r)===myTeamU()||slkMine(r));}
@@ -3830,19 +3832,13 @@ function slkSplit(text){const out=[];let carry="";
     const b=(carry+own).trim(),head=b.split(/\[CS쉐어링 접수\]|<\s*기술\s*요청\s*>/)[0],mm=/@([^\s@]{2,24})/.exec(head);carry=tail.slice(-300);
     out.push({b,f,src:/CS쉐어링/.test(b)?"night":/기술\s*요청/.test(b)?"cso":"etc",mention:mm?slkPerson_(mm[1]):""});});
   return out;}
-/* 201: 요청에서 찾을 말 — 장비군(XN-1000→XN) + 에러 코드, 없으면 증상·요청사항의 핵심 단어 2개. 전화·S/N·날짜·수량은 뺌 */
-function slkQuery(f){f=f||{};
-  const m0=String(f.eq||"").trim().split(/[\s,/]+/)[0]||"",fam=(/^([A-Za-z]{2,5})[-\s]?\d/.exec(m0)||[])[1];const eq=(fam||m0).toUpperCase();
-  const raw=[f.sym,f.req].filter(Boolean).join("\n");
-  const t=raw.replace(/0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}/g," ").replace(/\b(?:S\/?N|시리얼)\s*[:#]?\s*[A-Z0-9-]+/gi," ").replace(/\d{1,4}[./-]\d{1,2}([./-]\d{1,4})?/g," ").replace(/[A-Za-z]{1,5}-?\d{2,5}[A-Za-z]?\b/g,x=>/^(E|ERR|ERROR)-?\d/i.test(x)?x:" ");
-  const codes=[];const add=c=>{c=String(c).trim();if(c&&!codes.includes(c))codes.push(c);};
-  t.replace(/\b(?:E|ERR|ERROR|에러|오류)\s*[.:#-]?\s*(\d{2,6})\b/gi,(x,d)=>add(d));
-  t.replace(/(?:^|[^\d.])(\d{4,6})(?![\d.]|\s*(?:대|개|건|원|명|분|시|초|년|월|일|회|번|%|ml|mL|ul|uL|cc|kg|g|EA|ea))/g,(x,d)=>add(d));
-  t.replace(/([A-Za-z가-힣][A-Za-z0-9가-힣]{1,15})\s*(?:에러|error|알람|alarm|오류)/gi,(x,w)=>{if(!/^(장비|기기|시스템|system|기계|발생|관련|각종)$/i.test(w))add(w);});
-  let q=codes.slice(0,2);
-  if(!q.length){const STOP=/^(문의|확인|요청|연락|부탁|드립니다|드림|있음|없음|발생|관련|장비|고객|병원|내용|바랍니다|합니다|해주세요|해주시기|주세요|필요|가능|방문|후|중|및|건|현재|계속|다시|자꾸|안됨|안|됨|함|진행|전달|담당자|처리|조치|부분|상태|경우|이상|문제|요청사항|에러|error|오류|알람|alarm|반복|표시|발생함)$/i;
-    (t.match(/[A-Za-z가-힣][A-Za-z0-9가-힣]+/g)||[]).forEach(w=>{w=w.replace(/(이요|에서|으로|에게|까지|부터|이랑|하고|이|가|을|를|은|는|에|로|도|와|과|의|만)$/,"");if(w.length>=2&&!STOP.test(w)&&w.toUpperCase()!==eq&&!q.includes(w)&&q.length<2)q.push(w);});}
-  const full=[eq].concat(q).filter(Boolean).join(" ");return {eq,codes,q:full};}
+/* 202: 요청 → 실마리 에러 사전과 맞는 것만(대화 글의 silMatches 와 같은 기준: 에러 이름 그대로·코드+에러/장비명·이름 핵심 두 단어).
+   장비군이 다른 에러는 뺌. 단어를 뽑아 지어낸 검색어는 쓰지 않는다(사용자 지적 「에러 분류가 잘 안 됨 — 매칭되는 것만」) */
+function slkSil(f){f=f||{};if(!silIdx)return null;
+  const m0=String(f.eq||"").trim().split(/[\s,/]+/)[0]||"",fam=((/^([A-Za-z]{2,5})(?=[-\s#]|\d|$)/.exec(m0)||[])[1]||m0).toUpperCase();
+  const m={text:[f.eq,f.req,f.sym].filter(Boolean).join("\n")};const ms=silMatches(m);
+  const ok=r=>!fam||String(r.d||"").toUpperCase().indexOf(fam)===0;
+  return ms.filter(ok).slice(0,3);}
 function slkDupOf(f){const k=[f.hosp,f.eq,f.req].join("|");return slkList().find(r=>[r.f.hosp,r.f.eq,r.f.req].join("|")===k);}
 function renderReqPage(){
   const b=$("reqBody");if(!b||!me)return;slkWatch();b.textContent="";
@@ -3894,8 +3890,17 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   c.appendChild(tb);
   if(r.fin){const fb=el("div","slkfin");fb.appendChild(el("b",null,"마무리 보고 · "+(r.fin.n||"")+" · "+slkAgo(r.fin.at)));fb.appendChild(el("span",null,slkFirst(r.fin.t,160)));c.appendChild(fb);}
   const go2=el("div","slkgo");const lk=(t,fn)=>{const a=el("button","hmore",t);a.onclick=()=>{closeProfile();fn();};go2.appendChild(a);};
-  {const Q=slkQuery(f);   // 201: 장비군 + 에러 코드(없으면 증상·요청 핵심 단어)로 찾기 — 버튼에 찾는 말을 보여 줌
-    if(Q.q){lk("수리이력 · "+Q.q+" ›",()=>goHist(Q.q));lk("실마리 · "+Q.q+" ›",()=>silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(Q.q)));}}
+  {const S=slkSil(f);   // 202: 실마리 에러와 맞는 것만 — 실마리(원인·조치) + 같은 에러 이름·코드로 수리이력
+    if(S===null){if(silErr==="locked"){const a=el("button","hmore","실마리 연결하면 에러를 찾아 연결 ›");a.onclick=()=>{closeProfile();openSilUnlock();};go2.appendChild(a);}else silLoad().then(()=>{if(!$("pOv").hidden)openSlkReq(id);}).catch(()=>{});}
+    else if(S.length){const tx=[f.req,f.sym].filter(Boolean).join(" ").toLowerCase(),tw=silWords(tx).join(" ");
+      const hit=r=>{const tl=String(r.t||"").toLowerCase();if(tl&&tx.indexOf(tl)>=0)return r.t;   // 요청 글에 실제로 나온 표현으로 수리이력 검색
+        const c=(r.c||[]).find(c=>tx.indexOf(String(c).toLowerCase())>=0);if(c)return String(c);
+        const w=silWords(tl);for(let i=0;i<w.length-1;i++){const bg=w[i]+" "+w[i+1];if((" "+tw+" ").indexOf(" "+bg+" ")>=0)return bg;}return w.slice(0,2).join(" ");};
+      S.forEach(r=>{const hq=String(hit(r)||"").slice(0,40);
+        const row=el("div","slksil");const nm=el("span","slksn");nm.appendChild(el("b",null,r.d+" · "+String(r.t||"")));if(r.c&&r.c.length)nm.appendChild(el("small",null,r.c.slice(0,2).join(" / ")));row.appendChild(nm);
+        const a1=el("button","hmore","실마리 ›");a1.onclick=()=>{closeProfile();silOpenUrl(silUrl(r));};row.appendChild(a1);
+        const a2=el("button","hmore","수리이력 ›");a2.onclick=()=>{closeProfile();goHist(r.d+" "+hq);};row.appendChild(a2);c.appendChild(row);});}
+    else c.appendChild(el("p","hp slknone","실마리에 맞는 에러가 없습니다"));}
   if(f.hosp)lk("길찾기 ›",()=>openMap(f.hosp));
   const url=slkUrl(r);if(url){const a=el("button","hmore","Slack에서 열기 ›");a.onclick=()=>openUrl(url);go2.appendChild(a);}
   c.appendChild(go2);

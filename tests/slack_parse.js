@@ -35,18 +35,8 @@ eq(sp.map(x=>[x.src,x.f.hosp,x.f.contact||'',x.mention]),[['cso','테스트14병
 eval(/const ROOM_SCOPE = [^\n]*/.exec(src)[0].replace('const ','var '));eval(pick('slkRoomFor_'));
 const RS={"FS WEST":{"테스트1":{o:"",lead:true}},"FS CENTRAL":{"테스트2":{o:"대전"},"테스트3":"광주","테스트4":""},"FS SOUTH":{"테스트5":"부산"},"FSS Team":{"테스트6":""},"FSOM Team":{"테스트1":""}};
 eq(['테스트2','테스트3','테스트4','테스트5','테스트6','테스트1','테스트99'].map(n=>slkRoomFor_(n,RS)),['daejeon','gwangju','central','busan','fss','all','all'],'Slack 글 방: 사무소방 > 팀방, 동명이인·명단 없음은 전체방');
-// 201: 요청에서 찾을 말(장비군 + 에러 코드, 없으면 핵심 단어)
-eval(pickH('slkQuery'));
-const QC=[
- [{eq:'XN-1000',req:'프린터 연결 문의',sym:'SN: A0000 프린터 연결이 불안정\n설정이 안됨'},'XN 프린터 연결'],
- [{eq:'XN-1000',sym:'0201 에러 발생, 010-1234-5678로 회신'},'XN 0201'],
- [{eq:'SP-10',req:'- 장비 셧다운함\n- 염색제1 에러'},'SP 염색제1'],
- [{eq:'CS-5100',req:'장비 에러',sym:'검체 에러'},'CS 검체'],
- [{eq:'XR-1000',sym:'E-123 표시, 11/5 방문 요청'},'XR 123'],
- [{eq:'HLC-723',req:'정전 후 파란 화면'},'HLC 정전 파란'],
- [{eq:'UF-5000',req:'세척액 2개 요청'},'UF 세척액'],
- [{eq:'',req:'Sampler error 반복'},'Sampler'],
- [{eq:'CN-6000',req:'정전 후 에러'},'CN 정전'],
-];
-QC.forEach(([f,exp])=>eq(slkQuery(f).q,exp,'찾을 말: '+exp));
+// 202: 실마리 대조 함수가 포털에 있는지(지어낸 검색어 함수 slkQuery 는 없어야 함)
+eq(!!pickH('slkSil')&&!pickH('slkQuery'),true,'요청 → 실마리 사전 대조만');
+// 202: Slack 표시 이름 앞머리(팀·회사) 빼기 — 명단 이름과 맞추기
+eq(['FS EAST 윤테스트','SKR FS 테스트30','SKR FS Central 테스트31','FS East 테스트32','테스트33(Woody)','이테스트 (Matt)'].map(slkPerson_),['윤테스트','테스트30','테스트31','테스트32','테스트33','이테스트'],'이름 앞머리·영문 별칭 빼기');
 console.log(fail?fail+'개 실패':'모두 통과');process.exit(fail?1:0);

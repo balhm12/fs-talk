@@ -102,7 +102,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v25';
+const NOTIFY_VER = 'v26';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -727,7 +727,7 @@ function slkClean_(t){
     .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').trim();
 }
 /* 「이준호(Juno)」 → 「이준호」 — 포털 명단 이름과 맞추기 */
-function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/\s+/g,' ').trim(); }
+function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/^\s*(?:SKR\s+)?FS(?:\s+(?:WEST|EAST|CENTRAL|SOUTH|SS|OM))?\s+/i,'').replace(/\s+/g,' ').trim(); }
 function slkUser_(uid, cacheObj){
   if(!uid) return '';
   if(cacheObj[uid] !== undefined) return cacheObj[uid];
@@ -788,7 +788,10 @@ function slackPull(force){
           const men = /<@([A-Z0-9]+)\|([^>]*)>/.exec(raw);
           const mention = men ? slkPerson_(men[2]) : (/<@([A-Z0-9]+)>/.exec(raw) ? slkPerson_(slkUser_(/<@([A-Z0-9]+)>/.exec(raw)[1], names)) : '');
           const at = Math.round(+m.ts*1000);
-          if(C.type === 'feed'){
+          if(C.type === 'feed' && /<\s*(기술|학술)\s*요청\s*>/.test(text)){   // 202: 대화방엔 안 옮김
+            if(/학술\s*요청/.test(text) || !/<\s*인계\s*:\s*FS/i.test(text)) return;   // 학술요청·<완료 : …>·CSO 인계는 FSG 요청 아님
+          }
+          else if(C.type === 'feed'){
             dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
             slkToRoom_(m, text, slkPerson_(who), at, ch, C);
             slkFinHint_(text, slkPerson_(who), at);
@@ -799,9 +802,12 @@ function slackPull(force){
             ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
           blocks.forEach(function(b, i){
             const f = slkParse_(b); if(!f) return;
-            const id = blocks.length > 1 ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : C.k+'_'+slkKey_(m.ts);
+            if(/학술\s*요청/.test(b) || (f.team && !/^FS/.test(f.team))) return;   // 202: 학술요청·CSO/SA 인계는 FSG 요청함에 넣지 않음
+            const day = Utilities.formatDate(new Date(at), 'Asia/Seoul', 'yyyyMMdd');
+            const id = blocks.length > 1 ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : (C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'));
             const cur = db_('talk/slack/req/'+id);
-            const base = {ch:ch, ts:m.ts, kind:C.k, by:slkPerson_(who), at:(cur&&cur.at)||at, t:b.slice(0,4000), f:f, mention:mention||null, multi:blocks.length>1||null};
+            if(cur && !(blocks.length > 1)) return;   // 같은 요청이 다른 채널에 또 올라온 것 — 처음 것을 그대로 둠
+            const base = {ch:ch, ts:m.ts, kind:(C.k === 'talk' ? 'cso' : C.k), by:slkPerson_(who), at:(cur&&cur.at)||at, t:b.slice(0,4000), f:f, mention:mention||null, multi:blocks.length>1||null};
             if(!cur){ base.st = 'new'; added++; }
             dbPatch_('talk/slack/req/'+id, base);
           });
