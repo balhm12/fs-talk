@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#005BAC">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -1333,6 +1333,8 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
   .tabbar button .ri{display:flex;align-items:center;justify-content:center;width:52px;height:28px;border-radius:14px;transition:background .18s}
   .tabbar button.on .ri{background:#EAF2FB}
   html[data-theme=dark] .tabbar button.on .ri{background:#1D3550}
+  html[data-theme=dark] .tabbar button.on{color:#8CC4F5}
+  #pCard:focus{outline:none}
   .tabbar button .dot{top:0!important;right:calc(50% - 30px)!important}
 }
 
@@ -1672,7 +1674,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.192";
+const APP_VERSION="2026-11-06.193";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3092,7 +3094,7 @@ function boardForm(k,ed){
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,B.title+(ed?" 고치기·개정":" 등록")));
   c.appendChild(el("div","pkhint",ed?"내용을 고치거나, 개정판이면 「개정」을 체크하고 개정 표시(예: Rev.08)를 적으세요. 개정하면 알림 센터에 「기술정보 개정」으로 뜹니다.":"링크(사내 드라이브·유튜브·SharePoint 등)를 등록하면 FSG 모두의 포털 첫 화면에 보입니다."));
-  const fld=(lab,node)=>{const f=el("div","f");const l=el("label",null,lab);f.appendChild(l);f.appendChild(node);c.appendChild(f);return node;};
+  const fld=(lab,node)=>{const f=el("div","f");const l=el("label",null,lab);fld.n=(fld.n||0)+1;node.id="bf"+fld.n;l.htmlFor=node.id;f.appendChild(l);f.appendChild(node);c.appendChild(f);return node;};
   let cat=null;if(k==="tech"){cat=fld("분류",el("select"));Object.entries(BCAT).forEach(([v,l])=>{const o=el("option",null,l);o.value=v;cat.appendChild(o);});cat.value=(ed&&BCAT[ed.c]?ed.c:"")||"manual";}
   const NOC={ecr:"ECR 번호",fca:"FCA 번호"};   /* 166: ECR·FCA는 번호 입력, 링크는 비우면 KnowledgeCenter */
   const no=fld("번호",el("input"));no.maxLength=40;no.value=ed&&ed.no||"";const noF=no.parentNode;
@@ -3103,7 +3105,7 @@ function boardForm(k,ed){
   if(cat)cat.addEventListener("change",syncNo);syncNo();
   /* 173: 첨부 파일(기술정보만) — 대화 첨부와 같은 방식으로 드라이브 「FS Talk 첨부」에 올리고 board 항목에 f={id,name,size,mime} */
   let fi=null,keepF=ed&&ed.f?ed.f:null;
-  if(k==="tech"){const ff=el("div","f");ff.appendChild(el("label",null,"첨부 파일 (선택 · 10MB 이하 · PDF·엑셀·사진 등)"));fi=el("input");fi.type="file";ff.appendChild(fi);
+  if(k==="tech"){const ff=el("div","f");const fl=el("label",null,"첨부 파일 (선택 · 10MB 이하 · PDF·엑셀·사진 등)");ff.appendChild(fl);fi=el("input");fi.type="file";fi.id="bffile";fl.htmlFor="bffile";ff.appendChild(fi);
     if(keepF){const cur=el("div","nthint");cur.appendChild(document.createTextNode("지금 파일: "+keepF.name+" ("+fmtSize(keepF.size)+") "));const rm=el("button","hmore","빼기");rm.type="button";rm.onclick=()=>{keepF=null;cur.textContent="첨부를 뺍니다 (저장하면 반영)";};cur.appendChild(rm);ff.appendChild(cur);}
     fi.onchange=()=>{const f=fi.files[0];if(f&&f.size>MAX_UP){toast("10MB 이하 파일만 올릴 수 있어요. 큰 파일은 드라이브·SharePoint 링크로 넣어 주세요.");fi.value="";}};
     c.insertBefore(ff,u.parentNode.nextSibling);
@@ -5615,6 +5617,28 @@ $("pOv").addEventListener("click",e=>{const ov=$("pOv");if(e.target!==ov||pOvDow
   if($("pCard").querySelector("input:not([type=checkbox]):not([type=radio]):not([type=search]),textarea,select")){const c=$("pCard");c.classList.remove("nudge");void c.offsetWidth;c.classList.add("nudge");return;}
   closeProfile();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pOv").hidden)closeProfile();});
+/* 접근성: 열린 창(#pOv)에 dialog 역할·이름을 주고, 포커스를 창 안으로 옮겼다가 닫으면 눌렀던 자리로 되돌린다. Tab 은 창 안에서만 돈다 */
+(function(){const ov=$("pOv"),card=$("pCard");let from=null;
+  card.setAttribute("role","dialog");card.setAttribute("aria-modal","true");card.tabIndex=-1;
+  const nameIt=()=>{const h=card.querySelector("h1,h2,h3");if(h&&h.textContent.trim())card.setAttribute("aria-label",h.textContent.trim().slice(0,60));else card.removeAttribute("aria-label");};
+  new MutationObserver(()=>{if(!ov.hidden)nameIt();}).observe(card,{childList:true});
+  new MutationObserver(()=>{
+    if(!ov.hidden){
+      if(!from)from=document.activeElement;
+      nameIt();
+      setTimeout(()=>{if(!ov.hidden&&!card.contains(document.activeElement)){try{card.focus({preventScroll:true});}catch(e){}}},120);
+    }else{
+      const f=from;from=null;if(f&&f.focus&&document.contains(f)){try{f.focus({preventScroll:true});}catch(e){}}
+    }
+  }).observe(ov,{attributes:true,attributeFilter:["hidden"]});
+  ov.addEventListener("keydown",e=>{if(e.key!=="Tab"||ov.hidden)return;
+    const f=[...card.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+    if(!f.length){e.preventDefault();card.focus();return;}
+    const a=f[0],z=f[f.length-1],cur=document.activeElement;
+    if(e.shiftKey&&(cur===a||cur===card)){e.preventDefault();z.focus();}
+    else if(!e.shiftKey&&cur===z){e.preventDefault();a.focus();}
+  });
+})();
 function openProfileByName(name){const p=rosterList().find(x=>x.name===name);if(p)openProfile(p);}
 /* 팀방은 그 팀(사무소방은 그 사무소) 사람·그룹장·부문장·관리자만 (159, 규칙과 같은 기준) */
 function canRoom(id){const sc=ROOM_SCOPE[id];if(!sc)return true;if(isAdmin)return true;if(!me)return false;return sc[0]===me.team&&(!sc[1]||sc[1]===me.office);}

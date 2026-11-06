@@ -65,7 +65,7 @@ h2.sec small{font-weight:400;color:var(--sub);font-size:12px}
 .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--sub);margin-bottom:4px}
 .meta .dt{color:var(--tx);font-weight:600}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--pri);font-weight:600}
-.tag.t1{background:#FDF1D8;color:#8A5A00}.tag.t2{background:#E3F4E4;color:#1E6B24}.tag.t3{background:#E6EEF8;color:#005BAC}.tag.at{background:transparent;border:1px solid var(--line);color:var(--sub)}
+.tag.t1{background:#FDF1D8;color:#8A5A00}.tag.t2{background:#E3F4E4;color:#1E6B24}.tag.t3{background:#E6EEF8;color:#005BAC}.tag.at{background:transparent;border:1px solid var(--line);color:var(--sub)}.tag.src{background:transparent;border:1px dashed var(--sub);color:var(--sub)}
 @media(prefers-color-scheme:dark){.tag.t1{background:#4A3A12;color:#F2C969}.tag.t2{background:#1C3A20;color:#8FD994}.tag.t3{background:#1B2B40;color:#8EC3F2}}
 .txt{white-space:pre-wrap;word-break:break-word;font-size:14.5px;max-height:10em;overflow:hidden}
 .txt.open{max-height:none}
@@ -446,7 +446,7 @@ function card(c,i,hl){
   const d=document.createElement("div");d.className="card";
   const body=hlHtml(t.replace(/ \/ /g,"\n").replace(/\n{3,}/g,"\n\n"),hl);
   const rn=((META.rooms||[])[c.rm[i]]||{}).name;
-  d.innerHTML='<div class="meta"><span class="dt">'+fmtDate(c.ts[i])+'</span><span>'+esc(META.senders[c.sd[i]]||"")+'</span>'+tagsHtml(c,i,t)+
+  d.innerHTML='<div class="meta"><span class="dt">'+fmtDate(c.ts[i])+'</span><span>'+esc(META.senders[c.sd[i]]||"")+'</span><span class="tag src" title="Sysmex Talk 대화에서 가져온 기록입니다. 승인된 서비스 매뉴얼·SOP가 아닙니다. 원문과 매뉴얼로 확인한 뒤 쓰세요">대화 기록 · 미검증</span>'+tagsHtml(c,i,t)+
     (c.att.has(i)?'<span class="tag at">첨부 있음</span>':'')+(rn&&META.rooms.length>1?'<span class="note" style="margin:0">'+esc(rn.replace(/^방 \d+ · /,""))+'</span>':'')+'</div>'+
     '<h3>'+hlHtml(titleOf(t),hl)+'</h3><div class="txt">'+body+'</div><div class="acts"><button class="btn" data-a="ctx">대화 흐름 보기</button><button class="btn" data-a="rel">연관 대화</button><button class="btn" data-a="cp">복사</button></div>';
   d.querySelector('[data-a="ctx"]').onclick=()=>{saveRecent(state.q);openDetail(c,i);};
@@ -492,7 +492,7 @@ function ctxList(list,marks,hl){   // marks: key(청크:인덱스) → "me" | "h
     const mk=marks.get(cc.k+":"+ii),sys=cc.ty[ii]===NZ;
     const d=document.createElement("div");d.className="ctx "+(mk==="me"?"me":mk==="hit"?"hit":sys?"sys":"rel");
     const t=txtAt(cc,ii);
-    const fu=anchorTs!==null&&cc.ts[ii]>anchorTs&&!mk&&!sys&&RESULT_RE.test(t)?'<span class="fu" title="규칙 기반 표시입니다. 실제 조치 결과는 원문으로 확인하세요">조치·결과 표현 포함</span>':"";
+    const fu=anchorTs!==null&&cc.ts[ii]>anchorTs&&!mk&&!sys&&RESULT_RE.test(t)?'<span class="fu" title="규칙 기반 표시입니다. 실제 조치 결과는 원문으로 확인하세요">조치·결과 표현 포함 · 원문 확인 전까지 절차 아님</span>':"";
     d.innerHTML='<div class="who">'+fmtDate(cc.ts[ii])+' · '+esc(META.senders[cc.sd[ii]]||"")+(cc.id[ii]?' · ID '+cc.id[ii]:'')+(sys?' · 시스템 알림(검색 제외)':'')+(mk==="me"?' · 기준 메시지':'')+fu+'</div><div class="tx">'+hlHtml(t.replace(/ \/ /g,"\n"),mk?hl:null)+'</div>'+(cc.att.has(ii)?'<div class="att">첨부: '+esc(cc.att.get(ii))+' (파일 미확보)</div>':'');
     d.querySelector(".tx").onclick=e=>e.currentTarget.classList.toggle("open");
     wrap.appendChild(d);
@@ -747,7 +747,7 @@ function openDetail(c,i,before,after){
   const rowsAll=prev.concat([[c,i]],next);
   const t=txtAt(c,i),mods=modelsOf(t),codes=codesOf(t),syms=symsOf(t);
   const who=META.senders[c.sd[i]]||"";
-  let h='<dl class="kv"><dt>메시지 ID</dt><dd>'+(c.id[i]||"–")+'</dd><dt>작성자</dt><dd>'+esc(who)+'</dd><dt>작성일시</dt><dd>'+fmtDate(c.ts[i])+'</dd>'+
+  let h='<dl class="kv"><dt>출처 등급</dt><dd>대화 기록 · 미검증 <span class="note">— 현장 대화에서 가져온 기록이며 승인된 매뉴얼·SOP가 아닙니다. 조치 절차는 서비스 매뉴얼로 확인하세요</span></dd><dt>메시지 ID</dt><dd>'+(c.id[i]||"–")+'</dd><dt>작성자</dt><dd>'+esc(who)+'</dd><dt>작성일시</dt><dd>'+fmtDate(c.ts[i])+'</dd>'+
     '<dt>대화방</dt><dd>'+esc(((META.rooms||[])[c.rm[i]]||{}).name||("방 "+c.rm[i]))+'</dd>'+
     '<dt>제품·장비</dt><dd>'+(mods.length?mods.map(esc).join(", "):"–")+'</dd>'+
     '<dt>에러코드</dt><dd>'+(codes.length?codes.map(esc).join(", ")+' <span class="note">(추정)</span>':"–")+'</dd>'+
