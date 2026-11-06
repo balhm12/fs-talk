@@ -56,7 +56,16 @@
 4. 키·비밀번호·명단(실명)을 저장소·채팅에 남기지 않는다. 규칙은 fs-talk-fa383에만.
 5. 큰 블록을 바꿀 때 사이에 있던 함수가 같이 지워지지 않았는지 확인한다(2026-10-30 `schChips` 누락 사고).
 6. 디자인: 글꼴 `var(--font)`(Pretendard → 맑은 고딕), 색은 Sysmex 브랜드(#005BAC·#00B8EE·#3FBA46·#E69E0B·#E7413E), 디자인 v3 블록은 `</style>` 바로 앞(마지막에 덮어씀). 로고 비율 유지.
-7. 테스트: Playwright + Firebase 목(`/tmp/fbmock/mock.js` 방식), PC 1440·휴대폰(iPhone 13)·다크, 콘솔 오류 0.
+7. 테스트: Playwright + Firebase 목(`/tmp/fbmock/mock.js` 방식), **PC 1280 + 휴대폰 390**(작은 기종 360×740도 확인) + 다크, 콘솔 오류 0. 목은 저장소에 없으므로 매번 만든다(gstatic firebase 스크립트를 가로채 메모리 DB 로 바꾸고, 외부 요청은 막고, 가명 데이터 `테스트N`·`example.invalid` 만 쓴다). 콘솔의 `ERR_FAILED` 는 막아 둔 외부 요청이라 앱 오류가 아니다.
+8. **서버가 서비스 권한으로 읽는 곳은 rules 와 같은 조건을 서버에서도 다시 확인**한다(예: AI 요약 `summary_` 의 `canReadFixedRoom_`). 방 접근을 바꾸면 `database.rules.json`·`notify.gs`(`ROOM_SCOPE`)·`index.html` 세 곳과 `tests/room_scope.js` 를 같이 본다. 화면에서 숨기는 것만으로는 막은 것이 아니다.
+9. **관리자 = `admins/{uid}===true` 그리고 `users/{uid}/status==='approved'`**. 사용 중지·명단에서 뺄 때는 그 기기의 `admins/{uid}` 도 같이 지운다. rules 를 고친 뒤에는 모든 `.read/.write/.validate` 식을 JS 문법으로 파싱(`new Function("return ("+식+")")`)해 오류 0 을 확인한다.
+10. **창(모달)은 `#pOv` 한 곳에 공용 접근성 블록**(`role=dialog`·포커스 이동·Tab 순환)이 있다. 새 창을 따로 만들지 말고 `#pCard` 에 내용을 넣고 `$("pOv").hidden=false` 만 한다. 창 이름은 첫 h1~h3 가 된다. 입력은 label 과 연결(`for`/`id`)하거나 `aria-label` 을 단다.
+11. **CSS 는 뒤에 나온 같은 선택자가 이긴다**. 휴대폰(`max-width:820px`)·터치(`pointer:coarse`) 규칙은 기존 규칙보다 뒤에 두고, 넣은 뒤 computed style 로 실제로 먹었는지 확인한다(44px 규칙이 40px 규칙에 덮인 적 있음).
+12. **홈 카드 색은 쓰임새 3색** — 업무 `#005BAC`·찾기/자료 `#0F766E`·현황/교육 `#B03060`(`[data-hk]` 선택자, 다크 별도). 조직도 팀 색(`TEAM_COLOR`)과 같은 값을 카드 색으로 쓰지 않는다(`tests/home_static.js` 가 확인). 카드를 새로 만들면 `dataset.hk` 를 달고 그룹을 정한다.
+13. **홈 v4(2026-11-06, 사용자 승인)**: 맨 위 검색 패널(`.hsp`: 검색창 + 범위 탭 `SCOPES` 전체·수리이력·실마리·부품·기술정보 + 장비 칩) → 한 줄 브리핑(`#hbrief`, 요약 4칸 `#hstats` 는 숨김) → 오늘의 업무·업무 커뮤니케이션 → 부품 재고·기술정보·더 보기. 범위는 `runScope` 가 기존 함수를 부르기만 한다(전체=통합 검색, 수리이력=`goHist`, 실마리=`silOpenUrl(SIL_BASE+"#/q/…")`, 부품=`partsQuery`, 기술정보=`go("tech~…")`). 카드 키는 `sched·comm·parts·tech·more·links`, 홈 편집은 보이기·숨기기만(`applyHomeHidden`, 순서 고정). 카드를 함수째 홈에서 뺄 때는 그 카드 안에서만 정의된 함수(예: `goHist`)가 없어지지 않았는지 확인한다.
+14. **휴대폰 첫 화면 기준**: 「오늘의 업무」 카드가 390×844·360×740 첫 화면에 보여야 한다(요약·브리핑은 한 줄 가로 스크롤). 요약·브리핑·안내 줄을 늘릴 때는 카드 위치를 다시 잰다.
+15. **정적 테스트 파일**: `tests/room_scope.js`·`a11y_static.js`·`home_static.js`·`roster_read.js`(명단 읽기 제한, 16과 짝). `sched_suggest.js` 는 오늘 날짜에 의존해 날짜가 지나면 일부 실패한다(회귀 아님).
+16. **명단(`talk/roster`) 읽기는 승인된 직원만** — 승인 전(익명) 사용자가 읽을 수 있는 데이터를 늘리지 않는다. 가입은 이름·소속 직접 입력이고 접수 여부는 서버 규칙(`users/$uid` `.validate`: pending 은 `roster/팀/이름` 이 있어야 함)이 판단한다. 승인되면 `users/{uid}` 리스너가 `watchRoster()` 를 다시 불러 새로고침 없이 읽는다. 남는 위험: 명단에 있는 이름을 아는 사람의 가입 요청(관리자 승인에서 걸러야 함).
 
 ## 스킬 비교·갱신 규칙 (모든 작업 공통, 2026-11-06 사용자 지시)
 - **시작할 때**: 요청과 관련된 스킬을 설명문 기준으로 골라 사용자가 스킬 이름을 말하지 않아도 먼저 읽고 쓴다. 여러 개가 걸리면 모두 쓰고, 서로 어긋나는 곳(수치·규칙·절차·경로)을 찾아 둔다. 목록에 없는 스킬은 「미설치」라고 알리고 진행한다.
@@ -76,7 +85,7 @@
 - 자동 개선 사이클 C1~C10 완료(2026-10-30 22:45 ~ 10-31 02:20)
 - **사용자 확인 필요**: ⓪ (188) 관리자 PC에서 「수리이력」 앱을 열고 「데이터 올리기」로 `fs-hist-upload.json`(약 35MB) 올리기 — 올리기 전에는 「아직 자료가 없습니다」가 보임(v2 자료는 번들을 다시 만들어 올려야 대화 상세·첨부·데이터 정보가 완전히 동작). 올린 뒤 휴대폰 첫 로딩(약 26MB 내려받기) 속도 확인, 새 기능 안내(`GUIDE_NEW`)는 자료를 올린 뒤에 묶음 날짜를 바꿔 알림 ① (완료) KPI 대시보드 1인당 생산성 비교 배포됨 ② 실제 라벨 바코드 스캔 ③ 아침 7시대 일정 브리핑 알림 수신 ④ 1~2주 뒤 사용 현황 보고 다음 개선 결정
 - **사용자 확인 필요(192, 머지 후)**: 규칙·Apps Script 가 자동 게시되므로 머지 뒤 Actions 결과(`deploy-rules`·`deploy-apps-script`)와 관리자 화면(명단·승인·관리자 지정) 동작, 대화 「AI 요약」이 본인 방에서 되고 남의 팀·사무소 방은 「이 방을 볼 수 없습니다」인지 확인. 문제가 생기면 규칙은 이전 커밋의 `database.rules.json` 으로 되돌려 다시 올리면 됨
-- **사용자 확인 필요(보안, 197)**: 외부 일정 DB(`sysmex-system-schedule`, 설치·근무일정·만족도 — 규칙 파일이 이 저장소에 없음)의 규칙을 아직 확인하지 못함. 포털·일정 페이지는 그 DB 를 **공개 웹 키 + 익명 로그인**으로 읽고 `work-schedule/{팀}/{날짜}/{본인}`·`schedule-overrides/custom/user-…` 에 씀 → 규칙이 `auth != null` 수준이면 누구나 읽고 쓸 수 있음. 확인 방법: Firebase 콘솔 → 해당 프로젝트 → Realtime Database → 규칙 전문을 채팅에 붙여 넣기(규칙에 비밀값 없음), 또는 PowerShell `Invoke-RestMethod 'https://sysmex-system-schedule-default-rtdb.firebaseio.com/.json?shallow=true'` 가 키 이름을 돌려주면 로그인 없이도 읽히는 상태(오류 401 이면 로그인 필요). 확인 뒤 경로별 규칙을 제안·시험함
+- **외부 일정 DB 규칙(2026-11-06 정리)**: `sysmex-system-schedule` 의 규칙 파일은 저장소 `balhm12/sysmex-schedule` 의 `firebase/`(1단계 `database.rules.stage1.json`: 통째 쓰기·삭제 금지·형식 검사, 2단계 `stage2`: KPI 쓰기는 관리자 계정만)에 있고 `tests/test_db_rules.js` 가 검사한다. 콘솔에 게시한 단계와 날짜는 그 저장소 `firebase/README.md` 기준이다. 포털은 이 DB 를 **공개 웹 키 + 익명 로그인**으로 읽고 위 두 경로(`work-schedule/{팀}/{날짜}/{본인}`·`schedule-overrides/custom/user-…`)에만 쓴다. 익명 로그인한 사람이 한 건씩 고치는 것은 규칙으로 못 막는다(남은 위험).
 - 남은 작업: 8장 「앞으로의 순서」 (Slack·Salesforce 연동, 회사 서버 이전 — 사용자가 시작을 말하면 착수)
 
 ## 7. 변경 이력 (최근 것 위)
