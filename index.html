@@ -1055,6 +1055,28 @@ html[data-theme=dark] .rail button.on,html[data-theme=dark] .rail a.rlink.on{bac
 .hsearch:focus-within,.obsearch:focus-within,.hmini input:focus{border-color:#005BAC;box-shadow:0 0 0 3px rgba(0,91,172,.12)}
 .hlink{border-color:var(--line);box-shadow:var(--sh-1);font-weight:600}.hlink .ico{color:#005BAC}
 .hchip{font-weight:600}
+/* 194: 카드 종류별 색 — 위쪽 컬러바 + 제목 옆 아이콘 칩 (색만으로 구분하지 않게 아이콘·제목은 그대로) */
+.hcard[data-hk]{border-top:4px solid var(--cc,var(--line));padding-top:13px}
+.hcard[data-hk] .hcic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:9px;background:var(--ct,transparent);color:var(--cc,var(--blue))}
+.hcard[data-hk=sched]{--cc:#005BAC;--ct:#E3EEF9}
+.hcard[data-hk=comm]{--cc:#7A2DC7;--ct:#F1E8FB}
+.hcard[data-hk=sil],.hcard[data-hk=hist]{--cc:#00457F;--ct:#E1EAF4}
+.hcard[data-hk=parts]{--cc:#B45F06;--ct:#FBEEDD}
+.hcard[data-hk=tech]{--cc:#0E7C86;--ct:#DFF2F3}
+.hcard[data-hk=video]{--cc:#C2410C;--ct:#FCE9DF}
+.hcard[data-hk=voc]{--cc:#2E7D32;--ct:#E4F2E5}
+.hcard[data-hk=kpi]{--cc:#4A5564;--ct:#ECEFF3}
+html[data-theme=dark] .hcard[data-hk=sched]{--cc:#8CC4F5;--ct:#1D3550}
+html[data-theme=dark] .hcard[data-hk=comm]{--cc:#C9A0F5;--ct:#2C2140}
+html[data-theme=dark] .hcard[data-hk=sil],html[data-theme=dark] .hcard[data-hk=hist]{--cc:#A9CBEF;--ct:#1E2E44}
+html[data-theme=dark] .hcard[data-hk=parts]{--cc:#F0B36A;--ct:#3A2A17}
+html[data-theme=dark] .hcard[data-hk=tech]{--cc:#6FD0D8;--ct:#17333A}
+html[data-theme=dark] .hcard[data-hk=video]{--cc:#F59E7A;--ct:#3D2418}
+html[data-theme=dark] .hcard[data-hk=voc]{--cc:#7FD686;--ct:#1C3320}
+html[data-theme=dark] .hcard[data-hk=kpi]{--cc:#B8C2CF;--ct:#262E3A}
+.hscopes{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 4px;margin:-2px 0 4px}
+.hscopes .lb{font-size:12px;color:var(--sub);margin-right:2px}
+@media (pointer:coarse){.hscopes .hchip{height:44px;padding:0 14px}}
 .htool{border-color:var(--line);box-shadow:var(--sh-1)}
 .hht h1{font-size:25px;font-weight:800;letter-spacing:-.03em}
 .hdate{font-weight:500}
@@ -1674,7 +1696,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.193";
+const APP_VERSION="2026-11-06.194";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3153,6 +3175,7 @@ function renderExt(q){
     ev.slice(0,5).forEach(e=>{const r=el("div","schev"+(e.start<=schData.today?" now":""));r.appendChild(el("span","schd",schDateLbl(e,schData.today).lb));const cc=SCH_CAT[e.category]||[e.category||"일정","#9E9E9E"];const tg=el("span","schc",cc[0]);tg.style.setProperty("--c",cc[1]);r.appendChild(tg);
       const t=el("span","scht");t.appendChild(el("b",null,String(e.title||"")));t.appendChild(el("small",null,[e.device,e.team,e.assignee].filter(Boolean).join(" · ")));r.appendChild(t);box.appendChild(r);});}
 }
+let homeScope="all";   /* 194: 홈 검색 범위(이 세션에서만 기억) */
 function hcard(title,ic,cls){const c=el("section","hcard"+(cls?" "+cls:""));const h=el("div","hch");h.appendChild(icEl(ic,"hcic",20));h.appendChild(el("h2",null,title));c.appendChild(h);c._head=h;return c;}
 function hmore(c,label,fn){const a=el("button","hmore",label+" ›");a.onclick=fn;c._head.appendChild(a);}
 /* ===== 홈 대시보드 (FS 포털 – Field Service Integrated Portal) =====
@@ -3194,7 +3217,13 @@ function renderHome(){
   const q=el("input");q.id="hq";q.type="search";q.placeholder=isM()?"장비·에러코드·부품번호·사람":"장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
   f.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";f.appendChild(sb);
-  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");$("q").value=v;go("search");};
+  const SCOPES=[["all","전체",q.placeholder],["hist","수리이력","에러코드·증상·장비 (시스멕스톡 2016~)"],["parts","부품","부품번호·ERP CODE·부품 이름·장비"],["tech","기술·실마리","장비·에러 이름·코드·부품번호·제목"]];
+  q.placeholder=(SCOPES.find(x=>x[0]===homeScope)||SCOPES[0])[2];
+  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");
+    if(homeScope==="hist"){goHist(v);return;}
+    if(homeScope==="parts"&&document.getElementById("hpq")){partsQuery(v);return;}   /* 카드를 숨긴 사람은 아래 전체 검색으로 */
+    if(homeScope==="tech"){silHistAdd(v);go("tech~"+encodeURIComponent(v));return;}
+    $("q").value=v;go("search");};
   hd.appendChild(f);
   const tools=el("div","htools");
   if(!isTouch()){const ck=el("button","htool hck");ck.title="빠른 이동 (Ctrl+K)";ck.setAttribute("aria-label","빠른 이동");ck.appendChild(el("span",null,/Mac/.test(navigator.platform)?"⌘K":"Ctrl K"));ck.onclick=openCmd;tools.appendChild(ck);}
@@ -3203,6 +3232,11 @@ function renderHome(){
   th.onclick=()=>{theme=document.documentElement.dataset.theme==="dark"?"light":"dark";try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();homeBuilt="";renderHome();};tools.appendChild(th);
   const av=el("button","hav");av.setAttribute("aria-label","내 정보·설정");av.appendChild(personAv(me.name,"s"));av.onclick=()=>go("settings");tools.appendChild(av);
   hd.appendChild(tools);b.appendChild(hd);
+  /* 194: 검색 범위 — 한 검색창에서 전체·수리이력·부품·기술/실마리로 보냄 (아래 카드별 검색창은 그대로) */
+  {const sc0=el("div","hscopes");sc0.setAttribute("role","group");sc0.setAttribute("aria-label","검색 범위");sc0.appendChild(el("span","lb","찾을 곳"));
+    SCOPES.forEach(([k,l,ph])=>{const c=el("button","hchip sm"+(homeScope===k?" on":""),l);c.type="button";c.setAttribute("aria-pressed",homeScope===k?"true":"false");
+      c.onclick=()=>{homeScope=k;q.placeholder=ph;sc0.querySelectorAll(".hchip").forEach(x=>{const on=x===c;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false");});q.focus();};sc0.appendChild(c);});
+    b.appendChild(sc0);}
   /* 180: 부품 바코드 입력 안내(사용자 요청) — 검색창 아래 한 줄, 누르면 바로 스캔 */
   {const hn=el("button","hscanhint");hn.type="button";hn.appendChild(icEl("scan","",14));hn.appendChild(el("span",null,isM()?"부품 바코드·QR은 스캔 버튼으로 찍으면 바로 검색":"부품 라벨 바코드·QR은 검색창 옆 스캔 버튼으로 찍거나, 바코드 스캐너로 검색창에 바로 입력하세요"));hn.onclick=openScan;b.appendChild(hn);}
   // ── 요약 숫자
