@@ -116,7 +116,7 @@
         }
       },
       "roster": {
-        ".read": "auth != null",
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
         ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')"
       },
       "tokens": {

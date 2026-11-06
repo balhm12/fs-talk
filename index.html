@@ -1585,6 +1585,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
     </div>
     <div id="rNone" class="psel" hidden>아직 직원 명단이 등록되지 않았습니다. 관리자가 명단을 등록한 뒤 다시 열어 주세요.</div>
     <div id="rManual" hidden>
+    <div class="psel" id="rManualHint">직원 명단에 등록된 이름·소속과 같아야 등록 요청이 접수돼요. 명단은 관리자가 관리합니다.</div>
     <div class="f"><label for="rName">이름</label><input id="rName" maxlength="20" placeholder="예: 홍길동"></div>
     <div class="f"><label for="rTeam">소속</label>
       <select id="rTeam">
@@ -1769,7 +1770,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.196";
+const APP_VERSION="2026-11-06.197";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1936,7 +1937,7 @@ auth.onAuthStateChanged(u=>{
   uid=u.uid;$("myUid").textContent="문의용 기기 번호: "+uid;
   watchRoster();
   R("admins/"+uid).on("value",s=>{isAdmin=s.val()===true;if(!isAdmin)adminSync();applyMe();renderBoardCards();if(view==="home")renderHome();if(started)renderNav();if(isAdmin&&started)watchUsers();if(started)myRooms().forEach(r=>watchRoom(r.id));});
-  R("users/"+uid).on("value",s=>{meLoaded=true;me=s.val();applyMe();},err=>{$("loadMsg").textContent="데이터베이스 연결 실패("+(err&&err.code||"")+"). 관리자에게 알려 주세요.";show("gLoad",true);});
+  R("users/"+uid).on("value",s=>{meLoaded=true;me=s.val();if(me&&me.status==="approved"&&rosterDenied)watchRoster();applyMe();},err=>{$("loadMsg").textContent="데이터베이스 연결 실패("+(err&&err.code||"")+"). 관리자에게 알려 주세요.";show("gLoad",true);});
 });
 let meLoaded=false;
 /* ---------- 앱 안 브라우저(카카오톡 등) 막기 + 기기 연결 코드 ----------
@@ -2018,7 +2019,7 @@ function applyMe(){
 }
 
 /* ---------- 등록 ---------- */
-let roster={},picked=null,manual=false,rosterVer=0;
+let roster={},picked=null,manual=false,rosterVer=0,rosterDenied=false;   /* 197: 승인 전에는 명단을 읽을 수 없음 → 가입은 이름·소속 직접 입력 */
 function rosterList(){const out=[];Object.keys(roster).forEach(t=>{const g=roster[t]||{};Object.keys(g).forEach(n=>{const v=g[n];const o=typeof v==="string"?v:(v&&typeof v.o==="string"?v.o:"");out.push({team:t,name:n,office:o,lead:!!(v&&typeof v==="object"&&v.lead)});});});return out;}
 /* 팀장은 팀 맨 위: 팀 → 팀장이 있는 사무소 → 팀장 → 이름 순 */
 function leadOffice(team){const l=rosterList().find(p=>p.team===team&&p.lead);return l?l.office:null;}
@@ -2034,11 +2035,11 @@ const TEAM_ORDER=["고객접점부문","FSG","FS WEST","FS EAST","FS CENTRAL","F
 const teamLabel=t=>t==="FSG"?"FSG 그룹장":t===TOP_TEAM?"고객접점부문 부문장":t;
 const teamRank=t=>{const i=TEAM_ORDER.indexOf(t);return i<0?99:i;};
 let rosterWatched=false;
-function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{roster=s.val()||{};rosterVer++;syncPickMode();applyMe();if(started)myRooms().forEach(r=>watchRoom(r.id));if(view==="admin")renderAdmin();if(view==="org"&&typeof renderOrgBoard==="function")renderOrgBoard();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;roster={};syncPickMode();});}
+function watchRoster(){if(rosterWatched)return;rosterWatched=true;R("roster").on("value",s=>{rosterDenied=false;roster=s.val()||{};rosterVer++;syncPickMode();applyMe();if(started)myRooms().forEach(r=>watchRoom(r.id));if(view==="admin")renderAdmin();if(view==="org"&&typeof renderOrgBoard==="function")renderOrgBoard();if(started){renderNav();renderInfo();}},()=>{rosterWatched=false;rosterDenied=true;roster={};syncPickMode();});}
 function syncPickMode(){
   const has=rosterList().length>0;
   const usePick=has;
-  $("rPick").hidden=!has;$("rManual").hidden=true;$("rNone").hidden=has;$("regBtn").disabled=!has;
+  $("rPick").hidden=!has;$("rManual").hidden=!rosterDenied;$("rNone").hidden=has||rosterDenied;$("regBtn").disabled=!has&&!rosterDenied;
   const sel=$("pTeam"),cur=sel.value;sel.textContent="";sel.appendChild(new Option("전체 팀",""));
   [...new Set(rosterList().map(p=>p.team))].sort((a,b)=>teamRank(a)-teamRank(b)||a.localeCompare(b,"ko")).forEach(t=>sel.appendChild(new Option(teamLabel(t),t)));
   sel.value=cur;
@@ -2079,11 +2080,17 @@ setTimeout(function(){try{if(!isStandalone())return;const t=$("lnkTip");if(!t)re
 $("regForm").addEventListener("submit",async e=>{
   e.preventDefault();
   let name,team,office;
-  if(!picked){toast("명단에서 이름을 골라 주세요.");return;}
-  name=picked.name;team=picked.team;office=picked.office||"";
+  if(rosterDenied){   /* 197: 승인 전에는 명단을 볼 수 없어 이름·소속을 직접 입력(서버 규칙이 명단과 대조) */
+    name=$("rName").value.trim();team=$("rTeam").value;office=OFFICES[team]?$("rOffice").value:"";
+    if(name.length<2){toast("이름을 입력해 주세요.");$("rName").focus();return;}
+    if(!team){toast("소속을 골라 주세요.");$("rTeam").focus();return;}
+    if(OFFICES[team]&&!office){toast("사무소를 골라 주세요.");$("rOffice").focus();return;}
+  }else{
+    if(!picked){toast("명단에서 이름을 골라 주세요.");return;}
+    name=picked.name;team=picked.team;office=picked.office||"";}
   const data={name,team,office,status:"pending",createdAt:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent.slice(0,180)};
   $("regBtn").disabled=true;
-  try{await R("users/"+uid).set(data);notifyRegister();}catch(err){toast("등록 실패: "+(err.code||err.message));}
+  try{await R("users/"+uid).set(data);notifyRegister();}catch(err){toast(rosterDenied&&/PERMISSION/i.test(err.code||err.message||"")?"명단에 없는 이름·소속입니다. 이름과 소속을 다시 확인해 주세요 (명단은 관리자가 등록합니다).":"등록 실패: "+(err.code||err.message));}
   finally{$("regBtn").disabled=false;}
 });
 $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("pSel").hidden=true;$("rName").value=me.name||"";$("rTeam").value=me.team||"";syncOffice();$("rOffice").value=me.office||"";syncPickMode();};
