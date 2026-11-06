@@ -1807,7 +1807,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.200";
+const APP_VERSION="2026-11-06.201";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3830,6 +3830,19 @@ function slkSplit(text){const out=[];let carry="";
     const b=(carry+own).trim(),head=b.split(/\[CS쉐어링 접수\]|<\s*기술\s*요청\s*>/)[0],mm=/@([^\s@]{2,24})/.exec(head);carry=tail.slice(-300);
     out.push({b,f,src:/CS쉐어링/.test(b)?"night":/기술\s*요청/.test(b)?"cso":"etc",mention:mm?slkPerson_(mm[1]):""});});
   return out;}
+/* 201: 요청에서 찾을 말 — 장비군(XN-1000→XN) + 에러 코드, 없으면 증상·요청사항의 핵심 단어 2개. 전화·S/N·날짜·수량은 뺌 */
+function slkQuery(f){f=f||{};
+  const m0=String(f.eq||"").trim().split(/[\s,/]+/)[0]||"",fam=(/^([A-Za-z]{2,5})[-\s]?\d/.exec(m0)||[])[1];const eq=(fam||m0).toUpperCase();
+  const raw=[f.sym,f.req].filter(Boolean).join("\n");
+  const t=raw.replace(/0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}/g," ").replace(/\b(?:S\/?N|시리얼)\s*[:#]?\s*[A-Z0-9-]+/gi," ").replace(/\d{1,4}[./-]\d{1,2}([./-]\d{1,4})?/g," ").replace(/[A-Za-z]{1,5}-?\d{2,5}[A-Za-z]?\b/g,x=>/^(E|ERR|ERROR)-?\d/i.test(x)?x:" ");
+  const codes=[];const add=c=>{c=String(c).trim();if(c&&!codes.includes(c))codes.push(c);};
+  t.replace(/\b(?:E|ERR|ERROR|에러|오류)\s*[.:#-]?\s*(\d{2,6})\b/gi,(x,d)=>add(d));
+  t.replace(/(?:^|[^\d.])(\d{4,6})(?![\d.]|\s*(?:대|개|건|원|명|분|시|초|년|월|일|회|번|%|ml|mL|ul|uL|cc|kg|g|EA|ea))/g,(x,d)=>add(d));
+  t.replace(/([A-Za-z가-힣][A-Za-z0-9가-힣]{1,15})\s*(?:에러|error|알람|alarm|오류)/gi,(x,w)=>{if(!/^(장비|기기|시스템|system|기계|발생|관련|각종)$/i.test(w))add(w);});
+  let q=codes.slice(0,2);
+  if(!q.length){const STOP=/^(문의|확인|요청|연락|부탁|드립니다|드림|있음|없음|발생|관련|장비|고객|병원|내용|바랍니다|합니다|해주세요|해주시기|주세요|필요|가능|방문|후|중|및|건|현재|계속|다시|자꾸|안됨|안|됨|함|진행|전달|담당자|처리|조치|부분|상태|경우|이상|문제|요청사항|에러|error|오류|알람|alarm|반복|표시|발생함)$/i;
+    (t.match(/[A-Za-z가-힣][A-Za-z0-9가-힣]+/g)||[]).forEach(w=>{w=w.replace(/(이요|에서|으로|에게|까지|부터|이랑|하고|이|가|을|를|은|는|에|로|도|와|과|의|만)$/,"");if(w.length>=2&&!STOP.test(w)&&w.toUpperCase()!==eq&&!q.includes(w)&&q.length<2)q.push(w);});}
+  const full=[eq].concat(q).filter(Boolean).join(" ");return {eq,codes,q:full};}
 function slkDupOf(f){const k=[f.hosp,f.eq,f.req].join("|");return slkList().find(r=>[r.f.hosp,r.f.eq,r.f.req].join("|")===k);}
 function renderReqPage(){
   const b=$("reqBody");if(!b||!me)return;slkWatch();b.textContent="";
@@ -3881,9 +3894,8 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   c.appendChild(tb);
   if(r.fin){const fb=el("div","slkfin");fb.appendChild(el("b",null,"마무리 보고 · "+(r.fin.n||"")+" · "+slkAgo(r.fin.at)));fb.appendChild(el("span",null,slkFirst(r.fin.t,160)));c.appendChild(fb);}
   const go2=el("div","slkgo");const lk=(t,fn)=>{const a=el("button","hmore",t);a.onclick=()=>{closeProfile();fn();};go2.appendChild(a);};
-  const eqk=String(f.eq||"").split(/[\s,/]+/)[0];
-  if(eqk||f.sym)lk("수리이력에서 찾기 ›",()=>goHist([eqk,slkFirst(f.sym,20)].filter(Boolean).join(" ")));
-  if(eqk)lk("실마리 ›",()=>silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(eqk)));
+  {const Q=slkQuery(f);   // 201: 장비군 + 에러 코드(없으면 증상·요청 핵심 단어)로 찾기 — 버튼에 찾는 말을 보여 줌
+    if(Q.q){lk("수리이력 · "+Q.q+" ›",()=>goHist(Q.q));lk("실마리 · "+Q.q+" ›",()=>silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(Q.q)));}}
   if(f.hosp)lk("길찾기 ›",()=>openMap(f.hosp));
   const url=slkUrl(r);if(url){const a=el("button","hmore","Slack에서 열기 ›");a.onclick=()=>openUrl(url);go2.appendChild(a);}
   c.appendChild(go2);
