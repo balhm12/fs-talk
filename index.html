@@ -1546,6 +1546,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .vlog{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px;max-height:46vh;overflow:auto}.vlr{display:flex;gap:10px;font-size:14px;line-height:1.45}.vld{flex:0 0 42px;color:var(--sub);font-variant-numeric:tabular-nums}
 .bdfile{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.bdfile .ico{color:var(--blue)}
 .bdfn{flex:1;min-width:0;display:flex;flex-direction:column}.bdfn b{font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bdfn small{font-size:12px;color:var(--sub)}
+.slksrcm{margin-left:6px;font-size:11px;font-weight:700;color:#4A154B;background:#F4EDF4;border-radius:5px;padding:1px 6px;vertical-align:1px}html[data-theme=dark] .slksrcm{color:#E3C6E4;background:rgba(160,90,160,.22)}
 /* Slack 요청함(198) */
 .slkadd{margin-left:auto;display:inline-flex;align-items:center;gap:6px;width:auto;padding:9px 14px}
 .slkcn{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:1.5;color:var(--sub)}.slkcn>span:nth-child(2){flex:1;min-width:0}.slkcn .hmore{margin-left:auto;flex:0 0 auto}
@@ -1806,7 +1807,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.199";
+const APP_VERSION="2026-11-06.200";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2200,7 +2201,7 @@ function parseMsg(v){
   if(!v||typeof v.text!=="string")return null;
   return {text:v.text,ts:+v.ts||Date.now(),author:String(v.uid||""),name:String(v.name||""),
     re:v.re&&typeof v.re==="object"&&v.re.id?v.re:null,edited:+v.edited||0,
-    file:v.file&&typeof v.file==="object"&&v.file.id?v.file:null,tn:v.tn===true};
+    file:v.file&&typeof v.file==="object"&&v.file.id?v.file:null,tn:v.tn===true,slk:v.slk&&typeof v.slk==="object"?v.slk:null};   // slk = Slack #group-sysmex-talk 에서 서버가 옮긴 글(200)
 }
 function addMsg(roomId,key,v){
   const p=parseMsg(v);if(!p||byId.has(key))return;
@@ -4838,7 +4839,7 @@ function renderMsgs(scroll){
     const col=el("div","col");
     if(!cont&&(!mine||(room==="all"&&m.room!=="all"))){
       const who=el("div","who");
-      if(!mine){who.appendChild(el("b",null,m.name||"알 수 없음"));const tg=roleTag(personTeam(m.name));if(tg)who.appendChild(tg);}
+      if(!mine){who.appendChild(el("b",null,m.name||"알 수 없음"));const tg=roleTag(personTeam(m.name));if(tg)who.appendChild(tg);if(m.slk){const st=el("span","slksrcm","Slack");st.title="Slack #"+(m.slk.cn||"group-sysmex-talk")+"에서 가져온 글";who.appendChild(st);}}
       if(room==="all"&&m.room!=="all")who.appendChild(el("span","rb",roomName(m.room)));
       col.appendChild(who);
     }

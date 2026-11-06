@@ -102,7 +102,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v24';
+const NOTIFY_VER = 'v25';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -700,7 +700,7 @@ function removeDigestTrigger(){
 const SLACK_CH = {
   C0AT8RP3QDN: {k:'cso',   name:'handover-cso-fsg',      type:'req'},   // CSO → FSG 기술 문의 이관
   C0AHFJGKMTL: {k:'night', name:'handover-cssharing-fsg', type:'req'},   // 야간 전화 접수(CS쉐어링) 인계
-  C0C6U7RQ44D: {k:'talk',  name:'group-sysmex-talk',      type:'feed'}   // 현장 마무리 보고
+  C0C6U7RQ44D: {k:'talk',  name:'group-sysmex-talk',      type:'feed', room:true}   // 현장 대화 → 작성자 팀·사무소방(200)
 };
 const SLK_FEED_KEEP_DAYS = 30;
 
@@ -781,7 +781,7 @@ function slackPull(force){
         (j.messages||[]).forEach(function(m){
           if(+m.ts <= +last) return;
           if(+m.ts > +maxTs) maxTs = m.ts;
-          if(m.subtype && ['bot_message','thread_broadcast'].indexOf(m.subtype) < 0) return;   // 들어옴·나감·파일 알림 등
+          if(m.subtype && ['bot_message','thread_broadcast'].concat(C.type === 'feed' ? ['file_share'] : []).indexOf(m.subtype) < 0) return;   // 들어옴·나감 등
           if(m.bot_id && m.app_id && m.username && /FS 포털/.test(m.username)) return;          // 우리가 보낸 글
           const raw = String(m.text||''), text = slkClean_(raw);
           const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
@@ -790,6 +790,7 @@ function slackPull(force){
           const at = Math.round(+m.ts*1000);
           if(C.type === 'feed'){
             dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
+            slkToRoom_(m, text, slkPerson_(who), at, ch, C);
             slkFinHint_(text, slkPerson_(who), at);
             return;
           }
@@ -843,6 +844,25 @@ function slkSync_(names){
     }
     dbPatch_('talk/slack/req/'+id, patch);
   });
+}
+/* 200: #group-sysmex-talk 글 → 포털 대화방 (Slack → 포털 한쪽만, 사용자 결정 2026-11-06)
+ *  작성자 이름을 명단과 맞춰 사무소방(있으면) 또는 팀방, 명단에 없거나 같은 이름이 둘 이상이면 전체방.
+ *  키 = 's'+Slack ts 라 같은 글은 두 번 들어오지 않음. 알림(푸시)은 보내지 않음. Slack 에서 고치거나 지운 것·스레드 답글은 옮기지 않음 */
+function slkRoomFor_(name, roster){
+  const hits = [];
+  Object.keys(roster||{}).forEach(function(team){ const g = roster[team]||{}; if(Object.prototype.hasOwnProperty.call(g, name)){ const v = g[name]; hits.push({team:team, office: typeof v === 'string' ? v : (v && v.o) || ''}); } });
+  if(hits.length !== 1) return 'all';
+  const p = hits[0], keys = Object.keys(ROOM_SCOPE);
+  return keys.filter(function(k){ return ROOM_SCOPE[k][0] === p.team && ROOM_SCOPE[k][1] && ROOM_SCOPE[k][1] === p.office; })[0]
+      || keys.filter(function(k){ return ROOM_SCOPE[k][0] === p.team && !ROOM_SCOPE[k][1]; })[0] || 'all';
+}
+function slkToRoom_(m, text, name, at, ch, C){
+  if(!C.room) return;
+  if(!slkToRoom_.roster) slkToRoom_.roster = db_('talk/roster') || {};
+  const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
+  if(!t) return;
+  const room = slkRoomFor_(name, slkToRoom_.roster);
+  dbPut_('talk/msgs/'+room+'/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
 }
 /* 현장 마무리 보고(「○○병원 마칩니다」)에 열린 요청의 기관명이 있으면 요청에 표시 — 자동으로 닫지는 않음 */
 function slkFinHint_(text, who, at){
