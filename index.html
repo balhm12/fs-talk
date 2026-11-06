@@ -1061,13 +1061,10 @@ html[data-theme=dark] .rail button.on,html[data-theme=dark] .rail a.rlink.on{bac
 /* 색은 쓰임새 3가지 — 업무=파랑, 찾기·자료=청록, 현황·교육=장미 (조직도의 팀 색과 의미가 겹치지 않게 카드마다 다른 색을 쓰지 않음. 구분은 아이콘이 함) */
 .hcard[data-hk=sched],.hcard[data-hk=comm]{--cc:#005BAC;--ct:#E3EEF9}
 .hcard[data-hk=sil],.hcard[data-hk=hist],.hcard[data-hk=parts],.hcard[data-hk=tech]{--cc:#0F766E;--ct:#DDF1EE}
-.hcard[data-hk=video],.hcard[data-hk=voc],.hcard[data-hk=kpi]{--cc:#B03060;--ct:#FBE6EE}
+.hcard[data-hk=video],.hcard[data-hk=voc],.hcard[data-hk=kpi],.hcard[data-hk=more]{--cc:#B03060;--ct:#FBE6EE}
 html[data-theme=dark] .hcard[data-hk=sched],html[data-theme=dark] .hcard[data-hk=comm]{--cc:#8CC4F5;--ct:#1D3550}
 html[data-theme=dark] .hcard[data-hk=sil],html[data-theme=dark] .hcard[data-hk=hist],html[data-theme=dark] .hcard[data-hk=parts],html[data-theme=dark] .hcard[data-hk=tech]{--cc:#6FD0C4;--ct:#153431}
-html[data-theme=dark] .hcard[data-hk=video],html[data-theme=dark] .hcard[data-hk=voc],html[data-theme=dark] .hcard[data-hk=kpi]{--cc:#F29BB8;--ct:#3B1B27}
-.hscopes{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 4px;margin:-2px 0 4px}
-.hscopes .lb{font-size:12px;color:var(--sub);margin-right:2px}
-@media (pointer:coarse){.hscopes .hchip{height:44px;padding:0 14px}}
+html[data-theme=dark] .hcard[data-hk=video],html[data-theme=dark] .hcard[data-hk=voc],html[data-theme=dark] .hcard[data-hk=kpi],html[data-theme=dark] .hcard[data-hk=more]{--cc:#F29BB8;--ct:#3B1B27}
 .htool{border-color:var(--line);box-shadow:var(--sh-1)}
 .hht h1{font-size:25px;font-weight:800;letter-spacing:-.03em}
 .hdate{font-weight:500}
@@ -1100,7 +1097,6 @@ html[data-theme=dark] .hbi2.hot{background:#2E2614;border-color:#5A4A20}html[dat
 /* 195: 휴대폰 첫 화면 정리 — 요약·브리핑을 한 줄 가로 스크롤로 줄여 「오늘의 업무」가 첫 화면에 보이게, 범위 칩 한 줄, 하단 줄바꿈 정리 */
 @media (max-width:820px){
   .hht h1{word-break:keep-all}
-  .hscopes{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.hscopes::-webkit-scrollbar{display:none}.hscopes .lb,.hscopes .hchip{flex:none}
   .hstats{display:flex;overflow-x:auto;gap:10px;scroll-snap-type:x proximity;scroll-padding:0 14px;scrollbar-width:none;margin:0 -14px;padding:0 14px}.hstats::-webkit-scrollbar{display:none}
   .hstat{flex:0 0 172px;scroll-snap-align:start;padding:10px 12px;column-gap:10px}
   .hsti{width:36px;height:36px}.hstv b{font-size:22px}
@@ -1213,6 +1209,72 @@ html[data-theme=dark] .hstl,html[data-theme=dark] .obpi{color:#6CB4F5}   /* 다�
   .hchip,.hchip.sm{min-width:44px}
   .silfv{position:relative}.silfv::after{content:"";position:absolute;inset:-12px -6px}
 }
+
+/* 196: 홈 v4 — 승인된 정리안 (검색 패널 · 한 줄 브리핑 · 넓은 오늘의 업무 · 부품 재고/기술정보/더 보기) */
+.hv4 .hstats{display:none}
+.hv4 .hhead .htools{margin-left:auto}
+.hsp{background:var(--panel);border:1px solid var(--line);border-top:4px solid #0F766E;border-radius:16px;padding:14px 18px 14px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--sh-card)}
+html[data-theme=dark] .hsp{border-top-color:#6FD0C4}
+.hsp .hsearch{order:0;flex:none;width:100%;max-width:none;margin:0;height:52px;box-shadow:none}
+.hsp .hsearch input{font-size:16px}
+.hsp-r{display:flex;gap:14px 16px;align-items:center;flex-wrap:wrap}
+.hsp-seg{display:flex;gap:4px;background:var(--soft2);border-radius:10px;padding:3px}
+.hsp-seg button{border:0;background:none;padding:6px 14px;border-radius:8px;font:inherit;font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap}
+.hsp-seg button.on{background:var(--panel);color:var(--blue);font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.14)}
+html[data-theme=dark] .hsp-seg button.on{color:#8CC4F5}
+.hsp-sep{width:1px;height:20px;background:var(--line)}
+.hsp-dev{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.hsp-dev .lb{font-size:12px;color:var(--sub);margin-right:2px}
+.hsp .hscanhint{margin:0;padding:0}
+.hv4 .hbrief{background:none;border:0;box-shadow:none;padding:0 4px;gap:4px 14px}
+.hv4 .hbl{font-size:13px;margin-right:0}
+.hv4 .hbi2{border:0;background:none;padding:2px 0;border-radius:6px;font-size:13px;max-width:none}
+.hv4 .hbi2 .ico{display:none}
+.hv4 .hbi2~.hbi2::before{content:"·";color:var(--sub);margin-right:12px}
+.hv4 .hbi2.hot,.hv4 .hbi2.warn{background:none}
+.hv4 .hbi2.hot b{color:#B45309}.hv4 .hbi2.warn,.hv4 .hbi2.warn b{color:#B3261E}
+html[data-theme=dark] .hv4 .hbi2.hot b{color:#F5C26B}html[data-theme=dark] .hv4 .hbi2.warn,html[data-theme=dark] .hv4 .hbi2.warn b{color:#FCA5A5}
+.hbrt{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);white-space:nowrap}
+.hv4-r1{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:stretch}
+.hv4-r2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.hv4-act{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.hv4-act .btn{width:auto;margin:0;padding:7px 14px;font-size:13px}
+.hv4 #hsch{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 24px;align-items:start}
+.hv4 #hsch>.schscope,.hv4 #hsch>.schme,.hv4 #hsch>.schft,.hv4 #hsch>.schmsg{grid-column:1/-1}
+.hv4 #hsch .schft>span:not(.schwarn),.hv4 #hsch .schft .hmore{display:none}
+.hv4 #hsch .schft:not(:has(.schwarn)){display:none}
+.hv4 .schme{background:#EAF2FB;color:var(--text)}.hv4 .schme .ico{color:var(--blue)}
+html[data-theme=dark] .hv4 .schme{background:#16273A}
+.hv4 #hc-parts .hmini{display:none}
+.hv4-rows{display:flex;flex-direction:column;gap:2px}
+.hv4-row{display:flex;align-items:center;gap:10px;border:0;background:none;padding:8px 6px;border-radius:10px;text-align:left;font:inherit;color:inherit;width:100%}
+.hv4-row:hover{background:var(--soft2)}
+.hv4-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--cc,var(--blue))}
+.hv4-rt{flex:1;min-width:0;display:flex;flex-direction:column}.hv4-rt b{font-size:14px;color:var(--strong)}.hv4-rt small{font-size:12.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hv4-rl{font-size:12.5px;font-weight:700;color:var(--blue);white-space:nowrap}
+html[data-theme=dark] .hv4-rl,html[data-theme=dark] .hv4-tog{color:#8CC4F5}
+.hv4-tog{margin-left:auto;border:0;background:none;color:var(--blue);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 8px}
+.hv4-full{display:none;flex-direction:column;gap:16px;margin-top:16px}
+.hsec.rowb.open .hv4-full{display:flex}
+.hv4-fr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.hposter:empty{display:none}
+.hv4-choose{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.hv4-ch{display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 14px;font:inherit;color:inherit;min-height:56px}
+.hv4-ch b{display:block;font-size:15px;color:var(--strong)}.hv4-ch small{color:var(--sub);font-size:12.5px}
+.hv4-ch:hover{border-color:var(--blue)}
+@media (max-width:1100px){.hv4-r1{grid-template-columns:minmax(0,1fr)}.hv4-r2,.hv4-fr{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:820px){
+  .hv4-r2,.hv4-fr{grid-template-columns:minmax(0,1fr)}
+  .hv4 #hsch{grid-template-columns:minmax(0,1fr)}
+  .hv4-act{margin-left:0;width:100%}
+  .hsp{padding:12px 14px}
+  .hsp-r{flex-direction:column;align-items:stretch;gap:10px}
+  .hsp-seg{overflow-x:auto;scrollbar-width:none}.hsp-seg::-webkit-scrollbar{display:none}.hsp-seg button{flex:none}
+  .hsp-dev{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.hsp-dev::-webkit-scrollbar{display:none}.hsp-dev>*{flex:none}
+  .hsp-sep{display:none}
+  .hv4g .hch{flex-wrap:wrap}
+  .hbrt{display:none}
+}
+@media (pointer:coarse){.hsp-seg button{min-height:44px;padding:0 14px}.hv4-row,.hv4-tog{min-height:44px}}
 .kpt2 td.good,.kpt2 td small.up{color:#2E8B35}.kpt2 td.low,.kpt2 td small.down{color:#C9302C}
 html[data-theme=dark] .kpt2 td.good,html[data-theme=dark] .kpt2 td small.up{color:#6FD675}html[data-theme=dark] .kpt2 td.low,html[data-theme=dark] .kpt2 td small.down{color:#FF7A7A}
 .usp{display:inline-flex;align-items:flex-end;gap:2px;height:24px}.usp i{display:block;width:6px;background:#00B8EE;border-radius:2px}
@@ -1392,7 +1454,6 @@ html[data-theme=dark] .cins{background:#16273A}html[data-theme=dark] .cins b{col
 /* 휴대폰 홈 기본 배치 = 오늘 중심(사용자 결정 10-31): 대화·기술 카드는 각 탭에, 만족도·KPI는 한 줄 요약 → 「자세히」로 펼침 */
 .svcmini{display:none}
 @media (max-width:820px){
-  .hdash:not(.custom) [data-hk=comm],.hdash:not(.custom) .hsec.tech{display:none!important}
   .hdash:not(.custom) .hsec.work .hrow2{grid-template-columns:1fr}
   .hdash:not(.custom) .svcmini{display:flex;width:100%;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 12px;font:inherit;color:var(--text);cursor:pointer;text-align:left;box-shadow:var(--sh-1)}
   .hdash:not(.custom) .hsec.svc:not(.open) #svcFull{display:none}
@@ -1708,7 +1769,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.195";
+const APP_VERSION="2026-11-06.196";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2449,12 +2510,12 @@ function renderSch(){
     return;}
   if(schStale&&!schP&&!schErr)schLoad();
   const myTk=me?schTeamKey(me.team):"",tlOf=k=>(SCH_TEAMS.find(t=>t[0]===k)||[])[1];
-  const scoped=schScopeNow()==="team"&&myTk;
-  const inTeam=x=>!scoped||x.tl===tlOf(myTk);
-  const evIn=e=>!scoped||String(e.team||"").toLowerCase().replace(/\s+/g,"")==="fs"+myTk||(myTk==="fss"&&/fss/i.test(e.team||""));
+  const scoped=schScopeNow()==="team"&&myTk,meMode=schScopeNow()==="me"&&!!me;
+  const inTeam=x=>meMode?(x.nm===me.name):(!scoped||x.tl===tlOf(myTk));
+  const evIn=e=>meMode?schMineEv(e):!scoped||String(e.team||"").toLowerCase().replace(/\s+/g,"")==="fs"+myTk||(myTk==="fss"&&/fss/i.test(e.team||""));
   const fo=o=>({night:o.night.filter(inTeam),leave:o.leave.filter(inTeam),duty:o.duty.filter(inTeam),edu:o.edu.filter(inTeam),plan:(o.plan||[]).filter(inTeam)});
   const D=Object.assign({},schData,{ev:schData.ev.filter(evIn),w:fo(schData.w),w2:fo(schData.w2)}),mine=x=>me&&x.nm===me.name;
-  if(myTk){const sw=el("div","schscope");[["all","전체"],["team","우리 팀 ("+tlOf(myTk)+")"]].forEach(([k,l])=>{const b=el("button","hchip"+((scoped?"team":"all")===k?" on":""),l);b.onclick=()=>{schScope=k;try{}catch(e){}renderSch();renderStats();};sw.appendChild(b);});box.appendChild(sw);}
+  if(myTk){const sw=el("div","schscope");[["me","나"],["team","우리 팀 ("+tlOf(myTk)+")"],["all","전체"]].forEach(([k,l])=>{const b=el("button","hchip"+((meMode?"me":scoped?"team":"all")===k?" on":""),l);b.onclick=()=>{schScope=k;try{}catch(e){}renderSch();renderStats();};sw.appendChild(b);});box.appendChild(sw);}
   // 내 일정 한 줄
   const my=[];(D.week||[]).forEach(({d,o},i)=>{const w=i===0?"오늘":i===1?"내일":(+d.slice(5,7))+"/"+(+d.slice(8,10))+"("+"일월화수목금토"[new Date(d+"T00:00:00").getDay()]+")";
     ["night","duty","leave","edu","plan"].forEach(k=>(o[k]||[]).filter(mine).forEach(x=>my.push({w,k:x.k,t:i===0})));});
@@ -2552,6 +2613,7 @@ let vocFu={};
 
 /* 휴대폰 홈(기본 배치): 오늘 중심 — 만족도·KPI는 숫자 한 줄 요약, 누르면 자세히(펼침). 대화·기술 카드는 각 탭에 있으므로 홈에서 뺌(「홈 화면 순서·표시」로 다시 켤 수 있음) */
 function renderSvcMini(){
+  try{renderMore();}catch(e){}
   const b=document.getElementById("svcMini");if(!b)return;b.textContent="";
   const f1=v=>v==null||isNaN(v)?"–":(+v).toFixed(1),f2=v=>v==null||isNaN(v)?"–":(+v).toFixed(2);
   const item=(lab,val,cls)=>{const d=el("span","smi"+(cls?" "+cls:""));d.appendChild(el("small",null,lab));d.appendChild(el("b",null,val));b.appendChild(d);};
@@ -3012,7 +3074,7 @@ function renderPartsCard(pc){
   const q=el("input");q.id="hpq";q.type="search";q.placeholder="부품번호·ERP CODE·부품 이름·장비 (예: AN965961, LAMP XN)";q.autocomplete="off";f.appendChild(q);
   const gb=el("button","btn","찾기");gb.type="submit";f.appendChild(gb);pc.appendChild(f);
   const res=el("div","hpres");pc.appendChild(res);const st=el("div","hsilst");pc.appendChild(st);
-  const status=()=>{st.textContent="";const m=partsMeta;if(m){st.appendChild(document.createTextNode("CRM 부품재고 기준 · "+fmtMD(m.at)+" 올림 · 부품 "+(m.n||0).toLocaleString()+"개"+(m.nu?" · 중고 "+m.nu+"개":"")));}
+  const status=()=>{st.textContent="";const m=partsMeta;if(m){st.appendChild(document.createTextNode("CRM 부품재고 기준 · "+fmtMD(m.at)+" 올림 · 부품 "+(m.n||0).toLocaleString()+"개"+(m.nu?" · 중고 "+m.nu+"개":"")+" · 검색은 위 검색창의 「부품」"));}
     else if(m===null)st.appendChild(document.createTextNode(isAdmin?"아직 올라온 부품 자료가 없습니다 — 아래 「CRM 파일 올리기」":"아직 올라온 부품 자료가 없습니다 (관리자가 CRM 파일을 올리면 보입니다)"));
     if(isAdmin){const ub=el("button","hmore","CRM 파일 올리기");ub.style.marginLeft="8px";ub.onclick=openPartsUpload;st.appendChild(ub);}};
   let T=0,shown=8;const run=()=>{const v=q.value.trim();res.textContent="";if(v.length<2){return;}
@@ -3090,8 +3152,8 @@ function renderBoardCards(){
   ["tech","video"].forEach(k=>{const c=document.getElementById("hb-"+k);if(!c)return;const l=c.querySelector(".hblist");l.textContent="";
     const nN=boardList(k).filter(boardNew).length;let bd=c._head.querySelector(".hbcnt");if(nN){if(!bd){bd=el("span","hbcnt");c._head.insertBefore(bd,c._head.querySelector(".hmore"));}bd.textContent="새 "+nN;}else if(bd)bd.remove();
     const L=boardList(k);if(!L.length)l.appendChild(el("p","hp",k==="video"?"사내 교육 영상을 이곳에 모읍니다. 장비별 공식 영상은 아래에서 바로 볼 수 있어요.":BOARD[k].hint+"를 이곳에 모읍니다. "+(isAdmin?"아래 「등록」으로 첫 글을 올려 주세요.":"곧 올라옵니다.")));
-    L.slice(0,4).forEach(x=>l.appendChild(boardRow(x)));
-    if(L.length>4){const mb=el("button","sillink","외 "+(L.length-4)+"건 — 전체 보기 ›");mb.onclick=()=>openBoard(k);l.appendChild(mb);}
+    const NMAX=k==="tech"?2:4;L.slice(0,NMAX).forEach(x=>l.appendChild(boardRow(x)));
+    if(L.length>NMAX){const mb=el("button","sillink","외 "+(L.length-NMAX)+"건 — 전체 보기 ›");mb.onclick=()=>openBoard(k);l.appendChild(mb);}
     if(k==="video"&&!c.querySelector(".sysv"))c.appendChild(sysVideoChips());
     let ab=c.querySelector(".hbadd");if(boardCanAdd(k)&&!ab){ab=el("button","btn hbadd","+ 등록");ab.onclick=()=>boardForm(k);c.appendChild(ab);}else if(!boardCanAdd(k)&&ab)ab.remove();});
 }
@@ -3229,14 +3291,16 @@ function renderHome(){
   const q=el("input");q.id="hq";q.type="search";q.placeholder=isM()?"장비·에러코드·부품번호·사람":"장비·에러코드·부품번호·기술정보·병원·사람·대화";f.appendChild(q);
   f.appendChild(scanBtn());
   const sb=el("button","btn pri","검색");sb.type="submit";f.appendChild(sb);
-  const SCOPES=[["all","전체",q.placeholder],["hist","수리이력","에러코드·증상·장비 (시스멕스톡 2016~)"],["parts","부품","부품번호·ERP CODE·부품 이름·장비"],["tech","기술·실마리","장비·에러 이름·코드·부품번호·제목"]];
+  const SCOPES=[["all","전체",q.placeholder],["hist","수리이력","에러코드·증상·장비 (시스멕스톡 2016~)"],["sil","실마리","에러 이름·코드·부품번호"],["parts","부품","부품번호·ERP CODE·부품 이름·장비"],["tech","기술정보","장비·에러 이름·코드·부품번호·제목"]];
   q.placeholder=(SCOPES.find(x=>x[0]===homeScope)||SCOPES[0])[2];
-  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}track("search");
-    if(homeScope==="hist"){goHist(v);return;}
-    if(homeScope==="parts"&&document.getElementById("hpq")){partsQuery(v);return;}   /* 카드를 숨긴 사람은 아래 전체 검색으로 */
-    if(homeScope==="tech"){silHistAdd(v);go("tech~"+encodeURIComponent(v));return;}
-    $("q").value=v;go("search");};
-  hd.appendChild(f);
+  /* 196: 검색 범위별로 기존 검색 화면·함수를 부름. 장비 칩은 검색어에 붙여 같은 곳으로 */
+  const runScope=(k,v,dev)=>{const t=[v,dev].filter(Boolean).join(" ");if(!t){q.focus();return;}track("search");
+    if(k==="hist"){goHist(t);return;}
+    if(k==="sil"){silHistAdd(t);if(!v&&dev)openApp("silmari",LINKS.silmari+"#/d/"+encodeURIComponent(dev));else silOpenUrl(SIL_BASE+"#/q/"+encodeURIComponent(t));return;}
+    if(k==="parts"&&document.getElementById("hpq")){partsQuery(t);return;}   /* 카드를 숨긴 사람은 아래 전체 검색으로 */
+    if(k==="tech"||(k==="all"&&dev&&!v)){silHistAdd(t);go("tech~"+encodeURIComponent(t));return;}
+    $("q").value=t;go("search");};
+  f.onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v){q.focus();return;}runScope(homeScope,v,"");};
   const tools=el("div","htools");
   if(!isTouch()){const ck=el("button","htool hck");ck.title="빠른 이동 (Ctrl+K)";ck.setAttribute("aria-label","빠른 이동");ck.appendChild(el("span",null,/Mac/.test(navigator.platform)?"⌘K":"Ctrl K"));ck.onclick=openCmd;tools.appendChild(ck);}
   const bell=el("button","htool");bell.id="hBell";bell.setAttribute("aria-label","알림 센터");bell.title="알림 센터";bell.appendChild(icEl("bell","",20));bell.appendChild(el("span","hbadge"));bell.onclick=openNotiCenter;tools.appendChild(bell);
@@ -3244,64 +3308,57 @@ function renderHome(){
   th.onclick=()=>{theme=document.documentElement.dataset.theme==="dark"?"light":"dark";try{localStorage.setItem("fstalk-theme",theme);}catch(e){}applyTheme();homeBuilt="";renderHome();};tools.appendChild(th);
   const av=el("button","hav");av.setAttribute("aria-label","내 정보·설정");av.appendChild(personAv(me.name,"s"));av.onclick=()=>go("settings");tools.appendChild(av);
   hd.appendChild(tools);b.appendChild(hd);
-  /* 194: 검색 범위 — 한 검색창에서 전체·수리이력·부품·기술/실마리로 보냄 (아래 카드별 검색창은 그대로) */
-  {const sc0=el("div","hscopes");sc0.setAttribute("role","group");sc0.setAttribute("aria-label","검색 범위");sc0.appendChild(el("span","lb","찾을 곳"));
-    SCOPES.forEach(([k,l,ph])=>{const c=el("button","hchip sm"+(homeScope===k?" on":""),l);c.type="button";c.setAttribute("aria-pressed",homeScope===k?"true":"false");
-      c.onclick=()=>{homeScope=k;q.placeholder=ph;sc0.querySelectorAll(".hchip").forEach(x=>{const on=x===c;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false");});q.focus();};sc0.appendChild(c);});
-    b.appendChild(sc0);}
-  /* 180: 부품 바코드 입력 안내(사용자 요청) — 검색창 아래 한 줄, 누르면 바로 스캔 */
-  {const hn=el("button","hscanhint");hn.type="button";hn.appendChild(icEl("scan","",14));hn.appendChild(el("span",null,isM()?"부품 바코드·QR은 스캔 버튼으로 찍으면 바로 검색":"부품 라벨 바코드·QR은 검색창 옆 스캔 버튼으로 찍거나, 바코드 스캐너로 검색창에 바로 입력하세요"));hn.onclick=openScan;b.appendChild(hn);}
+  b.classList.add("hv4");
+  /* 196: 검색 패널 — 검색창 1개 + 범위 탭 + 장비 칩 (승인된 정리안) */
+  {const sp=el("div","hsp");sp.appendChild(f);
+    const sr=el("div","hsp-r");const seg=el("div","hsp-seg");seg.setAttribute("role","group");seg.setAttribute("aria-label","검색 범위");
+    SCOPES.forEach(([k,l,ph])=>{const c=el("button",homeScope===k?"on":null,l);c.type="button";c.setAttribute("aria-pressed",homeScope===k?"true":"false");
+      c.onclick=()=>{homeScope=k;q.placeholder=ph;seg.querySelectorAll("button").forEach(x=>{const on=x===c;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false");});q.focus();};seg.appendChild(c);});
+    sr.appendChild(seg);sr.appendChild(el("span","hsp-sep"));
+    const dv=el("div","hsp-dev");dv.appendChild(el("span","lb","장비"));
+    ["XN","XR","UF","UC","SP-50","CN","HISCL"].forEach(d=>{const c=el("button","hchip",d);c.type="button";c.title=d+" 바로 찾기";c.onclick=()=>runScope(homeScope,q.value.trim(),d);dv.appendChild(c);});
+    sr.appendChild(dv);sp.appendChild(sr);
+    /* 180: 부품 바코드 입력 안내(사용자 요청) — 누르면 바로 스캔 */
+    const hn=el("button","hscanhint");hn.type="button";hn.appendChild(icEl("scan","",14));hn.appendChild(el("span",null,isM()?"부품 바코드·QR은 스캔 버튼으로 찍으면 바로 검색":"부품 라벨 바코드·QR은 검색창 옆 스캔 버튼으로 찍거나, 바코드 스캐너로 검색창에 바로 입력하세요"));hn.onclick=openScan;sp.appendChild(hn);
+    b.appendChild(sp);}
   // ── 요약 숫자
   const ks=el("div","hstats");ks.id="hstats";b.appendChild(ks);
   const bf=el("div","hbrief");bf.id="hbrief";b.appendChild(bf);
   const hst0=el("div","hstart");hst0.id="hstart";b.appendChild(hst0);
-  // ── 영역
-  const grid=el("div","hdash");b.appendChild(grid);
+  // ── 영역 (196: 승인된 정리안 — 오늘의 업무·커뮤니케이션 / 부품 재고·기술정보·더 보기)
+  const grid=el("div","hdash hv4g");b.appendChild(grid);
   const sec=(id,title)=>{const s=el("section","hsec "+id);if(title)s.appendChild(el("h2","hsect",title));grid.appendChild(s);return s;};
-  // 1. 오늘의 업무 + 업무 커뮤니케이션
-  const s1=sec("work");const s1w=el("div","hrow2");s1.appendChild(s1w);
+  // 1. 오늘의 업무(넓게) + 업무 커뮤니케이션
+  const s1=sec("work");const r1=el("div","hv4-r1");s1.appendChild(r1);
   const sc=hcard("오늘의 업무","calendar","sched");sc.id="hc-sched";sc.dataset.hk="sched";
-  const sr=el("div","hbtns sm");[["box","설치일정",LINKS.install],["calendar","근무일정",LINKS.work]].forEach(([i,t,u])=>{const x=el("button","hbtn");x.appendChild(icEl(i,"",16));x.appendChild(el("span",null,t));x.onclick=()=>openApp(u===LINKS.install?"install":"work");sr.appendChild(x);});
-  sc._head.appendChild(sr);const hs=el("div","hsch");hs.id="hsch";sc.appendChild(hs);
-  const ad=el("div","hadd");if(isAdmin||myLead()){const tb=el("button","btn","팀 현황 ›");tb.onclick=()=>go("team");ad.appendChild(tb);}const a1=el("button","btn","+ 내 근무 등록");a1.onclick=()=>openWorkForm();const a2=el("button","btn","+ 설치·평가 일정 등록");a2.onclick=()=>openInstallForm();ad.appendChild(a1);ad.appendChild(a2);ad.appendChild(el("span","hsoon","대화창에서 「/휴가 11/3」「/설치 11/10 병원 장비」로도 등록"));sc.appendChild(ad);
-  s1w.appendChild(sc);
+  const sa=el("div","hv4-act");const ab1=el("button","btn pri","+ 일정 등록");ab1.onclick=openAddChooser;sa.appendChild(ab1);const ab2=el("button","btn","7일 보기");ab2.onclick=()=>openSchWeek();sa.appendChild(ab2);
+  sc._head.appendChild(sa);const hs=el("div","hsch");hs.id="hsch";sc.appendChild(hs);
+  const ad=el("div","hadd");if(isAdmin||myLead()){const tb=el("button","btn","팀 현황 ›");tb.onclick=()=>go("team");ad.appendChild(tb);}ad.appendChild(el("span","hsoon","대화창에서 「/휴가 11/3」「/설치 11/10 병원 장비」로도 등록"));sc.appendChild(ad);
+  r1.appendChild(sc);
   const cm=hcard("업무 커뮤니케이션","chat","comm");hmore(cm,"대화 전체",()=>{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");});
-  cm.appendChild(el("div","hcomm"));cm.dataset.hk="comm";s1w.appendChild(cm);
-  // 2. 기술지원
-  const s2=sec("tech");const t2h=el("div","hsech");t2h.appendChild(el("h2","hsect","기술지원"));const t2l=el("button","hmore","기술정보 검색 ›");t2l.onclick=()=>go("tech");t2h.appendChild(t2l);s2.appendChild(t2h);const s2w=el("div","hrow3");s2.appendChild(s2w);
-  const sl=hcard("실마리 빠른 찾기","compass","sil");hmore(sl,"실마리 열기",()=>openApp("silmari"));
-  const sf=el("form","hmini");sf.setAttribute("role","search");const sl2=el("label","vh","에러 검색");sl2.htmlFor="hsq";sf.appendChild(sl2);
-  const sq=el("input");sq.id="hsq";sq.type="search";sq.placeholder="에러 이름·코드·부품번호";sf.appendChild(sq);
-  const sgo=el("button","btn","찾기");sgo.type="submit";sf.appendChild(sgo);
-  sf.onsubmit=e=>{e.preventDefault();const v=sq.value.trim();if(!v){sq.focus();return;}silHistAdd(v);$("q").value=v;go("search");};
-  sl.appendChild(sf);const sres=el("div","hsilres");sl.appendChild(sres);
-  let sqT=0;sq.oninput=()=>{clearTimeout(sqT);sqT=setTimeout(()=>{const v=sq.value.trim();sres.textContent="";if(v.length<2){renderSilHome(sres);return;}if(!silIdx)return;
-    const rows=silSearch(v,3);if(!rows.length){sres.appendChild(el("div","hsoon","맞는 에러가 없습니다 — 「찾기」로 대화까지 검색"));return;}
-    rows.forEach(r=>sres.appendChild(silRowEl(r)));},250);};
-  renderSilHome(sres);
-  const chips=el("div","hchips");["XN","XN-L","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 에러 목록 (실마리)";c.onclick=()=>openApp("silmari",LINKS.silmari+"#/d/"+encodeURIComponent(dv));chips.appendChild(c);});
-  sl.dataset.hk="sil";sl.appendChild(chips);const st=el("div","hsilst");st.id="hsilst";sl.appendChild(st);s2w.appendChild(sl);silStatus();
-  const hh=hcard("수리이력 검색","search","hist");hh.dataset.hk="hist";hh.id="hc-hist";hmore(hh,"수리이력 열기",()=>{track("hist");openApp("hist");});
-  const hf=el("form","hmini");hf.setAttribute("role","search");const hl=el("label","vh","수리이력 검색");hl.htmlFor="hhq";hf.appendChild(hl);
-  const hq=el("input");hq.id="hhq";hq.type="search";hq.placeholder="에러코드·증상·장비 (시스멕스톡 2016~)";hf.appendChild(hq);
-  const hgo=el("button","btn","찾기");hgo.type="submit";hf.appendChild(hgo);
-  const goHist=v=>{track("hist");openApp("hist","hist.html"+(v?"#q="+encodeURIComponent(v):""));};
-  hf.onsubmit=e=>{e.preventDefault();goHist(hq.value.trim());};hh.appendChild(hf);
-  const hch=el("div","hchips");["XN","XR","UF","UC","SP-50","CN","HISCL"].forEach(dv=>{const c=el("button","hchip",dv);c.title=dv+" 수리이력 검색";c.onclick=()=>goHist(dv);hch.appendChild(c);});
-  hh.appendChild(hch);s2w.appendChild(hh);
-  ["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);s2w.appendChild(c);});
-  renderBoardCards();
-  // 2-1. 마스터 부품 검색 (CRM 부품재고관리·입출내역·중고 부품 기준)
-  const s2p=sec("parts");const pc=hcard("부품 검색","box","parts");pc.dataset.hk="parts";pc.id="hc-parts";s2p.appendChild(pc);
+  cm.appendChild(el("div","hcomm"));cm.dataset.hk="comm";r1.appendChild(cm);
+  // 2. 부품 재고 · 기술정보 · 더 보기
+  const s2=sec("rowb");const r2=el("div","hv4-r2");s2.appendChild(r2);
+  const pc=hcard("부품 재고","box","parts");pc.dataset.hk="parts";pc.id="hc-parts";
   if(poOk())hmore(pc,"부품 발주 시스템",()=>HLINKS.po[2]());
-  renderPartsCard(pc);if(partsFirst())s2.parentNode.insertBefore(s2p,s2);
-  // 3. 서비스 현황
-  const s3=sec("svc","서비스 현황");const hpo=el("div","hposter");hpo.id="hposter";s3.appendChild(hpo);const smi=el("button","svcmini");smi.id="svcMini";smi.setAttribute("aria-expanded","false");s3.appendChild(smi);
-  const s3w=el("div","hrow2 even");s3w.id="svcFull";s3.appendChild(s3w);
-  smi.onclick=()=>{const o=s3.classList.toggle("open");smi.setAttribute("aria-expanded",o?"true":"false");try{localStorage.setItem("fstalk-svcopen",o?"1":"");}catch(e){}if(o){renderVoc();renderKpi();}renderSvcMini();};
-  try{if(localStorage.getItem("fstalk-svcopen"))s3.classList.add("open");}catch(e){}
-  const vc=hcard("고객 만족도","star","voc");hmore(vc,"대시보드",()=>openApp("voc"));const hv=el("div","hvoc");hv.id="hvoc";vc.appendChild(hv);vc.dataset.hk="voc";s3w.appendChild(vc);
-  const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";s3w.appendChild(kc);
+  renderPartsCard(pc);r2.appendChild(pc);
+  const bcards={};["tech","video"].forEach(k=>{const B=BOARD[k];const c=hcard(B.title,B.ic,"board");c.id="hb-"+k;c.dataset.hk=k;hmore(c,"전체 보기",()=>openBoard(k));const l=el("div","hblist");c.appendChild(l);bcards[k]=c;});
+  r2.appendChild(bcards.tech);
+  const mc=hcard("더 보기","sysgrid","more");mc.dataset.hk="more";mc.id="hc-more";
+  const mt=el("button","hv4-tog");mt.id="hmoreTog";mt.type="button";mc._head.appendChild(mt);
+  const mrows=el("div","hv4-rows");mrows.id="hmoreRows";mc.appendChild(mrows);r2.appendChild(mc);
+  // 더 보기를 펼치면: 게시물·동영상 교육·고객 만족도·서비스 KPI 전체 카드
+  const full=el("div","hv4-full");full.id="svcFull";
+  const hpo=el("div","hposter");hpo.id="hposter";full.appendChild(hpo);
+  const fr=el("div","hv4-fr");full.appendChild(fr);
+  fr.appendChild(bcards.video);
+  const vc=hcard("고객 만족도","star","voc");hmore(vc,"대시보드",()=>openApp("voc"));const hv=el("div","hvoc");hv.id="hvoc";vc.appendChild(hv);vc.dataset.hk="voc";fr.appendChild(vc);
+  const kc=hcard("서비스 KPI","chart","kpi");hmore(kc,"KPI 대시보드",()=>openApp("kpi"));const hk=el("div","hkpi");hk.id="hkpi";kc.appendChild(hk);kc.dataset.hk="kpi";fr.appendChild(kc);
+  s2.appendChild(full);
+  const setMore=o=>{s2.classList.toggle("open",o);mt.setAttribute("aria-expanded",o?"true":"false");mt.textContent=o?"접기 ▴":"펼치기 ▾";try{localStorage.setItem("fstalk-svcopen",o?"1":"");}catch(e){}if(o){renderVoc();renderKpi();renderBoardCards();try{renderPoster();}catch(e){}}};
+  mt.onclick=()=>setMore(!s2.classList.contains("open"));
+  renderBoardCards();
+  try{setMore(!!localStorage.getItem("fstalk-svcopen"));}catch(e){setMore(false);}
   // 4. 바로가기
   const s4=sec("links");s4.dataset.hk="links";const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
   const lks=homeLinks().filter(k=>(k!=="kpi"||isAdmin||myLead())&&(k!=="po"||poOk())),used={};
@@ -3310,11 +3367,11 @@ function renderHome(){
     const gb=el("div","hlgb");gb.style.setProperty("--k",ks.length);gb.appendChild(el("div","hlgh",gt));const lg=el("div","hlg");gb.appendChild(lg);lgs.appendChild(gb);
     ks.forEach(k=>{used[k]=1;const [i,t,fn,tip]=HLINKS[k];const x=el("button","hlink");if(tip){x.title=tip;x.setAttribute("aria-label",t+" — "+tip);}
       const ic=el("span","hlic "+tone);ic.appendChild(icEl(i,"",18));x.appendChild(ic);const tx=el("span","hltx");tx.appendChild(el("b",null,t.replace("KnowledgeCenter","Knowledge\u200BCenter")));if(tip)tx.appendChild(el("small",null,tip.replace(/^Sysmex Korea 회사 사이트 · /,"")));x.appendChild(tx);x.onclick=fn;lg.appendChild(x);});});
-  applyHomeLayout(grid);
-  const eh=el("div","hedit");const eb=el("button","hmore","홈 화면 순서·표시 바꾸기");eb.onclick=openLayoutEditor;eh.appendChild(eb);b.appendChild(eh);
+  applyHomeHidden(grid);
+  const eh=el("div","hedit");const eb=el("button","hmore","홈 화면 표시 바꾸기");eb.onclick=openLayoutEditor;eh.appendChild(eb);b.appendChild(eh);
   navFooter(b);
   renderSch();renderVoc();renderKpi();try{renderPoster();}catch(e){}
-  updateHome();
+  updateHome();renderMore();
 }
 function updateHome(){
   const b=$("homeBody");if(!b||!b.children.length)return;
@@ -3322,13 +3379,13 @@ function updateHome(){
   if(cm){cm.textContent="";
     const nb=el("div","hnotice");noticeCards(nb);if(nb.children.length)cm.appendChild(nb);
     // 최근 전체공지 3개
-    const nl=msgs.filter(m=>m.room==="notice"&&shown(m)).sort((x,y)=>y.ts-x.ts).slice(0,3);
+    const nl=msgs.filter(m=>m.room==="notice"&&shown(m)).sort((x,y)=>y.ts-x.ts).slice(0,nb.children.length?0:2);
     if(nl.length){cm.appendChild(el("h3","hsub","최근 전체공지"));nl.forEach(m=>{const r=el("button","hnl");const ack=isMine(m)||ackedByMe(m);
       r.appendChild(el("span","hnld",fmtTime(m.ts)));const t=el("span","hnlt",previewText(m).replace(/\s+/g," ").slice(0,80));r.appendChild(t);if(!ack)r.appendChild(el("span","hbn","미확인"));r.onclick=()=>jumpTo(m.id);cm.appendChild(r);});}
     const st=navStats||buildNavStats();
     const ids=myRooms().map(r=>r.id).concat(Object.keys(dms).filter(id=>dmOther(id)&&dmVisible(id)),Object.keys(groups).filter(myGroup));
     const lt=id=>{const l=st.last[id];return l?l.ts:0;};
-    const top=ids.filter(id=>id!=="all"&&id!=="notice"&&lt(id)).sort((x,y)=>(st.unr[y]?1:0)-(st.unr[x]?1:0)||lt(y)-lt(x)).slice(0,5).map(getRoom).filter(Boolean);
+    const top=ids.filter(id=>id!=="all"&&id!=="notice"&&lt(id)).sort((x,y)=>(st.unr[y]?1:0)-(st.unr[x]?1:0)||lt(y)-lt(x)).slice(0,4).map(getRoom).filter(Boolean);
     cm.appendChild(el("h3","hsub","최근 대화"));
     const tl=el("div","htalk");if(!top.length)tl.appendChild(el("div","hp","아직 대화가 없습니다."));top.forEach(r=>tl.appendChild(roomBtn(r,false)));cm.appendChild(tl);}
   renderStats();updateNotiBadge();
@@ -3504,7 +3561,7 @@ function slashSchedule(text){
 }
 function schScoped(){                                     // 역할 기준으로 거른 일정 (직원·팀장 = 우리 팀, 그룹장 = 전체)
   if(!schData)return null;const tk=me?schTeamKey(me.team):"",tl=(SCH_TEAMS.find(t=>t[0]===tk)||[])[1];
-  const team=schScopeNow()==="team"&&!!tk;const inT=x=>!team||x.tl===tl;
+  const team=(schScopeNow()==="team"||schScopeNow()==="me")&&!!tk;const inT=x=>!team||x.tl===tl;
   const evIn=e=>!team||String(e.team||"").toLowerCase().replace(/\s+/g,"")==="fs"+tk||(tk==="fss"&&/fss/i.test(e.team||""));
   const f=o=>({night:o.night.filter(inT),leave:o.leave.filter(inT),duty:o.duty.filter(inT),edu:o.edu.filter(inT),plan:(o.plan||[]).filter(inT)});
   return {team,label:team?(tl||me.team):"FSG 전체",ev:schData.ev.filter(evIn),w:f(schData.w)};
@@ -3531,10 +3588,31 @@ function renderStart(){
   items.forEach(([ic,t,sub,ok,fn])=>{const r=el("button","hsti2"+(ok?" ok":""));const c=el("span","hstc");if(ok)c.textContent="✓";else c.appendChild(icEl(ic,"",16));r.appendChild(c);
     const tx=el("span","hstt");tx.appendChild(el("b",null,t));tx.appendChild(el("small",null,ok?"완료":sub));r.appendChild(tx);if(!ok)r.appendChild(icEl("chevron","mnchev",16));r.disabled=ok;if(!ok)r.onclick=fn;box.appendChild(r);});
 }
+function goHist(v){track("hist");openApp("hist","hist.html"+(v?"#q="+encodeURIComponent(v):""));}   /* 196: 홈 검색 범위·장비 칩에서 수리이력 앱을 검색어와 함께 열기 */
+function openAddChooser(){   /* 196: 「+ 일정 등록」 — 내 근무 / 설치·평가 중 고르기 */
+  const c=$("pCard");c.textContent="";c.classList.remove("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
+  c.appendChild(el("h3",null,"일정 등록"));
+  const L=el("div","hv4-choose");
+  [["calendar","내 근무 등록","휴가·교육·반차 등 (근무일정표)",()=>openWorkForm()],["box","설치·평가 일정 등록","병원·장비·날짜 (설치일정표)",()=>openInstallForm()]].forEach(([i,t,sub,fn])=>{const b=el("button","hv4-ch");b.type="button";b.appendChild(icEl(i,"",20));const tx=el("span");tx.appendChild(el("b",null,t));tx.appendChild(el("small",null,sub));b.appendChild(tx);b.onclick=fn;L.appendChild(b);});
+  c.appendChild(L);c.appendChild(el("div","pkhint","대화창에서 「/휴가 11/3」「/설치 11/10 병원 장비」로도 등록할 수 있어요."));
+  $("pOv").hidden=false;
+}
+function renderMore(){   /* 196: 「더 보기」 접힌 요약 — 고객 만족도 · 서비스 KPI(관리자·팀장) · 동영상 교육 */
+  const box=document.getElementById("hmoreRows");if(!box)return;box.textContent="";
+  const f1=v=>v==null||isNaN(v)?"–":(+v).toFixed(1),f2=v=>v==null||isNaN(v)?"–":(+v).toFixed(2);
+  const row=(lab,val,link,fn)=>{const r=el("button","hv4-row");r.type="button";r.appendChild(el("span","hv4-dot"));const t=el("span","hv4-rt");t.appendChild(el("b",null,lab));t.appendChild(el("small",null,val));r.appendChild(t);r.appendChild(el("span","hv4-rl",link+" ›"));r.onclick=fn;box.appendChild(r);};
+  const vs=vocSummary();
+  if(vs){const tm=me?String(me.team||"").toUpperCase():"",TR=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm),field=typeof myField==="function"?myField():true,use=field&&TR.length&&myRole()!=="group";
+    row("고객 만족도",vs.mlabel+" "+f2(use?vs.avgOf(TR):vs.avg)+" · 응답 "+(use?TR:vs.R).length+"건","대시보드",()=>openApp("voc"));}
+  else row("고객 만족도",vocErr?"연결 안 됨":"불러오는 중","대시보드",()=>openApp("voc"));
+  if(isAdmin||myLead()){const K=kpiSvc&&kpiSvc.cur;row("서비스 KPI",K?"FTFR "+f1(K.ftfr)+"% · 재방문율 "+f1(K.rev)+"% · MTTR "+f1(K.mttr)+"분":"KPI 대시보드에서 올리면 보입니다","KPI 대시보드",()=>openApp("kpi"));}
+  {const L=boardList("video"),nN=L.filter(boardNew).length;row("동영상 교육",(L.length?"사내 영상 "+L.length+"개 · ":"")+"장비별 공식 영상"+(nN?" · 새 "+nN:""),"열기",()=>openBoard("video"));}
+}
 function renderBrief(){try{renderStart();}catch(e){}
   const box=document.getElementById("hbrief");if(!box||!me)return;box.textContent="";
   const it=(ic,html,fn,cls)=>{const b=el("button","hbi2"+(cls?" "+cls:""));b.appendChild(icEl(ic,"",16));const t=el("span");html.forEach(([x,strong])=>t.appendChild(strong?el("b",null,x):document.createTextNode(x)));b.appendChild(t);if(fn)b.onclick=fn;box.appendChild(b);};
-  box.appendChild(el("span","hbl","오늘의 브리핑"));
+  box.appendChild(el("span","hbl","오늘"));
   if(schData){const now=schData.today,list=[];
     (schData.week||[]).forEach(({d,o})=>["night","duty","leave","edu","plan"].forEach(k=>(o[k]||[]).filter(x=>x.nm===me.name).forEach(x=>list.push({d,t:x.k}))));
     schData.ev.filter(schMineEv).forEach(e=>list.push({d:e.start<now?now:e.start,t:(SCH_CAT[e.category]||[e.category])[0]+" "+String(e.title||"").slice(0,14)}));
@@ -3554,6 +3632,7 @@ function renderBrief(){try{renderStart();}catch(e){}
   {const P=latestPoster();if(P&&!posterSeen(P)&&(!P.at||Date.now()-P.at<14*864e5))it("star",[["새 게시물 "],[P.title,1]],()=>openPosterViewer(P));}
   if((isAdmin||myLead())&&vocData){const vs=vocSummary();if(vs){const all=myRole()==="group"||!myField(),tm=myTeamU(),open=vs.R.filter(vocLow).filter(r=>all||String(r.team||"").toUpperCase()===tm).filter(r=>(vocFu[vocKey(r)]||{}).s!=="done").length;
     if(open)it("flag",[["3점 이하 미조치 "],[open+"건",1]],openVocLow,"warn");}}
+  {const rt=el("span","hbrt");if(schAt)rt.appendChild(document.createTextNode("일정표 기준 "+new Date(schAt).toTimeString().slice(0,5)+" 갱신"));const rb=el("button","hmore","새로고침");rb.onclick=()=>{schLoad(true);};rt.appendChild(rb);box.appendChild(rt);}
 }
 function renderStats(){
   const box=document.getElementById("hstats");if(!box)return;box.textContent="";
@@ -3734,27 +3813,22 @@ function openPosterUpload(){
 }
 /* ===== 홈 화면 개인 배치: 카드 순서·숨기기 (내 계정, 모든 기기 공통 prefs/{나}/hlayout = "순서|숨김") ===== */
 let myLayout=null;
-const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",sil:"실마리 빠른 찾기",hist:"수리이력 검색",parts:"부품 검색",tech:"기술정보",video:"동영상 교육",voc:"고객 만족도",kpi:"서비스 KPI",links:"바로가기"};
+const HCARDS={sched:"오늘의 업무",comm:"업무 커뮤니케이션",parts:"부품 재고",tech:"기술정보",more:"더 보기(만족도·동영상·KPI)",links:"바로가기"};
 const HCARD_DEF=Object.keys(HCARDS);
 function homeLayout(){const v=String(myLayout||"");const [o,h]=v.split("|");const order=(o||"").split(",").filter(k=>HCARDS[k]);HCARD_DEF.forEach(k=>{if(!order.includes(k))order.push(k);});
-  return {order,hidden:myLayout?(h||"").split(",").filter(k=>HCARDS[k]):(isM()?["comm","sil","tech","video"]:[]),custom:!!myLayout};}   // 휴대폰 기본: 대화·기술 카드는 각 탭에
-function applyHomeLayout(grid){
-  const L=homeLayout();if(!L.custom)return;   // 바꾼 적 없으면 기본 배치(줄 단위 디자인) 그대로
-  const cards={};grid.querySelectorAll("[data-hk]").forEach(c=>{cards[c.dataset.hk]=c;});
-  grid.textContent="";grid.classList.add("custom");
-  L.order.forEach(k=>{const c=cards[k];if(!c||L.hidden.includes(k))return;c.classList.add("hcc");grid.appendChild(c);});
+  return {order,hidden:myLayout?(h||"").split(",").filter(k=>HCARDS[k]):(isM()?["comm","tech"]:[]),custom:!!myLayout};}   // 휴대폰 기본: 대화·기술 카드는 각 탭에
+function applyHomeHidden(grid){   /* 196: 홈 배치는 정리안으로 고정, 카드는 보이기·숨기기만 */
+  homeLayout().hidden.forEach(k=>{const c=grid.querySelector('[data-hk="'+k+'"]');if(c)c.style.display="none";});
 }
 function openLayoutEditor(){
   const L=homeLayout();let cur=L.order.slice(),hid=new Set(L.hidden);
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
-  c.appendChild(el("h3",null,"홈 화면 순서·표시"));c.appendChild(el("div","pkhint","자주 보는 카드를 위로 올리고, 안 보는 카드는 끄세요. 내 계정의 모든 기기에 같이 적용돼요. 위쪽 요약 숫자·오늘의 브리핑은 항상 맨 위에 있어요."));
+  c.appendChild(el("h3",null,"홈 화면 표시"));c.appendChild(el("div","pkhint","안 보는 카드는 끄세요. 내 계정의 모든 기기에 같이 적용돼요. 검색 패널·오늘의 브리핑은 항상 맨 위에 있어요."));
   const list=el("div","ledit");c.appendChild(list);
   const draw=()=>{list.textContent="";cur.forEach((k,i)=>{const r=el("div","lerow"+(hid.has(k)?" off":""));
     const cb=el("input");cb.type="checkbox";cb.checked=!hid.has(k);cb.setAttribute("aria-label",HCARDS[k]+" 보이기");cb.onchange=()=>{cb.checked?hid.delete(k):hid.add(k);draw();};r.appendChild(cb);
     r.appendChild(el("span","lname",HCARDS[k]));
-    const up=el("button","lebtn","▲");up.setAttribute("aria-label",HCARDS[k]+" 위로");up.disabled=i===0;up.onclick=()=>{[cur[i-1],cur[i]]=[cur[i],cur[i-1]];draw();};r.appendChild(up);
-    const dn=el("button","lebtn","▼");dn.setAttribute("aria-label",HCARDS[k]+" 아래로");dn.disabled=i===cur.length-1;dn.onclick=()=>{[cur[i+1],cur[i]]=[cur[i],cur[i+1]];draw();};r.appendChild(dn);
     list.appendChild(r);});};draw();
   const row=el("div","lebtns");
   const rs=el("button","btn","기본으로");rs.onclick=async()=>{try{await R("prefs/"+myKey+"/hlayout").remove();toast("기본 배치로 돌렸습니다.");closeProfile();}catch(e){toast("저장 실패: "+(e.code||e.message));}};row.appendChild(rs);
