@@ -1822,7 +1822,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-06.205";
+const APP_VERSION="2026-11-09.206";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1856,6 +1856,7 @@ const PER_ROOM=500;           // 방마다 최근 몇 건을 불러올지 (검�
 const $=id=>document.getElementById(id);
 /* ---------- 아이콘: 기기마다 모양이 다른 이모지 대신 같은 굵기의 선 아이콘 ---------- */
 const ICON={
+  pmcheck:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m9 13 2 2 4-4"/>',
   chat:'<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.8 8.8 0 0 1-3.9-.9L3 20l1.1-4.4A8.4 8.4 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.7a3.5 3.5 0 0 1 0 6.6"/><path d="M18 14.3a6.5 6.5 0 0 1 3.5 5.7"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
@@ -2468,7 +2469,7 @@ async function openBulkPhotos(files){
 /* ---------- FS 포털 홈 (첫 화면) ----------
    지금 있는 기능·링크를 한 화면에: 통합 검색(대화+실마리) · 공지 · 일정표 · 실마리 · 전국시스템 · 최근 대화 · 바로가기
    아직 자료가 없는 칸(기술정보·동영상 교육)은 「준비 중」으로 자리만 */
-const LINKS={install:"https://balhm12.github.io/Sysmex-schedule/index.html",work:"https://balhm12.github.io/Sysmex-schedule/work-schedule.html",silmari:"https://balhm12.github.io/sysmex-ts/",system:"https://sysmex-system-configuration.web.app/",voc:"https://balhm12.github.io/Sysmex-schedule/voc-dashboard.html",kpi:"https://balhm12.github.io/Sysmex-schedule/fsg-kpi.html"};
+const LINKS={install:"https://balhm12.github.io/Sysmex-schedule/index.html",work:"https://balhm12.github.io/Sysmex-schedule/work-schedule.html",silmari:"https://balhm12.github.io/sysmex-ts/",system:"https://sysmex-system-configuration.web.app/",voc:"https://balhm12.github.io/Sysmex-schedule/voc-dashboard.html",kpi:"https://balhm12.github.io/Sysmex-schedule/fsg-kpi.html",pm:"https://script.google.com/macros/s/AKfycbwvSKftylso7NX1qLE5-f5xdhDxVfB5PS7Oox_Smv16FdoKFNxpl9SH6fJBWe8SAxOl/exec"};
 /* 새 창 열기: 아이폰 홈 화면 앱에서는 window.open(…,"noopener")이 아무 반응 없이 끝나는 경우가 있어 링크를 만들어 누르는 방식으로 */
 function openUrl(u){try{const a=document.createElement("a");a.href=u;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),0);}catch(e){try{window.open(u,"_blank");}catch(e2){location.href=u;}}}
 /* 길찾기: 휴대폰은 네이버 지도 앱을 먼저 열고(설치돼 있으면), 1.5초 안에 앱으로 안 넘어가면 웹 지도로. 앱이 없던 기기는 다음부터 바로 웹으로 */
@@ -3323,16 +3324,17 @@ const HLINKS={install:["box","설치일정",()=>openApp("install")],work:["calen
   saved:["bookmark","저장한 글",()=>go("saved")],org:["users","조직도",()=>go("org")],
   search:["search","통합 검색",()=>go("search")],team:["users","팀 현황",()=>go("team")],notice:["megaphone","전체공지",()=>go("room-notice")],tech:["doc","기술정보 검색",()=>go("tech")],video:["video","동영상 교육",()=>openBoard("video")],
   po:["box","부품 발주 관리 시스템",()=>{openApp("po");track("po");},"FSS·FSOM 부품 발주"],
+  pm:["pmcheck","FS 정기점검 관리",()=>{openUrl(LINKS.pm);track("pm");},"내 담당 거래처 정기점검 관리"],   // 206: Apps Script 웹앱 — 구글 로그인이 필요해 포털 안(iframe) 대신 항상 새 창
   hist:["search","수리이력 검색",()=>{openApp("hist");track("hist");},"시스멕스톡 2016~ 현장 조치 이력"],
   kc:["wrench","KnowledgeCenter",()=>{openApp("kc");track("kc");},"Service Manual, ECR 정보"],
   pmdb:["doc","Product Manual DB",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_randd001");track("pmdb");},"IFU, 인터페이스 자료, 시약 정보"],
   hr:["user","HR System",()=>{openApp("hr");track("hr");},"Sysmex Korea 회사 사이트 · eHR(JaDE)"],
   skr:["globe","SKR SharePoint",()=>{openUrl("https://sysmex1.sharepoint.com/sites/shr_SKR/SitePages/Home.aspx");track("skr");},"Sysmex Korea 회사 사이트 · SharePoint 메인"]};
-const LGRP=[["업무 도구",["install","work","silmari","system","voc","kpi","po"],"o"],["기술 자료",["tech","hist","video","kc","pmdb"],"b"],["회사 사이트",["hr","skr"],"g"]];
-const HLINKS_DEF=["install","work","silmari","system","voc","kpi","po","hist","kc","pmdb","hr","skr","saved","org"];
+const LGRP=[["업무 도구",["install","work","pm","silmari","system","voc","kpi","po"],"o"],["기술 자료",["tech","hist","video","kc","pmdb"],"b"],["회사 사이트",["hr","skr"],"g"]];
+const HLINKS_DEF=["install","work","pm","silmari","system","voc","kpi","po","hist","kc","pmdb","hr","skr","saved","org"];
 let myLinks=null;   // prefs/{나}/links — 쉼표로 이은 키 (없으면 기본)
 // 저장 형식: "켠 키들|끈 키들" (예전 형식은 "켠 키들"만). 저장 뒤에 새로 생긴 기본 바로가기는 켜진 채로 뒤에 붙임
-const LINK_ADDED=["kc","pmdb","hr","skr","po","hist"];
+const LINK_ADDED=["kc","pmdb","hr","skr","po","hist","pm"];
 const poOk=()=>isAdmin||(!!me&&(me.team==="FSS Team"||me.team==="FSOM Team"||isTop(me.team)));
 const partsFirst=()=>isAdmin||(!!me&&(me.team==="FSOM Team"||isTop(me.team)));   // 171: FSOM·관리자·그룹장(부문장)은 부품 검색·발주를 기술지원·서비스 현황보다 위에   // 168: 부품 발주 관리 시스템 = FSS·FSOM(·관리자)   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
 const homeLinks=()=>{if(!myLinks)return HLINKS_DEF.slice();const [a,b]=myLinks.split("|"),on=a.split(",").filter(k=>HLINKS[k]);
@@ -3750,7 +3752,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   L.splice(3,0,["headset","Slack 요청",()=>go("req")]);
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
   grp("FS 포털",L);
-  grp("업무 도구 (새 창)",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(k=>HLINKS[k]));
+  grp("업무 도구 (새 창)",["install","work","pm","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(k=>HLINKS[k]));
   grp("회사 사이트 (새 창)",[HLINKS.hr,HLINKS.skr]);
   grp("기술지원",[HLINKS.tech,HLINKS.hist,HLINKS.video,HLINKS.kc,HLINKS.pmdb,["compass","실마리",()=>openApp("silmari")]]);
   $("pOv").hidden=false;
@@ -3770,8 +3772,8 @@ function renderMenuPage(){
   if(isAdmin||myLead())mine.push(["users","팀 현황",()=>go("team"),0,"b"]);
   if(isAdmin)mine.push(["shield","관리",()=>go("admin"),pendingCount||0,"r"]);
   grid("자주 쓰는 것",mine);
-  const tool=k=>{const h=HLINKS[k];return [h[0],h[1],h[2],0,{install:"o",work:"o",silmari:"g",system:"g",voc:"y",kpi:"y",tech:"b",hist:"b",video:"b",kc:"b",pmdb:"b",hr:"g",skr:"g",po:"o"}[k],h[3]];};
-  grid("업무 도구",["install","work","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(tool));
+  const tool=k=>{const h=HLINKS[k];return [h[0],h[1],h[2],0,{install:"o",work:"o",silmari:"g",system:"g",voc:"y",kpi:"y",pm:"o",tech:"b",hist:"b",video:"b",kc:"b",pmdb:"b",hr:"g",skr:"g",po:"o"}[k],h[3]];};
+  grid("업무 도구",["install","work","pm","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(tool));
   grid("기술지원",["tech","hist","video","kc","pmdb"].map(tool));
   grid("회사 사이트",["hr","skr"].map(tool));
   b.appendChild(el("div","mnh","앱"));
@@ -4242,7 +4244,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
