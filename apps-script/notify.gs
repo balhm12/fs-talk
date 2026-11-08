@@ -102,7 +102,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v26';
+const NOTIFY_VER = 'v27';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -891,6 +891,7 @@ function slkTrimFeed_(){
 function slackAct_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid); if(!me || me.status !== 'approved') return {ok:false,err:'승인된 직원만 할 수 있습니다',ver:NOTIFY_VER};
+  if(db_('talk/admins/'+uid) !== true) return {ok:false,err:'담당·회신·완료는 관리자만 할 수 있습니다',ver:NOTIFY_VER};   // 205: 직원은 확인만
   if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'Slack 연결 전입니다 (관리자가 SLACK_BOT_TOKEN 설정)',ver:NOTIFY_VER};
   const id = String(req.id||''); if(!/^[a-z]+_[-\w]{6,40}$/.test(id)) return {ok:false,err:'bad id',ver:NOTIFY_VER};
   const r = db_('talk/slack/req/'+id); if(!r || !SLACK_CH[r.ch]) return {ok:false,err:'요청이 없습니다',ver:NOTIFY_VER};
