@@ -1822,7 +1822,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.206";
+const APP_VERSION="2026-11-09.207";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3338,7 +3338,8 @@ const LINK_ADDED=["kc","pmdb","hr","skr","po","hist","pm"];
 const poOk=()=>isAdmin||(!!me&&(me.team==="FSS Team"||me.team==="FSOM Team"||isTop(me.team)));
 const partsFirst=()=>isAdmin||(!!me&&(me.team==="FSOM Team"||isTop(me.team)));   // 171: FSOM·관리자·그룹장(부문장)은 부품 검색·발주를 기술지원·서비스 현황보다 위에   // 168: 부품 발주 관리 시스템 = FSS·FSOM(·관리자)   // 2026-11-03 추가 — 예전 형식 목록에도 자동으로 보이게
 const homeLinks=()=>{if(!myLinks)return HLINKS_DEF.slice();const [a,b]=myLinks.split("|"),on=a.split(",").filter(k=>HLINKS[k]);
-  const off=b!==undefined?b.split(","):[],cand=b!==undefined?HLINKS_DEF:LINK_ADDED;cand.forEach(k=>{if(!on.includes(k)&&!off.includes(k))on.push(k);});return on.length?on:HLINKS_DEF.slice();};
+  const off=b!==undefined?b.split(","):[],cand=b!==undefined?HLINKS_DEF:LINK_ADDED;cand.forEach(k=>{if(on.includes(k)||off.includes(k))return;   // 207: 새로 생긴 기본 바로가기는 맨 뒤가 아니라 기본 순서 자리(앞 기본 항목 바로 다음)에
+    const d=HLINKS_DEF.indexOf(k);let at=-1;for(let i=d-1;i>=0&&at<0;i--)at=on.indexOf(HLINKS_DEF[i]);on.splice(at+1,0,k);});return on.length?on:HLINKS_DEF.slice();};
 function renderHome(){
   if(!me)return;
   const key=me.name+"|"+ymd(new Date())+"|"+isAdmin+"|"+(myLinks||"");
