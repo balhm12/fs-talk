@@ -1546,13 +1546,7 @@ html[data-theme=dark] .hlic.o{background:rgba(230,158,11,.16);color:#F0B847}html
 .vlog{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px;max-height:46vh;overflow:auto}.vlr{display:flex;gap:10px;font-size:14px;line-height:1.45}.vld{flex:0 0 42px;color:var(--sub);font-variant-numeric:tabular-nums}
 .bdfile{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.bdfile .ico{color:var(--blue)}
 .bdfn{flex:1;min-width:0;display:flex;flex-direction:column}.bdfn b{font-size:14px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bdfn small{font-size:12px;color:var(--sub)}
-.rmtabs{display:flex;align-items:center;gap:4px;padding:6px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
-.rmtab{display:inline-flex;align-items:center;gap:6px;border:0;background:none;font:600 13.5px var(--font);color:var(--sub);padding:7px 12px;border-radius:8px;cursor:pointer}
-.rmtab.on{background:var(--soft);color:var(--text)}.rmtab:hover{color:var(--text)}
-.rmn{font-style:normal;font-size:11px;font-weight:700;background:#C62F34;color:#fff;border-radius:9px;padding:0 6px;line-height:17px}
-.rmnote{margin-left:auto;font-size:12px;color:var(--sub)}
-@media (pointer:coarse){.rmtab{min-height:44px;padding:0 16px}}
-@media (max-width:820px){.rmtabs{padding:4px 10px}.rmnote{flex-basis:100%;margin-left:4px}}
+.row:not(.mine) .bubble.slkb,.bubble.slkb{border-left:3px solid #611F69;background:#F7F1F7}html[data-theme=dark] .row:not(.mine) .bubble.slkb,html[data-theme=dark] .bubble.slkb{border-left-color:#C38DC4;background:rgba(160,90,160,.14)}
 .slksrcm{margin-left:6px;font-size:11px;font-weight:700;color:#4A154B;background:#F4EDF4;border-radius:5px;padding:1px 6px;vertical-align:1px}html[data-theme=dark] .slksrcm{color:#E3C6E4;background:rgba(160,90,160,.22)}
 .slksil{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px}.slksn{flex:1;min-width:0;display:flex;flex-direction:column}.slksn b{font-size:13.5px;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slksn small{font-size:12px;color:var(--sub)}.slksil .hmore{margin:0;flex:0 0 auto}.slknone{margin:0 0 8px;font-size:12.5px}
 @media (pointer:coarse){.slksil .hmore{min-height:44px}}
@@ -1590,6 +1584,21 @@ html[data-theme=dark] .slksb{background:transparent;border-color:#3F6E9E;color:#
 .slksrcb{flex-wrap:nowrap;overflow-x:auto}.slksrcb .hchip{flex:0 0 auto;white-space:nowrap}
 .slksrcb .hchip.s-night.on{background:#2B3A4A;border-color:#2B3A4A;color:#fff}html[data-theme=dark] .slksrcb .hchip.s-night.on{background:#C9D3DF;border-color:#C9D3DF;color:#1B2530}
 .slkack{margin:2px 0 8px;font-size:13px;color:#1E7A24;font-weight:600}html[data-theme=dark] .slkack{color:#6FD27A}.slkackb{font-weight:600;color:#1E7A24}html[data-theme=dark] .slkackb{color:#6FD27A}
+.hreq{background:var(--panel);border:1px solid var(--line);border-top:4px solid #005BAC;border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--sh-card)}
+html[data-theme=dark] .hreq{border-top-color:#6AA9E6}
+.hreqh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.hreqh .hmore{margin-left:auto}
+.hreqt{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:0;font:700 16px var(--font);color:var(--text);cursor:pointer}
+.hreqc{display:flex;gap:10px;font-size:13px;color:var(--sub)}.hreqn{font-weight:700}.hreqn.on{color:#C62F34}html[data-theme=dark] .hreqn.on{color:#F59A98}
+.hreql{display:flex;flex-direction:column;gap:6px}
+.hreqr{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 12px;cursor:pointer;font-family:var(--font);color:var(--text)}
+.hreqr:hover{border-color:var(--blue)}.hreqx{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;overflow:hidden}
+.hreqx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}.hreqx small{font-size:12.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 0;min-width:0}
+.hreqr .slkago{margin-left:0;font-size:12px;color:var(--sub);flex:0 0 auto}.hreqr .slksb,.hreqr .slkurg,.hreqr .slktm{flex:0 0 auto}
+.hreqe{margin:0;font-size:13px;color:var(--sub)}.hreqw{margin:0;font-size:12.5px;color:#B42318;font-weight:600}html[data-theme=dark] .hreqw{color:#F59A98}
+.hreqm{border:0;background:none;color:var(--blue);font:600 13px var(--font);text-align:left;padding:2px 2px;cursor:pointer}
+.slkerr{color:#B42318;font-weight:600}html[data-theme=dark] .slkerr{color:#F59A98}
+@media (max-width:820px){.hreq{padding:10px 12px}.hreqx small{display:none}.hreqh{flex-wrap:nowrap}.hreqc{font-size:12.5px;gap:8px;white-space:nowrap;overflow:hidden}.hreqc span:nth-child(3){display:none}.hreqh .hmore{flex:0 0 auto}}
+@media (pointer:coarse){.hreqr{min-height:44px}.hreqh .hmore,.hreqm{min-height:44px}}
 .slkurg{font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;background:#C62F34;color:#fff}
 .slktop{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
 .slkst{font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;background:var(--soft);color:var(--sub)}
@@ -1696,12 +1705,12 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
   <nav class="rail" id="rail">
     <button class="logo" id="rLogo" title="홈으로" aria-label="홈으로">FS</button>
     <button id="rHome" title="홈"><span class="ri" data-ic="home"></span>홈</button>
+    <button id="rReq" title="Slack 요청 — CSO 기술요청(평일)·CS쉐어링 접수(야간·휴일)"><span class="ri" data-ic="headset"></span>요청</button>
     <button id="rOrg" title="조직도"><span class="ri" data-ic="users"></span>조직도</button>
     <button id="rChat" title="대화"><span class="ri" data-ic="chat"></span>대화</button>
     <button id="rSearch" title="검색"><span class="ri" data-ic="search"></span>검색</button>
     <button id="rSaved" title="저장한 글"><span class="ri" data-ic="bookmark"></span>저장</button>
     <button id="rTech" title="기술정보 검색"><span class="ri" data-ic="doc"></span>기술</button>
-    <button id="rReq" title="Slack 요청 — CSO 기술요청·야간 접수 인계"><span class="ri" data-ic="headset"></span>요청</button>
     <button id="rAdmin" title="관리" hidden><span class="ri" data-ic="shield"></span>관리</button>
     <div class="rsep"></div>
     <a class="rlink" data-app="install" href="https://balhm12.github.io/Sysmex-schedule/index.html" target="_blank" rel="noopener" title="설치일정"><span class="ri" data-ic="box"></span>설치</a>
@@ -1744,7 +1753,6 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 
     <section class="view on" id="chatView">
       <div class="rsbar" id="rsBar" hidden role="search"><label for="rsQ" class="vh">이 방에서 찾기</label><span class="rsic" data-ic="search"></span><input id="rsQ" type="text" placeholder="이 방에서 찾기 · 장비·에러·병원·이름" autocomplete="off" enterkeyhint="search"><span class="rsn" id="rsN" aria-live="polite"></span><button class="tb" id="rsUp" title="이전(더 오래된) 결과" aria-label="이전 결과" data-ic="up"></button><button class="tb" id="rsDn" title="다음(더 최근) 결과" aria-label="다음 결과" data-ic="down"></button><button class="tb" id="rsX" title="찾기 닫기" aria-label="찾기 닫기">×</button></div>
-      <div class="rmtabs" id="rmTabs" hidden role="tablist" aria-label="대화 · Slack 나눠 보기"></div>
       <div class="pinbar" id="pinBar" hidden></div>
       <div class="msgs" id="msgs"></div>
       <button class="newmsg" id="newMsgBtn" hidden><span data-ic="down"></span><span id="newMsgTx">새 메시지</span></button>
@@ -1846,7 +1854,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.211";
+const APP_VERSION="2026-11-09.212";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3398,6 +3406,7 @@ function renderHome(){
   const av=el("button","hav");av.setAttribute("aria-label","내 정보·설정");av.appendChild(personAv(me.name,"s"));av.onclick=()=>go("settings");tools.appendChild(av);
   hd.appendChild(tools);b.appendChild(hd);
   b.classList.add("hv4");
+  {const rq=el("section","hreq");rq.id="hreq";b.appendChild(rq);slkWatch();renderHomeReq();}   // 212: 홈 맨 위 = Slack 요청 (사용자 지시 「이 툴에서 우선순위가 제일 높음」)
   /* 196: 검색 패널 — 검색창 1개 + 범위 탭 + 장비 칩 (승인된 정리안) */
   {const sp=el("div","hsp");sp.appendChild(f);
     const sr=el("div","hsp-r");const seg=el("div","hsp-seg");seg.setAttribute("role","group");seg.setAttribute("aria-label","검색 범위");
@@ -3463,7 +3472,7 @@ function renderHome(){
   updateHome();renderMore();
 }
 function updateHome(){
-  const b=$("homeBody");if(!b||!b.children.length)return;
+  const b=$("homeBody");if(!b||!b.children.length)return;try{renderHomeReq();}catch(e){}
   const cm=b.querySelector(".hcomm");
   if(cm){cm.textContent="";
     const nb=el("div","hnotice");noticeCards(nb);if(nb.children.length)cm.appendChild(nb);
@@ -3698,6 +3707,25 @@ function renderMore(){   /* 196: 「더 보기」 접힌 요약 — 고객 만�
   if(isAdmin||myLead()){const K=kpiSvc&&kpiSvc.cur;row("서비스 KPI",K?"FTFR "+f1(K.ftfr)+"% · 재방문율 "+f1(K.rev)+"% · MTTR "+f1(K.mttr)+"분":"KPI 대시보드에서 올리면 보입니다","KPI 대시보드",()=>openApp("kpi"));}
   {const L=boardList("video"),nN=L.filter(boardNew).length;row("동영상 교육",(L.length?"사내 영상 "+L.length+"개 · ":"")+"장비별 공식 영상"+(nN?" · 새 "+nN:""),"열기",()=>openBoard("video"));}
 }
+/* 212: 홈 맨 위 Slack 요청 — 새 요청(우리 팀 기준, 그룹장·지원 팀·관리자는 전체) 최신 순, 휴대폰 2건·PC 3건, 누르면 그 요청 상세 */
+function renderHomeReq(){const bx=$("hreq");if(!bx||!me)return;bx.textContent="";
+  const sc=slkDefScope(),all=slkList().filter(r=>slkIn(r,sc)),nw=all.filter(r=>r.st==="new").sort((a,c)=>c.at-a.at),dg=all.filter(r=>r.st==="doing"),unc=all.filter(r=>r.st!=="done"&&!slkChk[r.id]);
+  const hd=el("div","hreqh");const tl=el("button","hreqt");tl.appendChild(icEl("headset","",18));tl.appendChild(el("b",null,"Slack 요청"));tl.onclick=()=>go("req");hd.appendChild(tl);
+  const ct=el("div","hreqc");ct.appendChild(el("span","hreqn"+(nw.length?" on":""),"새 요청 "+nw.length));ct.appendChild(el("span",null,"처리 중 "+dg.length));if(unc.length)ct.appendChild(el("span",null,"확인 안 함 "+unc.length));hd.appendChild(ct);
+  const mo=el("button","hmore","요청함 ›");mo.onclick=()=>go("req");hd.appendChild(mo);bx.appendChild(hd);
+  const live=slkMeta&&slkMeta.ok&&Date.now()-(slkMeta.at||0)<15*6e4;
+  if(isAdmin&&!live)bx.appendChild(el("p","hreqw",slkMeta&&slkMeta.err?"Slack 가져오기 오류: "+String(slkMeta.err).slice(0,80):"Slack 에서 15분 넘게 가져오지 못했습니다"+(slkMeta&&slkMeta.at?" (마지막 "+new Date(slkMeta.at).toTimeString().slice(0,5)+")":"")+" — 요청함 「연결 시험」"));
+  const L=nw.slice(0,isM()?2:3);
+  if(!L.length){bx.appendChild(el("p","hreqe",dg.length?"새 요청이 없습니다 · 처리 중 "+dg.length+"건":"새 요청이 없습니다"));bx.classList.remove("has");return;}
+  bx.classList.add("has");const ls=el("div","hreql");
+  L.forEach(r=>{const f=r.f||{},row=el("button","hreqr");
+    row.appendChild(el("span","slksb s-"+slkSrc(r),slkSrc(r)==="night"?"CS쉐어링":slkSrc(r)==="cso"?"CSO":"기타"));
+    if(slkUrgent(f))row.appendChild(el("span","slkurg","긴급"));
+    const tx=el("span","hreqx");tx.appendChild(el("b",null,[f.hosp,f.eq].filter(Boolean).join(" · ")||"요청"));const q=slkFirst(f.req||f.sym,60);if(q)tx.appendChild(el("small",null,q));row.appendChild(tx);
+    const tm=slkTeam(r);if(tm&&sc==="all")row.appendChild(el("span","slktm",tm.replace(/^FS /,"")));
+    row.appendChild(el("span","slkago",slkAgo(r.at)));row.onclick=()=>{go("req");setTimeout(()=>{if(!slkChk[r.id])slkChkSet([r.id],true);openSlkReq(r.id);},60);};ls.appendChild(row);});
+  if(nw.length>L.length){const m=el("button","hreqm","새 요청 "+(nw.length-L.length)+"건 더 보기 ›");m.onclick=()=>{slkSt="new";go("req");};ls.appendChild(m);}
+  bx.appendChild(ls);}
 function renderBrief(){try{renderStart();}catch(e){}
   const box=document.getElementById("hbrief");if(!box||!me)return;box.textContent="";
   const it=(ic,html,fn,cls)=>{const b=el("button","hbi2"+(cls?" "+cls:""));b.appendChild(icEl(ic,"",16));const t=el("span");html.forEach(([x,strong])=>t.appendChild(strong?el("b",null,x):document.createTextNode(x)));b.appendChild(t);if(fn)b.onclick=fn;box.appendChild(b);};
@@ -3848,9 +3876,9 @@ function slkParse_(text){
 const SLK_SRC={cso:"CSO · 평일",night:"CS쉐어링 · 야간·휴일",etc:"기타 요청"};   // 209: CSO = 평일 주간, CS쉐어링 = 야간·휴일 (사용자 확인)
 const SLK_ST={new:"새 요청",doing:"처리 중",done:"완료"};
 function slkWatch(){if(slkOn||!me)return;slkOn=true;
-  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(started)try{renderNav();}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
-  R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();},()=>{});
-  if(myKey)R("prefs/"+myKey+"/slkchk").on("value",s=>{slkChk=s.val()||{};if(view==="req")renderReqPage();},()=>{});}   // 208: 내가 확인한 요청(사람마다)
+  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(started)try{renderNav();}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();renderHomeReq();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
+  R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});
+  if(myKey)R("prefs/"+myKey+"/slkchk").on("value",s=>{slkChk=s.val()||{};if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});}   // 208: 내가 확인한 요청(사람마다)
 function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
 function slkSrc(r){return r.kind==="paste"?(r.src||"etc"):r.kind;}
 function slkTeam(r){const f=r.f||{};if(f.team){let t=String(f.team).toUpperCase().replace(/^(FS\s+(?:WEST|EAST|CENTRAL|SOUTH))\b.*/,"$1");if(/^FS(OM|S)$/.test(t))t+=" TEAM";return t;}const p=r.mention&&rosterList().find(x=>x.name===r.mention);return p?String(p.team).toUpperCase():"";}
@@ -3944,6 +3972,7 @@ function renderReqPage(){
   const cn=el("div","slkcn");const live=slkMeta&&slkMeta.ok&&Date.now()-(slkMeta.at||0)<15*6e4;
   cn.appendChild(el("span","slkdot"+(live?" on":"")));
   cn.appendChild(el("span",null,live?"Slack 자동 연결됨 · "+new Date(slkMeta.at).toTimeString().slice(0,5)+" 확인":isAdmin?"Slack 자동 연결 전 — Slack 글의 ⋮ → 「텍스트 복사」 후 「Slack 글 붙여넣기」":"Slack 자동 연결 전 — 관리자가 올린 요청을 확인할 수 있습니다"));
+  if(isAdmin&&slkMeta&&slkMeta.err)cn.appendChild(el("span","slkerr","· 오류: "+String(slkMeta.err).slice(0,100)));   // 212
   if(isAdmin){const pv=el("button","hmore","연결 전 미리보기");pv.onclick=openSlkPreview;cn.appendChild(pv);const t=el("button","hmore","연결 시험");t.onclick=slkTest;cn.appendChild(t);}
   b.appendChild(cn);
   const all=slkList(),wk=Date.now()-7*864e5;
@@ -4326,7 +4355,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={room_slk:"방 Slack 탭",room_chat:"방 대화 탭",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"수리이력 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
@@ -4819,7 +4848,7 @@ function showView(){
   $("rTech").classList.toggle("on",view==="tech");
   if(view==="app")showApp();
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
-  $("composer").hidden=view!=="chat"||!room||(roomHasSlk(room)&&rmTab[room]==="slack");if(view!=="chat"||!room)$("rmTabs").hidden=true;
+  $("composer").hidden=view!=="chat"||!room;
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   $("popBtn").hidden=view!=="chat"||!room||isTouch();
   $("aiBtn").hidden=view!=="chat"||!room;$("rsBtn").hidden=view!=="chat"||!room;if((view!=="chat"||!room||rsRoom!==room)&&!$("rsBar").hidden)rsClose(true);
@@ -4959,26 +4988,12 @@ async function loadAllHistory(){
 const RENDER_STEP=60,renderN={room:"",n:60};   // 처음엔 최근 60개(카톡처럼), 위로 올리면 자동으로 더
 const pending=new Set();   // 아직 서버에 저장 확인이 안 된 내 메시지
 let newBelow=0,lastRenderRoom="",lastRenderIds=new Set(),lastRenderMax=0,dividerScroll=false;
-/* 210: 팀·사무소방 안에서 포털 대화와 Slack #group-sysmex-talk 에서 옮겨 온 글을 탭으로 나눔(사용자 결정 「방 안에 대화 · Slack 탭」). Slack 탭은 읽기만 */
-const rmTab={};let slkSeen={};try{slkSeen=JSON.parse(localStorage.getItem("fstalk-slkseen")||"{}")||{};}catch(e){}
-function roomHasSlk(r){return !!r&&msgs.some(m=>m.slk&&inRoom(m,r));}
-function renderRoomTabs(){const bx=$("rmTabs");if(!bx)return;const on=view==="chat"&&!!room&&roomHasSlk(room);bx.hidden=!on;
-  if(!on){$("composer").hidden=view!=="chat"||!room;return;}
-  const tb=rmTab[room]||"chat";const sl=msgs.filter(m=>m.slk&&inRoom(m,room));const nNew=sl.filter(m=>m.ts>(slkSeen[room]||0)).length;
-  if(tb==="slack"&&sl.length){const mx=sl[sl.length-1].ts;if(mx>(slkSeen[room]||0)){slkSeen[room]=mx;try{localStorage.setItem("fstalk-slkseen",JSON.stringify(slkSeen));}catch(e){}}}
-  bx.textContent="";[["chat","대화"],["slack","Slack"]].forEach(([k,l])=>{const b=el("button","rmtab"+(tb===k?" on":""));b.setAttribute("role","tab");b.setAttribute("aria-selected",tb===k);
-    b.appendChild(el("span",null,l));if(k==="slack"&&tb!=="slack"&&nNew)b.appendChild(el("em","rmn",nNew>99?"99+":String(nNew)));
-    b.onclick=()=>{if(rmTab[room]===k||(!rmTab[room]&&k==="chat"))return;rmTab[room]=k;track(k==="slack"?"room_slk":"room_chat");renderMsgs(true);};bx.appendChild(b);});
-  if(tb==="slack")bx.appendChild(el("span","rmnote","#group-sysmex-talk 글 · 읽기만 (답은 Slack 에서)"));
-  $("composer").hidden=tb==="slack";}
+/* 212: 210 의 「대화 · Slack」 탭은 사용자 지시 「두 개로 나누지 말고 Slack 표시가 되게」로 없앰 — 한 흐름에 시간순, Slack 글은 말풍선 왼쪽 선·바탕·「Slack」 표시 */
 function renderMsgs(scroll){
   const box=$("msgs"),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
   const prevTop=box.scrollTop;
   box.textContent="";
-  const tabOn=roomHasSlk(room);
-  if(tabOn&&jumpId){const jm=msgs.find(m=>m.id===jumpId);if(jm&&inRoom(jm,room))rmTab[room]=jm.slk?"slack":"chat";}   // 찾기·검색으로 온 글이 다른 탭이면 그 탭으로
-  const tb=rmTab[room]||"chat";renderRoomTabs();
-  const full=msgs.filter(m=>inRoom(m,room)&&(!tabOn||(tb==="slack"?!!m.slk:!m.slk)));
+  const full=msgs.filter(m=>inRoom(m,room));
   if(renderN.room!==room){renderN.room=room;renderN.n=RENDER_STEP;}
   // 화면에는 최근 renderN.n 개만 그림 (많으면 「이전 대화 더 보기」로 늘림) — 큰 방에서도 버벅이지 않게
   let list=full.length>renderN.n?full.slice(-renderN.n):full;
@@ -4990,7 +5005,7 @@ function renderMsgs(scroll){
   if(full.length>list.length){const mb=el("button","btn morebtn","이전 대화 더 보기");mb.onclick=()=>{const box2=$("msgs"),h0=box2.scrollHeight,t0=box2.scrollTop;renderN.n+=RENDER_STEP;renderMsgs(false);box2.scrollTop=box2.scrollHeight-h0+t0;};box.appendChild(mb);
     if("IntersectionObserver" in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)&&mb.isConnected&&box.scrollTop<box.scrollHeight-box.clientHeight-40){io.disconnect();mb.click();}},{root:box,rootMargin:"300px 0px 0px 0px"});setTimeout(()=>{if(mb.isConnected)io.observe(mb);},400);}}   // 위로 올리면 버튼을 누르지 않아도 이전 대화가 이어서
   else if(moreRooms(room).length){const mb=el("button","btn morebtn","이전 대화 더 보기");mb.style.alignSelf="center";mb.style.margin="4px 0 8px";mb.onclick=()=>{mb.disabled=true;mb.textContent="불러오는 중…";loadOlderFor(room);};box.appendChild(mb);}
-  if(!list.length){const e=el("div","empty");e.appendChild(icEl("chat","emptyic",40));e.appendChild(el("b",null,tabOn&&tb==="slack"?"Slack 글이 없습니다":"아직 대화가 없습니다"));e.appendChild(el("span",null,tabOn&&tb==="slack"?"#group-sysmex-talk 에 이 팀·사무소 사람이 쓴 글이 여기에 모입니다.":"첫 메시지를 남겨 보세요."));
+  if(!list.length){const e=el("div","empty");e.appendChild(icEl("chat","emptyic",40));e.appendChild(el("b",null,"아직 대화가 없습니다"));e.appendChild(el("span",null,"첫 메시지를 남겨 보세요."));
     if(!$("composer").hidden){const tips=el("div","etips");tips.appendChild(el("small",null,"이렇게도 쓸 수 있어요"));
       [["@이름","사람 부르기 — 그 사람에게 알림",()=>{input.value="@";input.focus();}],["/휴가 11/3","근무일정에 바로 등록",()=>{input.value="/휴가 ";input.focus();}],["사진·파일","＋ 버튼으로 보내기",()=>$("attachBtn").click()]].forEach(([k,t,fn])=>{const c=el("button","etip");c.appendChild(el("b",null,k));c.appendChild(el("span",null,t));c.onclick=fn;tips.appendChild(c);});e.appendChild(tips);}
     box.appendChild(e);return;}
@@ -5013,7 +5028,7 @@ function renderMsgs(scroll){
       col.appendChild(who);
     }
     const line=el("div","line");
-    const b=el("div","bubble"+(m.file?" media"+(!m.text&&!m.re?" only":""):""));
+    const b=el("div","bubble"+(m.file?" media"+(!m.text&&!m.re?" only":""):"")+(m.slk?" slkb":""));
     if(m.re){const ro=byId.get(m.re.id),qd=el("div","quote");   // 원글을 불러왔으면 원글의 이름·내용으로 (답장에 적힌 인용은 고쳐 쓸 수 있으므로)
       qd.appendChild(el("b",null,"↪ "+(ro?ro.name:m.re.name)));qd.appendChild(el("span",null,String(ro?previewText(ro):(m.re.text||"")).replace(/\s+/g," ").slice(0,120)));qd.onclick=ev=>{ev.stopPropagation();jumpTo(m.re.id);};b.appendChild(qd);}
     if(m.file)b.appendChild(fileView(m.file,m));
