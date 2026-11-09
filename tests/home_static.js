@@ -27,12 +27,15 @@ ok(/\.hcard\[data-hk\]\{border-top:4px solid var\(--cc/.test(idx), '카드 컬�
 ok(/\.hcard\[data-hk\] \.hcic\{[^}]*width:30px;height:30px/.test(idx), '아이콘 칩 규칙 없음');
 
 /* v4 구조 */
-ok(/b\.classList\.add\("hv4"\)/.test(idx) && /\.hv4 \.hstats\{display:none\}/.test(idx), 'v4 표시·요약 4칸 숨김이 없음');
+ok(/b\.classList\.add\("hv4","hv5"\)/.test(idx) && /\.hv5 \.hsp,\.hv5 \.hbrief,\.hv5 \.hstats\{display:none!important\}/.test(idx), 'v5 표시·검색 패널·브리핑·요약 4칸 숨김이 없음');
+ok(/function homeMoreOpen\(/.test(idx) && /\.hv4g:not\(\.m5open\)>\.hsec\.rowb/.test(idx), '217 「더 보기」 접기가 없음');
+ok(/id="rApps"/.test(idx) && /id="rMenu"/.test(idx) && /id="rSearch" title="검색" hidden/.test(idx), '217 PC 레일 정리(업무 앱·메뉴)가 없음');
+ok(/\["#hreq","Slack 요청"/.test(idx) && /\["#hc-sched","오늘의 업무"/.test(idx), '217 처음 둘러보기에 홈 요청·오늘의 업무 단계가 없음');
 ok(/const HCARDS=\{sched:[^}]*parts:[^}]*tech:[^}]*more:[^}]*links:[^}]*\}/.test(idx) && !/const HCARDS=\{[^}]*(sil:|hist:)/.test(idx), 'HCARDS 가 v4 카드(오늘의 업무·커뮤니케이션·부품 재고·기술정보·더 보기·바로가기)가 아님');
 ok(/function applyHomeHidden\(grid\)/.test(idx) && !/function applyHomeLayout/.test(idx), '홈은 보이기·숨기기만(applyHomeHidden) 이어야 함');
 ok(/const mc=hcard\("더 보기"/.test(idx) && /function renderMore\(\)/.test(idx), '더 보기 카드가 없음');
 ok(/function openAddChooser\(\)/.test(idx) && /\+ 일정 등록/.test(idx), '일정 등록 선택창이 없음');
-ok(/\[\["me","나"\],\["team","우리 팀/.test(idx), '일정 카드 「나」 보기가 없음');
+ok(/\[\["me","나"\],\["team",host\?"우리 팀"/.test(idx), '일정 카드 「나」 보기가 없음');
 
 /* 검색 패널·범위 */
 ok(/let homeScope="all"/.test(idx), 'homeScope 상태 변수 없음');
