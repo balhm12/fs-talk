@@ -1680,6 +1680,9 @@ html[data-theme=dark] .hm5tog{color:#8CC4F5}
 .rail .rfly a.rlink{width:auto;height:44px;flex-direction:row;justify-content:flex-start;gap:10px;padding:0 12px;font-size:14px!important;color:var(--text);letter-spacing:0}
 .rail .rfly a.rlink .ri{font-size:18px}
 .rail .rfly a.rlink:hover{background:var(--soft2);color:var(--strong)}
+/* 218: 요청함 연결 줄 — 「Slack 바로 받기」가 붙으면서 휴대폰에서 상태 글자가 세로로 쪼개지던 것 */
+.slkcn{flex-wrap:wrap}.slkcn>span:nth-child(2){flex:1 1 auto;min-width:160px}.slkcn .slkevt,.slkcn .slkerr{flex:0 1 auto}
+@media (max-width:820px){.slkcn>span:nth-child(2){flex:1 1 calc(100% - 20px)}.slkcn .hmore{margin-left:0}}
 </style>
 
 </head>
@@ -1912,7 +1915,7 @@ html[data-theme=dark] .hm5tog{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.217";
+const APP_VERSION="2026-11-09.218";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3798,7 +3801,7 @@ function renderHomeReq(){const bx=$("hreq");if(!bx||!me)return;bx.textContent=""
     if(slkUrgent(f))row.appendChild(el("span","slkurg","긴급"));
     const tx=el("span","hreqx");tx.appendChild(el("b",null,[f.hosp,f.eq].filter(Boolean).join(" · ")||"요청"));const q=slkFirst(f.req||f.sym,60);if(q)tx.appendChild(el("small",null,q));row.appendChild(tx);
     const tm=slkTeam(r);if(tm&&sc==="all")row.appendChild(el("span","slktm",tm.replace(/^FS /,"")));
-    row.appendChild(el("span","slkago",slkAgo(r.at)));row.onclick=()=>{go("req");setTimeout(()=>{if(!slkChk[r.id])slkChkSet([r.id],true);openSlkReq(r.id);},60);};ls.appendChild(row);});
+    row.appendChild(el("span","slkago",slkWhen(r.at)));row.onclick=()=>{go("req");setTimeout(()=>{if(!slkChk[r.id])slkChkSet([r.id],true);openSlkReq(r.id);},60);};ls.appendChild(row);});
   if(nw.length>L.length){const m=el("button","hreqm","새 요청 "+(nw.length-L.length)+"건 더 보기 ›");m.onclick=()=>{slkSt="new";go("req");};ls.appendChild(m);}
   bx.appendChild(ls);}
 function renderBrief(){try{renderStart();}catch(e){}
@@ -3964,6 +3967,9 @@ function slkList(){return Object.keys(slkReq).map(id=>Object.assign({id},slkReq[
 function slkNewCount(){const sc=slkDefScope();return slkList().filter(r=>r.st==="new"&&slkIn(r,sc)).length;}
 function slkLive(r){return !!(slkMeta&&slkMeta.ok&&r.ch&&r.ts&&slkMeta.chans&&slkMeta.chans[r.ch]&&!r.multi);}
 function slkUrl(r){if(r.u)return r.u;if(!r.ch||!r.ts||!slkMeta||!slkMeta.url)return "";return slkMeta.url.replace(/\/?$/,"/")+"archives/"+r.ch+"/p"+String(r.ts).replace(".","");}
+/* 218: 접수 시각(사용자 요청 「접수시간도 표기」) — 오늘이면 「14:07 · 2분 전」, 다른 날이면 「11/6(목) 09:12」 */
+function slkWhen(t){if(!t)return "";const d=new Date(t),hm=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  if(ymd(d)===ymd(new Date()))return hm+" · "+slkAgo(t);return (d.getMonth()+1)+"/"+d.getDate()+"("+"일월화수목금토"[d.getDay()]+") "+hm;}
 function slkAgo(t){const m=Math.round((Date.now()-t)/6e4);if(m<1)return "방금";if(m<60)return m+"분 전";const h=Math.round(m/60);if(h<24)return h+"시간 전";const d=new Date(t);return (d.getMonth()+1)+"/"+d.getDate();}
 /* 208: 요청 유형 — 실제 CSO 요청 93건(11/3~9)으로 맞춘 규칙(위에서부터 먼저 맞는 것 하나). 분류는 화면에서만(저장 안 함) */
 const SLK_KIND=[["inst","설치·이전",/이전\s*설치|이전설치|설치\s*(요청|문의)|PC\s*이동|XQC\s*설치|철수/i],
@@ -4087,7 +4093,7 @@ function renderReqPage(){
     tp.appendChild(el("span","slksb s-"+slkSrc(r),SLK_SRC[slkSrc(r)]||"요청"));
     {const k=slkKind(f);tp.appendChild(el("span","slkkd k-"+k,SLK_KN[k]));if(slkUrgent(f))tp.appendChild(el("span","slkurg","긴급"));const h=slkHow(f);if(h)tp.appendChild(el("span","slksrc",h));}
     const tm=slkTeam(r)||f.lvl||"";if(tm)tp.appendChild(el("span","slktm",tm.replace(/^FS /,"")));
-    tp.appendChild(el("span","slkago",slkAgo(r.at)));row.appendChild(tp);
+    tp.appendChild(el("span","slkago",slkWhen(r.at)));row.appendChild(tp);
     row.appendChild(el("b","slkh",[f.hosp+(f.area?" ("+f.area+")":""),f.eq].filter(Boolean).join(" · ")));
     const q=slkFirst(f.req||f.sym,80);if(q)row.appendChild(el("span","slkq",q));
     const who=r.st==="done"?(r.doneBy?"완료 "+r.doneBy:"완료"):r.who?"담당 "+r.who:r.mention?"@"+r.mention:"담당자 없음";
