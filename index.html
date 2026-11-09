@@ -1928,7 +1928,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.238";
+const APP_VERSION="2026-11-10.239";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2418,8 +2418,10 @@ const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 
 const readFor=m=>inAll(m.room)?Math.max(myRead(m.room),myRead("all")):myRead(m.room);
 const isUnread=(m,id)=>!isMine(m)&&m.ts>Math.max(myRead(id),readFor(m));
 function unread(id){return msgs.filter(m=>inRoom(m,id)&&isUnread(m,id)).length;}
+/* 239: 안 읽은 숫자는 Slack 채널 방(CSO·CS쉐어링·group-sysmex-talk)만 — 다른 고정 방(팀·사무소·공지·FS)은 관리자만 숫자가 보임(사용자 요청). 1:1·그룹 대화는 그대로 */
+function showUnr(id){return isAdmin||!ROOMS.some(x=>x.id===id)||/^sk_(cso|night|talk)$/.test(id);}
 function unreadMention(id){return msgs.some(m=>inRoom(m,id)&&isUnread(m,id)&&mentionsMe(m));}
-function totalUnread(){return msgs.filter(m=>shown(m)&&!isMuted(m.room)&&!isMine(m)&&m.ts>readFor(m)).length;}   // 알림을 꺼 둔 방은 아이콘 숫자에서 뺌
+function totalUnread(){return msgs.filter(m=>shown(m)&&showUnr(m.room)&&!isMuted(m.room)&&!isMine(m)&&m.ts>readFor(m)).length;}   // 알림을 꺼 둔 방은 아이콘 숫자에서 뺌
 const isImgF=f=>/^image\//.test(f&&f.mime||"");
 function previewText(m){if(m.text)return m.text;if(m.file)return isImgF(m.file)?"사진":"파일: "+m.file.name;return "";}
 const msgText=m=>m.text+(m.file?" "+m.file.name:"");
@@ -2461,7 +2463,7 @@ function renderNav(){
       groups.forEach(([k,label,list])=>{
         if(!list.length&&k!=="dm")return;
         const h=el("button","lgrp fold");h.appendChild(el("span",null,(fold[k]?"▸ ":"▾ ")+label));
-        if(fold[k]){const n=list.filter(r=>r.id!=="all").reduce((a,r)=>a+unread(r.id),0);if(n)h.appendChild(el("span","cnt",n>99?"99+":String(n)));}
+        if(fold[k]){const n=list.filter(r=>r.id!=="all").reduce((a,r)=>a+(showUnr(r.id)?unread(r.id):0),0);if(n)h.appendChild(el("span","cnt",n>99?"99+":String(n)));}
         h.onclick=()=>{fold[k]=!fold[k];try{localStorage.setItem("fstalk-fold",JSON.stringify(fold));}catch(e){}renderNav();};
         nav.appendChild(h);
         if(fold[k])return;
@@ -2509,7 +2511,7 @@ function roomBtn(r,indent){
   b.appendChild(mid);
   const rt=el("div","rt");
   if(last)rt.appendChild(el("span","tm",fmtTime(last.ts)));
-  const u=active?0:(navStats?(navStats.unr[r.id]||0):unread(r.id));
+  const u=active||!showUnr(r.id)?0:(navStats?(navStats.unr[r.id]||0):unread(r.id));
   if(u){b.classList.add("hasun");const bd=el("div","bdg");if(navStats?navStats.ment[r.id]:unreadMention(r.id))bd.appendChild(el("span","cnt at","@"));bd.appendChild(el("span","cnt",u>99?"99+":String(u)));rt.appendChild(bd);}
   b.appendChild(rt);
   b.onclick=()=>go("room-"+r.id);
@@ -3595,7 +3597,7 @@ function updateHome(){
     const tl=el("div","htalk");if(!top.length)tl.appendChild(el("div","hp","아직 대화가 없습니다."));top.forEach(r=>tl.appendChild(roomBtn(r,false)));cm.appendChild(tl);}
   renderStats();updateNotiBadge();
 }
-function homeUnread(){const st=navStats||buildNavStats();let n=0;Object.keys(st.unr).forEach(k=>{if(k!=="all")n+=st.unr[k];});return n;}
+function homeUnread(){const st=navStats||buildNavStats();let n=0;Object.keys(st.unr).forEach(k=>{if(k!=="all"&&showUnr(k))n+=st.unr[k];});return n;}
 /* ===== 포털 안에서 열기: 같은 주소(balhm12.github.io) 앱은 포털 화면 안에, 한 번 연 화면은 상태를 유지 ===== */
 const APPS={install:{t:"설치일정",ic:"box",u:LINKS.install},work:{t:"근무일정",ic:"calendar",u:LINKS.work},silmari:{t:"실마리",ic:"compass",u:LINKS.silmari},
   voc:{t:"고객 만족도",ic:"star",u:LINKS.voc},kpi:{t:"KPI 대시보드",ic:"chart",u:LINKS.kpi,lead:true},system:{t:"전국시스템",ic:"sysgrid",u:LINKS.system,ext:true},
