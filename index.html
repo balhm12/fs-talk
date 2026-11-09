@@ -1583,7 +1583,7 @@ html[data-theme=dark] .slkkd{background:#16314D;color:#9CC8F2}
 html[data-theme=dark] .slksb{background:transparent;border-color:#3F6E9E;color:#9CC8F2}html[data-theme=dark] .slksb.s-night{background:#C9D3DF;border-color:#C9D3DF;color:#1B2530}
 .slksrcb{flex-wrap:nowrap;overflow-x:auto}.slksrcb .hchip{flex:0 0 auto;white-space:nowrap}
 .slksrcb .hchip.s-night.on{background:#2B3A4A;border-color:#2B3A4A;color:#fff}html[data-theme=dark] .slksrcb .hchip.s-night.on{background:#C9D3DF;border-color:#C9D3DF;color:#1B2530}
-.slkack{margin:2px 0 8px;font-size:13px;color:#1E7A24;font-weight:600}html[data-theme=dark] .slkack{color:#6FD27A}.slkackb{font-weight:600;color:#1E7A24}html[data-theme=dark] .slkackb{color:#6FD27A}
+.slkmv{font-weight:600;color:#9A5B00}html[data-theme=dark] .slkmv{color:#F2B84B}.slkack{margin:2px 0 8px;font-size:13px;color:#1E7A24;font-weight:600}html[data-theme=dark] .slkack{color:#6FD27A}.slkackb{font-weight:600;color:#1E7A24}html[data-theme=dark] .slkackb{color:#6FD27A}
 .hreq{background:var(--panel);border:1px solid var(--line);border-top:4px solid #005BAC;border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--sh-card)}
 html[data-theme=dark] .hreq{border-top-color:#6AA9E6}
 .hreqh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.hreqh .hmore{margin-left:auto}
@@ -1613,7 +1613,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 .slkwho{margin:0 0 10px;font-size:13.5px;color:var(--strong);font-weight:600}
 .slkf{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.slkf .bdv{white-space:pre-wrap;flex:1;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.slkf .bdk{flex-basis:76px}
 .slktel{flex:0 0 auto;align-self:flex-start;font-size:12.5px;font-weight:700;color:var(--link);border:1px solid var(--line);border-radius:8px;padding:2px 10px;text-decoration:none}
-.slkfin{display:flex;flex-direction:column;gap:2px;background:var(--soft);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:13px}.slkfin b{font-size:12.5px;color:#1E7A24}
+.slkfin{display:flex;flex-direction:column;gap:2px;background:var(--soft);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:13px}.slkfin b{font-size:12.5px;color:#1E7A24}.slkmvb b{color:#9A5B00}html[data-theme=dark] .slkmvb b{color:#F2B84B}
 .slkgo{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:10px}.slkgo .hmore{margin:0;padding-left:0;padding-right:0}
 .slkh2{font-size:12.5px;font-weight:700;color:var(--sub);margin:4px 0}
 .slkth{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:30vh;overflow:auto}
@@ -1854,7 +1854,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.214";
+const APP_VERSION="2026-11-09.215";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4016,7 +4016,7 @@ function renderReqPage(){
     row.appendChild(el("b","slkh",[f.hosp+(f.area?" ("+f.area+")":""),f.eq].filter(Boolean).join(" · ")));
     const q=slkFirst(f.req||f.sym,80);if(q)row.appendChild(el("span","slkq",q));
     const who=r.st==="done"?(r.doneBy?"완료 "+r.doneBy:"완료"):r.who?"담당 "+r.who:r.mention?"@"+r.mention:"담당자 없음";
-    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention&&!r.ack?" none":""),who);if(r.ack&&r.st!=="done")ft.appendChild(el("b","slkackb"," · ✅ 확인"+(r.ack.n&&r.ack.n!==r.who?" "+r.ack.n:"")));if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));row.appendChild(ft);
+    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention&&!r.ack?" none":""),who);if(r.ack&&r.st!=="done")ft.appendChild(el("b","slkackb"," · ✅ 확인"+(r.ack.n&&r.ack.n!==r.who?" "+r.ack.n:"")));if(r.mv&&r.st!=="done")ft.appendChild(el("b","slkmv"," · 방문 중"+(r.mv.n?" "+r.mv.n:"")));if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));if(r.autoFin&&r.st==="done")ft.appendChild(el("em",null," · 현장 「마칩니다」로 완료"));row.appendChild(ft);
     row.onclick=()=>{if(!slkChk[r.id])slkChkSet([r.id],true);openSlkReq(r.id);};box.appendChild(it);});   // 208: 열어 보면 확인으로
   b.appendChild(box);
 }
@@ -4030,6 +4030,8 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   const who=r.who?(r.st==="done"?"완료 "+(r.doneBy||r.who):"담당 "+r.who):r.mention?"지정 @"+r.mention+" (아직 담당 표시 없음)":"아직 담당자가 없습니다";
   c.appendChild(el("p","slkwho",who));
   if(r.ack)c.appendChild(el("p","slkack","✅ 확인"+(r.ack.n?" · "+r.ack.n:"")+" · "+slkAgo(r.ack.at)));   // 210
+  if(r.mv){const mb=el("div","slkfin slkmvb");mb.appendChild(el("b",null,"방문 중 · "+(r.mv.n||"")+" · "+slkAgo(r.mv.at)));mb.appendChild(el("span",null,slkFirst(r.mv.t,160)));c.appendChild(mb);}   // 215: 현장 「이동합니다」
+  if(r.autoFin&&r.st==="done")c.appendChild(el("p","hp","현장 「마칩니다」 글로 자동 완료했습니다. 잘못이면 「다시 열기」."));
   const tb=el("div","slkf");const row=(k,v,lnk)=>{if(!v)return;const d=el("div","bdr");d.appendChild(el("span","bdk",k));const vv=el("span","bdv",v);d.appendChild(vv);if(lnk)d.appendChild(lnk);tb.appendChild(d);};
   row("장비",f.eq);row("요청사항",f.req);row("Error/증상",f.sym);row("확인/조치",f.act);
   {const tel=slkTel(f.contact);let a=null;if(tel){a=el("a","slktel","전화");a.href="tel:"+tel;a.setAttribute("aria-label","회신처에 전화");}row("회신처",f.contact,a);}

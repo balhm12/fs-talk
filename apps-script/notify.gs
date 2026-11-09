@@ -105,7 +105,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v32';
+const NOTIFY_VER = 'v33';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -815,7 +815,7 @@ function slackPull(force, opt){
           else if(C.type === 'feed'){
             dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
             slkToRoom_(m, text, slkPerson_(who), at, ch, C);
-            slkFinHint_(text, slkPerson_(who), at);
+            slkFieldHint_(text, slkPerson_(who), at);
             return;
           }
           // 요청 채널: 양식 블록마다 요청 1건 (야간 인계 요약 글은 여러 건 — 같은 내용은 같은 id 라 두 번 들어오지 않음)
@@ -972,16 +972,41 @@ function slkToRoom_(m, text, name, at, ch, C){
   dbPut_('talk/msgs/'+room+'/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
 }
 /* 현장 마무리 보고(「○○병원 마칩니다」)에 열린 요청의 기관명이 있으면 요청에 표시 — 자동으로 닫지는 않음 */
-function slkFinHint_(text, who, at){
-  if(!/마칩니다|마쳤|마무리|완료|종료/.test(text)) return;
+/* 215: 현장 글(#group-sysmex-talk)의 기관명이 열린 요청과 맞으면 (사용자 결정 2026-11-09)
+ *  「○○ 이동합니다」 = 방문 중(mv, 새 요청이면 처리 중·담당), 「○○ 마칩니다/마쳤/마치고/마무리/종료/완료」 = 완료(fin + st done, autoFin).
+ *  한 글에 병원이 여럿이면 병원 이름 바로 뒤에 먼저 나오는 말로 판단(「A 마치고 B 이동합니다」 → A 완료·B 방문 중) */
+const SLK_FIN_RE = /마칩니다|마쳤|마치고|마침|마무리|종료|완료/;
+const SLK_MOVE_RE = /이동/;
+function slkFieldHint_(text, who, at){
+  if(!SLK_FIN_RE.test(text) && !SLK_MOVE_RE.test(text)) return;
   const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {};
   const flat = text.replace(/\s+/g,'');
   Object.keys(all).forEach(function(id){
     const r = all[id]; if(!r || r.st === 'done' || !r.f || !r.f.hosp) return;
-    const h = String(r.f.hosp).replace(/\s+/g,'').replace(/^(의료법인|재단법인|학교법인)/,'');
-    if(h.length >= 3 && (flat.indexOf(h) >= 0 || flat.indexOf(h.slice(0,4)) >= 0 && h.length >= 6))
-      dbPatch_('talk/slack/req/'+id, {fin:{n:who, t:text.slice(0,400), at:at}});
+    const act = slkFieldAct_(flat, r.f.hosp); if(!act) return;
+    const patch = {}, who2 = r.who || who;
+    if(act === 'fin'){
+      patch.fin = {n:who, t:text.slice(0,400), at:at};
+      patch.st = 'done'; patch.doneAt = at; patch.doneBy = who || 'Slack'; patch.autoFin = true; if(!r.who && who) patch.who = who;
+    }else{
+      if(r.mv && r.mv.at >= at) return;
+      patch.mv = {n:who, t:text.slice(0,400), at:at};
+      if(r.st === 'new'){ patch.st = 'doing'; if(!r.who && who){ patch.who = who; patch.whoAt = at; } }
+    }
+    dbPatch_('talk/slack/req/'+id, patch);
   });
+}
+/* 기관명 위치 뒤에서 먼저 나오는 말: 'fin' | 'move' | '' */
+function slkFieldAct_(flat, hosp){
+  const h = String(hosp||'').replace(/\s+/g,'').replace(/^(의료법인|재단법인|학교법인)/,'');
+  if(h.length < 3) return '';
+  let i = flat.indexOf(h), L = h.length;
+  if(i < 0 && h.length >= 6){ i = flat.indexOf(h.slice(0,4)); L = 4; }
+  if(i < 0) return '';
+  const rest = flat.slice(i + L), f = rest.search(SLK_FIN_RE), m = rest.search(SLK_MOVE_RE);
+  if(f < 0 && m < 0) return '';
+  if(f < 0) return 'move'; if(m < 0) return 'fin';
+  return f < m ? 'fin' : 'move';
 }
 function slkTrimFeed_(){
   const old = dbQuery_('talk/slack/feed','orderBy="at"&endAt='+(Date.now()-SLK_FEED_KEEP_DAYS*864e5)) || {};

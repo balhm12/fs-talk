@@ -4,7 +4,7 @@ const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cach
 function get(p){let o=db;for(const k of p.split('/').filter(Boolean)){o=o&&o[decodeURIComponent(k)];}return o;}
 function set(p,v,patch){const ks=p.split('/').filter(Boolean).map(decodeURIComponent);let o=db;for(const k of ks.slice(0,-1)){o[k]=o[k]||{};o=o[k];}const L=ks[ks.length-1];if(patch){o[L]=o[L]||{};for(const k in v){if(v[k]===null)delete o[L][k];else o[L][k]=v[k];}}else o[L]=v;}
 const now=Date.now()/1000;
-const hist={C0AT8RP3QDN:[{ts:(now-60).toFixed(6),user:'U1',text:'<기술 요청>\n<인계 : FS WEST>\n기관명 : 테스트병원\n장비 : XN-1000\n요청사항 : 에러 확인',reactions:[{name:'white_check_mark',users:['U2']}],reply_count:1,latest_reply:(now-30).toFixed(6)}],C0AHFJGKMTL:[],C0C6U7RQ44D:[{ts:(now-50).toFixed(6),user:'U1',text:'테스트병원 마칩니다 완료'}]};
+const hist={C0AT8RP3QDN:[{ts:(now-60).toFixed(6),user:'U1',text:'<기술 요청>\n<인계 : FS WEST>\n기관명 : 테스트병원\n장비 : XN-1000\n요청사항 : 에러 확인',reactions:[{name:'white_check_mark',users:['U2']}],reply_count:1,latest_reply:(now-30).toFixed(6)}],C0AHFJGKMTL:[],C0C6U7RQ44D:[{ts:(now-50).toFixed(6),user:'U1',text:'테스트병원 이동합니다'}]};
 const ctx={
  UrlFetchApp:{fetch(u,o={}){calls.push(u);if(/[" ]/.test(u))throw new Error('잘못된 인수: '+u);
   if(u.startsWith('https://slack.com/api/')){const m=u.split('/api/')[1].split('?')[0];const q=new URLSearchParams(u.split('?')[1]||'');
@@ -33,7 +33,7 @@ if(require.main===module){
   g.slackPull(true);
   const m=db.talk.slack.meta, R=Object.values(db.talk.slack.req);
   assert(m.ok && !m.err, 'meta 오류 없음: '+m.err);
-  assert(R.length===1 && R[0].st==='doing' && R[0].ack.n==='테스트2' && R[0].fin, '요청·확인·마무리 표시');
+  assert(R.length===1 && R[0].st==='doing' && R[0].ack.n==='테스트2' && R[0].mv && R[0].mv.n==='테스트1', '요청·확인·이동(방문 중) 표시');
   assert(Object.keys(props).filter(k=>k.startsWith('SLK_TS_')).length===3, '세 채널 모두 읽은 시각 저장');
   assert(!calls.some(u=>/[" ]/.test(u)), '따옴표·공백 없는 주소');
   const n=calls.filter(u=>u.includes('conversations.replies')).length; g.slackPull(true);
@@ -79,4 +79,20 @@ if(require.main===module){
   const r=db.talk.slack.req[id];
   assert(r.ch==='C0AT8RP3QDN' && r.ack && r.ack.n==='테스트2','확인 맞추기에서 handover 로 옮기고 ✅ 읽음');
   console.log('slack_pull 214-A: 통과');
+}
+// 215: 「A 마치고 B 이동합니다」 → A 완료·B 방문 중, 다른 병원은 그대로
+if(require.main===module){
+  const assert=require('assert');
+  const mk=(h)=>'&lt;기술요청&gt;&lt;인계 : FS WEST &gt;\n1) 기 관 명 : '+h+'\n2) 장 비 명 : XN-550\n3) 요청사항 : 방문 요청';
+  const t0=(Date.now()/1000-20);
+  hist.C0AT8RP3QDN=[{ts:t0.toFixed(6),user:'U1',text:mk('테스트오병원')},{ts:(t0+1).toFixed(6),user:'U1',text:mk('테스트육병원')},{ts:(t0+2).toFixed(6),user:'U1',text:mk('테스트칠병원')}];
+  hist.C0C6U7RQ44D=[{ts:(t0+5).toFixed(6),user:'U2',text:'테스트오병원 소음 마치고, 식사 후 테스트육병원 확인 이동 합니다'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true);
+  const by=h=>Object.values(db.talk.slack.req).find(v=>v.f.hosp===h);
+  const a=by('테스트오병원'),b=by('테스트육병원'),c=by('테스트칠병원');
+  assert(a.st==='done' && a.autoFin && a.doneBy==='테스트2','A 완료');
+  assert(b.st==='doing' && b.mv && b.mv.n==='테스트2' && b.who==='테스트2','B 방문 중');
+  assert(c.st==='new' && !c.mv && !c.fin,'C 그대로');
+  console.log('slack_pull 215: 통과');
 }
