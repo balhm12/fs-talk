@@ -94,7 +94,7 @@
 
 ## 7. 변경 이력 (최근 것 위)
 
-- 2026-11-09 · 222 **CS 방에 Slack CSO·CS쉐어링 글**(사용자 요청): 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg)의 맨 위 글을 모두(학술요청·완료 글 포함, 스레드 답글 제외) 포털 `talk/msgs/cs/s{ts}` 로도 옮김(`slkToCs_`, 요청함 반영과 별개, 푸시 없음, Slack → 포털 한쪽만). 처음 한 번 최근 7일치 옮기기(`slkCsBackfill_`, 스크립트 속성 `SLK_CS_BF_{채널}`). 이름 옆 표시 「Slack · CSO」/「Slack · CS쉐어링」. CS 방 글은 전체방에도 함께 보임(`ALL_SRC`). 시험 `tests/slack_pull.js` 222. notify v34
+- 2026-11-09 · 222 **CS 방에 Slack CSO·CS쉐어링 글**(사용자 요청): 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg)의 맨 위 글을 모두(학술요청·완료 글 포함, 스레드 답글 제외) 포털 `talk/msgs/cs/s{ts}` 로도 옮김(`slkToCs_`, 요청함 반영과 별개, 푸시 없음, Slack → 포털 한쪽만). 처음 한 번 최근 7일치 옮기기(`slkCsBackfill_`, 스크립트 속성 `SLK_CS_BF_{채널}`). 이름 옆 표시 「Slack · CSO」/「Slack · CS쉐어링」. CS 방 글은 전체방에도 함께 보임(`ALL_SRC`). ②**CSO 직원 알아보기**(사용자 확인 「요청 채널 작성자 = CSO 맴버」, CS쉐어링은 「[CSIS] 상담사 …」): 요청 채널에 글을 쓴 사람 중 포털 명단에 없는 사람을 Slack 사용자 id 로 `talk/slack/cso/{id}={n,at}` 에 기록(실명은 DB 에만, `slkMarkCso_`) → 이 사람들의 #group-sysmex-talk 일반 글은 전체방 대신 **CS 방**. 「연결 전 미리보기」도 같은 기준(「CS 방 · CSO 직원」). 시험 `tests/slack_pull.js` 222·222-B. notify v34
 - 2026-11-09 · 221 PC 왼쪽 레일에서 「조직도」를 맨 아래(메뉴 다음)로(사용자 요청). 순서 = 홈·요청·대화·기술·Talk·(관리)·업무 앱·메뉴·조직도 … 설정
 - 2026-11-09 · 220 ①PC 왼쪽 레일 「기술」 아래 **「Talk」 = Sysmex Talk 검색**(`#rTalk` → `goHist`, 사용자 요청) ②통합 검색(홈 검색 「전체」)은 Sysmex Talk 자료(약 26MB, 기기 IndexedDB)를 직접 찾지 않음 — 결과 맨 위에 「Sysmex Talk에서 「검색어」 찾기」 줄(`.stalk`)을 두어 한 번에 같은 검색어로 엶(사용자 질문 「홈 검색이 Sysmex Talk 까지 되나」)
 - 2026-11-09 · 219 「수리이력 검색」 이름을 **「Sysmex Talk 검색」**으로(사용자 지시): 바로가기·메뉴(`HLINKS.hist`), 포털 안 앱 탭(`APPS.hist`), 홈 검색 범위, 기술 화면 「Sysmex Talk에서 찾기」, Slack 요청 상세 「Sysmex Talk ›」, 둘러보기·새 기능 안내 문구, 사용 현황 이름, `hist.html` 창 제목. 저장 경로(`talk/hist`)·함수 이름(`goHist`)·키는 그대로
