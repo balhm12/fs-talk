@@ -320,6 +320,11 @@
           },
           "hlayout": {
             ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "slkchk": {
+            "$id": {
+              ".validate": "newData.isBoolean() && $id.matches(/^[a-z]+_[-a-z0-9_]{6,40}$/)"
+            }
           }
         }
       },
