@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v35';
+const NOTIFY_VER = 'v36';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -798,8 +798,11 @@ function slackPull(force, opt){
       if(!props.getProperty('SLK_CHAN_BF_'+ch)){   // 224: 처음 한 번 — 최근 7일 채널 글을 채널 방에(팀 방에는 새 글부터)
         try{ slkChanBackfill_(ch, C, names, now - 7*864e5); props.setProperty('SLK_CHAN_BF_'+ch, '1'); }catch(e){ meta.err = '채널 방 채우기: '+String(e.message||e).slice(0,160); console.error(e); }
       }
-      const last = props.getProperty('SLK_TS_'+ch) || String((now - 3*864e5)/1000);
-      let cursor = '', maxTs = last, page = 0;
+      const oldLast = props.getProperty('SLK_TS_'+ch) || String((now - 3*864e5)/1000);
+      // 227: 한 번 — 최근 3일 요청을 새 규칙(머리말 인계 팀·재요청)으로 다시 봄. 이미 읽은 글은 요청함만 맞추고 채널 방·현장 반영은 다시 안 함
+      const rescan = !props.getProperty('SLK_RESCAN_227');
+      const last = rescan ? String(Math.min(+oldLast, (now - 3*864e5)/1000)) : oldLast;
+      let cursor = '', maxTs = oldLast, page = 0;
       do{
         const prm = {channel:ch, oldest:last, limit:200}; if(cursor) prm.cursor = cursor;
         let j; try{ j = slackApi_('conversations.history', prm); }catch(e){ meta.err = String(e.message||e).slice(0,200); break; }
@@ -813,13 +816,17 @@ function slackPull(force, opt){
           const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
           const men = /<@([A-Z0-9]+)\|([^>]*)>/.exec(raw);
           const mention = men ? slkPerson_(men[2]) : (/<@([A-Z0-9]+)>/.exec(raw) ? slkPerson_(slkUser_(/<@([A-Z0-9]+)>/.exec(raw)[1], names)) : '');
-          const at = Math.round(+m.ts*1000);
-          if(C.type === 'req') slkMarkCso_(m, slkPerson_(who));
-          slkToChan_(m, raw, text, slkPerson_(who), at, ch, C);   // 224: 모든 맨 위 글 → 채널 방 + 해당 팀·사무소방
+          const at = Math.round(+m.ts*1000), seen = +m.ts <= +oldLast;   // seen = 227 다시 보기에서 이미 읽은 글
+          const hTeam = slkHeadTeam_(raw, text);   // 227: 머리말(==== 위)·그룹 멘션에 적힌 FS 팀 = 전달받은 팀
+          if(!seen){
+            if(C.type === 'req') slkMarkCso_(m, slkPerson_(who));
+            slkToChan_(m, raw, text, slkPerson_(who), at, ch, C);   // 224: 모든 맨 위 글 → 채널 방 + 해당 팀·사무소방
+          }
           if(C.type === 'feed' && /<\s*(기술|학술)\s*요청\s*>/.test(text)){   // 202: 요청 양식은 요청함 쪽으로
-            if(/학술\s*요청/.test(text) || !/<\s*인계\s*:\s*FS/i.test(text)) return;   // 학술요청·<완료 : …>·CSO 인계는 FSG 요청 아님
+            if(!hTeam && (/학술\s*요청/.test(text) || !/<\s*인계\s*:\s*FS/i.test(text))) return;   // 학술요청·<완료 : …>·CSO 인계는 FSG 요청 아님(머리말에 FS 팀으로 전달하면 요청)
           }
           else if(C.type === 'feed'){
+            if(seen) return;
             dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
             slkFieldHint_(text, slkPerson_(who), at);
             return;
@@ -829,11 +836,22 @@ function slackPull(force, opt){
             ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
           blocks.forEach(function(b, i){
             const f = slkParse_(b); if(!f) return;
-            if(/학술\s*요청/.test(b) || (f.team && !/^FS/.test(f.team))) return;   // 202: 학술요청·CSO/SA 인계는 FSG 요청함에 넣지 않음
+            if(blocks.length === 1 && hTeam) f.team = hTeam;   // 227: 「CSO Team 먼저 인계드렸으나, FS WEST … 전달」 같은 머리말 = FS 요청(양식이 학술요청이어도)
+            else if(/학술\s*요청/.test(b) || (f.team && !/^FS/.test(f.team))) return;   // 202: 학술요청·CSO/SA 인계는 FSG 요청함에 넣지 않음
             const day = Utilities.formatDate(new Date(at), 'Asia/Seoul', 'yyyyMMdd');
             const id = blocks.length > 1 ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : (C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'));
             const cur = db_('talk/slack/req/'+id);
             if(cur && !(blocks.length > 1)){
+              // 227: 재요청 — 같은 날 같은 기관·장비·요청인데 다른 글(내용이 다르고 1분 넘게 뒤)이면 요청에 「재요청」으로 붙이고, 완료였으면 다시 새 요청으로
+              const rk = slkKey_(m.ts), norm = function(x){ return String(x||'').replace(/\s+/g,''); };
+              const known = cur.ts === m.ts || (cur.rr && cur.rr[rk]);
+              if(!known && norm(cur.t) !== norm(b.slice(0,4000)) && +m.ts*1000 - (+cur.at||0) > 60*1000){
+                dbPut_('talk/slack/req/'+id+'/rr/'+rk, {n:slkPerson_(who), t:b.slice(0,600), at:at, ch:ch, ts:m.ts});
+                const p = {rrAt:at};
+                if(cur.st === 'done'){ p.st = 'new'; p.doneAt = null; p.doneBy = null; p.autoFin = null; p.fin = null; added++; }
+                dbPatch_('talk/slack/req/'+id, p);
+                return;
+              }
               // 214: 같은 요청이 #group-sysmex-talk 에 먼저 왔으면 handover 채널 글로 바꿔 둠 — ✅ 확인은 handover 원래 글에서 읽고 거기에 단다(사용자 확인)
               if(C.type === 'req' && cur.ch && SLACK_CH[cur.ch] && SLACK_CH[cur.ch].type !== 'req') dbPatch_('talk/slack/req/'+id, {ch:ch, ts:m.ts, lr:null});
               return;
@@ -845,8 +863,9 @@ function slackPull(force, opt){
         }
         cursor = j.response_metadata && j.response_metadata.next_cursor || '';
       }while(cursor && ++page < 3);
-      props.setProperty('SLK_TS_'+ch, String(maxTs));
+      props.setProperty('SLK_TS_'+ch, String(maxTs));   // maxTs 는 oldLast 에서 시작해 커지기만 함
     });
+    if(!props.getProperty('SLK_RESCAN_227')) props.setProperty('SLK_RESCAN_227','1');
     if(!props.getProperty('SLK_MIG_224')){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
     const min = new Date().getMinutes();
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
@@ -990,6 +1009,15 @@ function slkTeamRooms_(raw, text, name, C){
   const au = slkRoomFor_(name, slkRoster_()), author = au === 'all' ? '' : au;
   if(C.type === 'req') return grp.length ? grp : (author ? [author] : []);
   return author ? [author] : grp;
+}
+/* 227: 글 머리말(첫 ==== 줄 위)이나 그룹 멘션 라벨에 적힌 FS 팀 — CSO 가 「… FS WEST 로 전달」처럼 다시 넘긴 글 */
+function slkHeadTeam_(raw, text){
+  let m; const re = /<!subteam\^[A-Z0-9]+\|@?([A-Za-z0-9._-]+)>/g;
+  while((m = re.exec(String(raw||'')))){ const r = SLK_GRP_ROOM[m[1].toLowerCase()]; if(r && ROOM_SCOPE[r] && /^FS /.test(ROOM_SCOPE[r][0])) return ROOM_SCOPE[r][0]; }
+  const t = String(text||''), parts = t.split(/\n\s*={5,}\s*(?:\n|$)/);
+  if(parts.length < 2) return '';
+  const h = /인계\s*:\s*FS\s*(WEST|EAST|CENTRAL|SOUTH)/i.exec(parts[0]) || /(?:^|[^A-Za-z])FS\s*(WEST|EAST|CENTRAL|SOUTH)(?![A-Za-z])/i.exec(parts[0]);
+  return h ? 'FS ' + h[1].toUpperCase() : '';
 }
 function slkToChan_(m, raw, text, name, at, ch, C, opt){
   if(!C.pr) return;

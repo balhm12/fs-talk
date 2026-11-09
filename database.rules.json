@@ -323,7 +323,7 @@
           },
           "slkchk": {
             "$id": {
-              ".validate": "newData.isBoolean() && $id.matches(/^[a-z]+_[-a-z0-9_]{6,40}$/)"
+              ".validate": "newData.isBoolean() && $id.matches(/^[a-z]+_[-A-Za-z0-9_]{6,48}$/)"
             }
           }
         }
