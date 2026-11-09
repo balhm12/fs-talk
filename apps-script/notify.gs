@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v38';
+const NOTIFY_VER = 'v39';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -856,6 +856,11 @@ function slackPull(force, opt){
               if(C.type === 'req' && cur.ch && SLACK_CH[cur.ch] && SLACK_CH[cur.ch].type !== 'req') dbPatch_('talk/slack/req/'+id, {ch:ch, ts:m.ts, lr:null});
               return;
             }
+            if(!cur && blocks.length === 1){   // 233: 같은 Slack 글로 이미 만든 요청이 있으면 새로 만들지 않음 — 글을 고친 뒤 다시 읽으면 요청사항이 달라져 id 가 바뀌던 것
+              const near = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(at-10*60000)+'&endAt='+(at+10*60000)) || {};
+              const same = Object.keys(near).filter(function(k){ return near[k] && near[k].ts === m.ts && k !== id; })[0];
+              if(same){ dbPatch_('talk/slack/req/'+same, {t:b.slice(0,4000), f:f}); return; }   // 고친 내용으로 칸만 바꿈(상태는 그대로)
+            }
             const base = {ch:ch, ts:m.ts, kind:(C.k === 'talk' ? 'cso' : C.k), by:slkPerson_(who), at:(cur&&cur.at)||at, t:b.slice(0,4000), f:f, mention:mention||null, multi:blocks.length>1||null};
             if(!cur){ base.st = 'new'; added++; }
             dbPatch_('talk/slack/req/'+id, base);
@@ -867,6 +872,7 @@ function slackPull(force, opt){
     });
     if(!props.getProperty('SLK_RESCAN_227')) props.setProperty('SLK_RESCAN_227','1');
     if(!props.getProperty('SLK_DEDUP_232')){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
+    if(!props.getProperty('SLK_REQDUP_233')){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
     if(!props.getProperty('SLK_LINK_229')){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!props.getProperty('SLK_MIG_224')){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
     const min = new Date().getMinutes();
@@ -1048,6 +1054,17 @@ function slkDedup232_(){   // 한 번 — 팀 방에 두 번 들어간 같은 Sl
       .sort(function(a,b){ return (+all[a].ts||0)-(+all[b].ts||0); })
       .forEach(function(k){ const v = all[k], h = (v.name||'')+'|'+String(v.text||'').replace(/\s+/g,'');
         if(seen[h] && (+v.ts||0) - seen[h] < 15*60*1000){ dbDelete_('talk/msgs/'+room+'/'+k); n++; } else seen[h] = +v.ts||0; });
+  });
+  return n;
+}
+function slkReqDedup233_(){   // 한 번 — 같은 Slack 글(ts)로 두 건 생긴 요청 정리: 진행한 것(담당·확인·처리 중·완료)을 남기고, 없으면 먼저 만든 것
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-5*864e5)) || {}, by = {};
+  Object.keys(all).forEach(function(k){ const r = all[k]; if(!r || !r.ts || r.multi || /^p_/.test(k)) return; (by[r.ch+'|'+r.ts] = by[r.ch+'|'+r.ts] || []).push(k); });
+  let n = 0;
+  Object.keys(by).forEach(function(g){ const ks = by[g]; if(ks.length < 2) return;
+    const score = function(k){ const r = all[k]; return (r.st !== 'new' ? 4 : 0) + (r.who ? 2 : 0) + (r.ack ? 1 : 0); };
+    ks.sort(function(a,b){ return score(b) - score(a) || (all[a].at||0) - (all[b].at||0); });
+    ks.slice(1).forEach(function(k){ dbDelete_('talk/slack/req/'+k); n++; });
   });
   return n;
 }

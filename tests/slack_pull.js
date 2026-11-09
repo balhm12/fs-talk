@@ -202,3 +202,21 @@ if(require.main===module){
   assert(db.talk.msgs.east.s100_1t&&!db.talk.msgs.east.s101_1t,'이미 두 번 들어간 것 정리(나중 것 삭제)');
   console.log('slack_pull 232: 통과');
 }
+// 233: 고친 글을 다시 읽어도 같은 Slack 글이면 요청 하나, 이미 두 건이면 진행한 것만 남김
+if(require.main===module){
+  const assert=require('assert');const now=Date.now()/1000;const ts=(now-30).toFixed(6);
+  const f=r=>`&lt;기술요청&gt;&lt;인계 : FS WEST &gt;\n1) 기 관 명 : 테스트경기지부\n2) 장 비 명 : XN-2000\n3) 요청사항 : ${r}`;
+  hist.C0AT8RP3QDN=[{ts,user:'U3',text:f('CAL 전 점검 요청')}];hist.C0AHFJGKMTL=[];hist.C0C6U7RQ44D=[];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(now-60);
+  g.slackPull(true);
+  hist.C0AT8RP3QDN=[{ts,user:'U3',text:f('CAL 전 점검 요청\n-11월 17일 13시 CAL 예정')}];
+  props.SLK_TS_C0AT8RP3QDN=String(now-60);g.slackPull(true);
+  const L=Object.values(db.talk.slack.req).filter(r=>r&&r.f&&r.f.hosp==='테스트경기지부');
+  assert.strictEqual(L.length,1,'고친 글 다시 읽어도 요청 하나');
+  const id=Object.keys(db.talk.slack.req).find(k=>db.talk.slack.req[k]&&db.talk.slack.req[k].f&&db.talk.slack.req[k].f.hosp==='테스트경기지부');
+  db.talk.slack.req.cso_dDUP000000001=Object.assign({},db.talk.slack.req[id],{st:'doing',who:'테스트2'});
+  delete props.SLK_REQDUP_233;g.slackPull(true);
+  const L2=Object.entries(db.talk.slack.req).filter(([k,r])=>r&&r.f&&r.f.hosp==='테스트경기지부');
+  assert(L2.length===1&&L2[0][0]==='cso_dDUP000000001','이미 두 건이면 진행한 것만 남김');
+  console.log('slack_pull 233: 통과');
+}
