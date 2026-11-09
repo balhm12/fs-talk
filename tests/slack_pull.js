@@ -130,3 +130,18 @@ if(require.main===module){
   assert(inCs && !inAll, 'CSO 직원의 talk 글은 CS 방으로');
   console.log('slack_pull 222-B: 통과');
 }
+// 222-C: 전체방에 있던 Slack 글을 새 이름 기준으로 다시 맞춤([서부팀]·SKR FSW 앞머리, CS쉐어링 봇 → CS 방), 포털 글은 그대로
+if(require.main===module){
+  const assert=require('assert');
+  db.talk.msgs.all=Object.assign(db.talk.msgs.all||{},{
+    s111:{uid:'slack',name:'SKR FSW 테스트2',text:'가',ts:1,slk:{ch:'C0C6U7RQ44D',ts:'1.0',cn:'group-sysmex-talk'}},
+    s112:{uid:'slack',name:'CS쉐어링 전화접수 인계사항',text:'나',ts:2,slk:{ch:'C0C6U7RQ44D',ts:'2.0',cn:'group-sysmex-talk'}},
+    s113:{uid:'slack',name:'[동부팀]모름이',text:'다',ts:3,slk:{ch:'C0C6U7RQ44D',ts:'3.0',cn:'group-sysmex-talk'}},
+    '-p1':{uid:'u1',name:'테스트1',text:'포털 글',ts:4}});
+  delete props.SLK_REROUTE_222; g.slackPull(true);
+  const A=db.talk.msgs.all;
+  assert(!A.s111 && db.talk.msgs.west && db.talk.msgs.west.s111 && db.talk.msgs.west.s111.name==='테스트2','SKR FSW 테스트2 → 팀방');
+  assert(!A.s112 && db.talk.msgs.cs.s112,'CS쉐어링 봇 → CS 방');
+  assert(A.s113 && A.s113.name==='모름이' && A['-p1'],'명단 밖은 전체방(이름만 정리), 포털 글 그대로');
+  console.log('slack_pull 222-C: 통과');
+}

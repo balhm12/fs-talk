@@ -731,7 +731,7 @@ function slkClean_(t){
     .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').trim();
 }
 /* 「이준호(Juno)」 → 「이준호」 — 포털 명단 이름과 맞추기 */
-function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/^\s*(?:SKR\s+)?FS(?:\s+(?:WEST|EAST|CENTRAL|SOUTH|SS|OM))?\s+/i,'').replace(/\s+/g,' ').trim(); }
+function slkPerson_(n){ const t = String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/\s*[\[［【][^\]］】]*[\]］】]\s*/g,' ').replace(/\s+/g,' ').trim().split(' '); while(t.length > 1 && /^[A-Za-z0-9_.&\/-]+$/.test(t[0]) && /[가-힣]/.test(t.slice(1).join(''))) t.shift(); return t.join(' '); }
 function slkBotId_(){
   const c = CacheService.getScriptCache(), h = c.get('slkBot'); if(h !== null) return h;
   let id = ''; try{ id = slackApi_('auth.test',{}).user_id || ''; }catch(e){}
@@ -846,6 +846,7 @@ function slackPull(force, opt){
       }while(cursor && ++page < 3);
       props.setProperty('SLK_TS_'+ch, String(maxTs));
     });
+    if(!props.getProperty('SLK_REROUTE_222')){ try{ slkReroute_(); props.setProperty('SLK_REROUTE_222','1'); }catch(e){ meta.err = '전체방 글 다시 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
     const min = new Date().getMinutes();
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
     const evLive = meta.ev && now - meta.ev < 10*60*1000, cch = CacheService.getScriptCache();
@@ -974,7 +975,7 @@ function slkToRoom_(m, text, name, at, ch, C){
   const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
   if(!t) return;
   let room = slkRoomFor_(name, slkToRoom_.roster);
-  if(room === 'all' && m.user && slkCso_()[m.user]) room = 'cs';   // 222: CSO 직원(요청 채널에 글 쓰는 명단 밖 사람)은 전체방 대신 CS 방
+  if(room === 'all' && ((m.user && slkCso_()[m.user]) || SLK_CS_NAME.test(name))) room = 'cs';   // 222: CSO 직원(요청 채널에 글 쓰는 명단 밖 사람)은 전체방 대신 CS 방
   dbPut_('talk/msgs/'+room+'/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
 }
 /* 222: 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg) 글 → 포털 CS 방 (Slack → 포털 한쪽만, 사용자 요청 2026-11-09)
@@ -986,6 +987,23 @@ function slkToCs_(m, text, name, at, ch, C){
 }
 /* 222: CSO 직원 알아보기 — 요청 채널에 글을 쓴 사람 중 포털 명단에 이름이 없는 사람(사용자 확인: 요청 채널 작성자 = CSO).
  *  실명을 저장소에 두지 않으려고 Slack 사용자 id 로 DB talk/slack/cso/{id} = {n,at} 에만 기록 */
+const SLK_CS_NAME = /CS\s*쉐어링|CSIS|CSO/i;   // 222: 「CS쉐어링 전화접수 인계사항」 같은 CS 쪽 봇·워크플로 이름
+/* 222: 이름 정리 규칙을 바꾼 뒤 한 번 — 전체방에 들어와 있던 Slack 글을 새 기준으로 다시 맞춰 팀·사무소방/CS 방으로 옮김 */
+function slkReroute_(){
+  if(!slkToRoom_.roster) slkToRoom_.roster = db_('talk/roster') || {};
+  const cso = {}; Object.keys(slkCso_()).forEach(function(k){ const v = slkCso_()[k]; if(v && v.n) cso[v.n] = 1; });
+  const all = dbQuery_('talk/msgs/all','orderBy="$key"&startAt="s"&endAt="s~"') || {};
+  let moved = 0;
+  Object.keys(all).forEach(function(k){
+    const v = all[k]; if(!v || v.uid !== 'slack' || !v.slk) return;
+    const n = slkPerson_(v.name);
+    let room = slkRoomFor_(n, slkToRoom_.roster);
+    if(room === 'all' && (cso[n] || SLK_CS_NAME.test(n))) room = 'cs';
+    if(room === 'all'){ if(n !== v.name) dbPatch_('talk/msgs/all/'+k, {name:n}); return; }
+    v.name = n; dbPut_('talk/msgs/'+room+'/'+k, v); dbDelete_('talk/msgs/all/'+k); moved++;
+  });
+  return moved;
+}
 function slkCso_(){ if(!slkCso_.v) slkCso_.v = db_('talk/slack/cso') || {}; return slkCso_.v; }
 function slkMarkCso_(m, name){
   if(!m.user || !name || !/^[A-Z0-9]+$/.test(m.user)) return;

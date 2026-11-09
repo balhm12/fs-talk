@@ -3935,7 +3935,7 @@ function slkClean_(t){
     .replace(/<(https?:[^|>]*)\|([^>]*)>/g,'$2 ($1)').replace(/<(https?:[^>]*)>/g,'$1')
     .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').trim();
 }
-function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/^\s*(?:SKR\s+)?FS(?:\s+(?:WEST|EAST|CENTRAL|SOUTH|SS|OM))?\s+/i,'').replace(/\s+/g,' ').trim(); }
+function slkPerson_(n){ const t = String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/\s*[\[［【][^\]］】]*[\]］】]\s*/g,' ').replace(/\s+/g,' ').trim().split(' '); while(t.length > 1 && /^[A-Za-z0-9_.&\/-]+$/.test(t[0]) && /[가-힣]/.test(t.slice(1).join(''))) t.shift(); return t.join(' '); }
 function slkParse_(text){
   const t = String(text||'');
   const f = {};
@@ -4030,7 +4030,7 @@ function slkPrevClass(m){const t=slkClean_(m.t);
     if(!/<\s*인계\s*:\s*FS/i.test(t)||!f)return {k:"skip",lab:"건너뜀 · "+(/<\s*완료/.test(t)?"CSO 완료 글":"FSG 인계 아님")};
     return {k:"req",lab:"요청함 · "+(f.team||"")+" · "+[f.hosp,f.eq].filter(Boolean).join(" ")};}
   if(!m.who)return {k:"room",room:"all",lab:"전체방",why:"작성자 이름 줄이 없음"};
-  let r=slkRoomForC(m.who);if(r.id==="all"&&slkCsoNames.has(m.who))r={id:"cs",why:"CSO 직원"};const rm=ROOMS.find(x=>x.id===r.id);return {k:"room",room:r.id,lab:(rm?rm.name:r.id)+(r.id==="all"?"":" 방"),why:r.why};}
+  let r=slkRoomForC(m.who);if(r.id==="all"&&(slkCsoNames.has(m.who)||/CS\s*쉐어링|CSIS|CSO/i.test(m.who)))r={id:"cs",why:"CSO·CS쉐어링"};const rm=ROOMS.find(x=>x.id===r.id);return {k:"room",room:r.id,lab:(rm?rm.name:r.id)+(r.id==="all"?"":" 방"),why:r.why};}
 let slkCsoNames=new Set();   // 222: 서버가 알아본 CSO 직원(talk/slack/cso) — 전체방 대신 CS 방
 function openSlkPreview(){track("slk_prev");R("slack/cso").once("value").then(s=>{slkCsoNames=new Set(Object.values(s.val()||{}).map(v=>v&&v.n).filter(Boolean));try{$("slkPv")&&$("slkPv").dispatchEvent(new Event("input"));}catch(e){}}).catch(()=>{});
   const c=$("pCard");c.textContent="";c.classList.remove("drawer");c.classList.add("wide");
