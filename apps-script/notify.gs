@@ -20,6 +20,8 @@ function out_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setM
 function doPost(e){
   try{
     const req = JSON.parse(e.postData.contents);
+    if(req.type === 'url_verification' && req.challenge) return ContentService.createTextOutput(String(req.challenge).slice(0,200));   // 213: Slack 이벤트 주소 확인
+    if(req.type === 'event_callback') return out_(slackEvent_(req));
     if(req.type === 'register') return out_(notifyRegister_(req));
     if(req.type === 'testAdmin') return out_(testAdmin_(req));
     if(req.type === 'pushStatus') return out_(pushStatus_(req));
@@ -103,7 +105,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v30';
+const NOTIFY_VER = 'v31';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -365,6 +367,7 @@ function summary_(req){
   return {ok:false,err:'AI 응답 실패: '+last,ver:NOTIFY_VER};
 }
 function dbQuery_(path, query){
+  query = String(query||'').replace(/"/g,'%22');   // 213: 따옴표를 그대로 넣으면 UrlFetchApp 이 「잘못된 인수」로 멈춤
   const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?'+query,{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('DB 읽기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,200));
   return JSON.parse(r.getContentText());
@@ -779,12 +782,13 @@ function slkParse_(text){
 function slkHash_(s){ return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)).replace(/[=_-]/g,'').slice(0,14); }
 
 /* 1분마다: 새 글 가져오기. 5분마다(또는 force): 열린 요청의 스레드·반응 맞추기 */
-function slackPull(force){
+function slackPull(force, opt){
+  opt = opt || {}; if(typeof force === 'object' && force) force = false;   // 시간 트리거는 이벤트 객체를 넘김
   if(!P_('SLACK_BOT_TOKEN')) return;
-  const lock = LockService.getScriptLock(); if(!lock.tryLock(1000)) return;
+  const lock = LockService.getScriptLock(); if(!lock.tryLock(opt.wait || 1000)) return;
   try{
     const props = PropertiesService.getScriptProperties(), names = {}, now = Date.now();
-    const meta = db_('talk/slack/meta') || {};
+    const meta = db_('talk/slack/meta') || {}; delete meta.err;   // 213: 지난 오류는 이번에 다시 나면 다시 적힘
     if(!meta.team){ try{ const a = slackApi_('auth.test',{}); meta.team = a.team_id; meta.teamName = a.team; meta.url = a.url; }catch(e){} }
     let added = 0;
     Object.keys(SLACK_CH).forEach(function(ch){
@@ -794,7 +798,8 @@ function slackPull(force){
       do{
         const prm = {channel:ch, oldest:last, limit:200}; if(cursor) prm.cursor = cursor;
         let j; try{ j = slackApi_('conversations.history', prm); }catch(e){ meta.err = String(e.message||e).slice(0,200); break; }
-        (j.messages||[]).forEach(function(m){
+        (j.messages||[]).forEach(function(m){ try{ slkOne_(m); }catch(e){ meta.err = '글 '+m.ts+': '+String(e.message||e).slice(0,160); console.error(e); } });
+        function slkOne_(m){
           if(+m.ts <= +last) return;
           if(+m.ts > +maxTs) maxTs = m.ts;
           if(m.subtype && ['bot_message','thread_broadcast'].concat(C.type === 'feed' ? ['file_share'] : []).indexOf(m.subtype) < 0) return;   // 들어옴·나감 등
@@ -827,14 +832,18 @@ function slackPull(force){
             if(!cur){ base.st = 'new'; added++; }
             dbPatch_('talk/slack/req/'+id, base);
           });
-        });
+        }
         cursor = j.response_metadata && j.response_metadata.next_cursor || '';
       }while(cursor && ++page < 3);
       props.setProperty('SLK_TS_'+ch, String(maxTs));
     });
     const min = new Date().getMinutes();
-    if(force || min % 5 === 0) slkSync_(names);
-    if(min % 30 === 0) slkTrimFeed_();
+    // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
+    const evLive = meta.ev && now - meta.ev < 10*60*1000;
+    if(!opt.newOnly && (force || !evLive || min % 5 === 0)){ try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
+    if(!opt.newOnly && min % 30 === 0){ try{ slkTrimFeed_(); }catch(e){ console.error(e); } }
+    meta.ms = Date.now() - now;
+    if(opt.ev) meta.ev = now;
     meta.at = now; meta.ok = true; if(!meta.err) delete meta.err; meta.chans = {}; Object.keys(SLACK_CH).forEach(function(c){ meta.chans[c] = SLACK_CH[c].name; });
     meta.added = added;
     dbPut_('talk/slack/meta', meta);
@@ -846,20 +855,37 @@ function slackPull(force){
 /* 열린 요청(7일 안)의 스레드 답글·반응을 읽어 상태를 맞춤 — Slack 에서 👀/답글 = 처리 중, ✅ = 완료 */
 function slkSync_(names){
   const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-7*864e5)) || {};
-  Object.keys(all).slice(-40).forEach(function(id){
+  // 213: 요청마다 스레드를 읽던 것 → 채널 기록(7일)을 채널마다 한 번 읽어 반응·답글 수를 보고, 답글이 바뀐 요청만 스레드를 읽음
+  const hist = {}, oldest = String((Date.now() - 8*864e5)/1000);
+  Object.keys(SLACK_CH).forEach(function(ch){
+    if(SLACK_CH[ch].type !== 'req') return;
+    let cursor = '', page = 0;
+    do{
+      const prm = {channel:ch, oldest:oldest, limit:200}; if(cursor) prm.cursor = cursor;
+      const j = slackApi_('conversations.history', prm);
+      (j.messages||[]).forEach(function(m){ hist[ch+'|'+m.ts] = m; });
+      cursor = j.response_metadata && j.response_metadata.next_cursor || '';
+    }while(cursor && ++page < 3);
+  });
+  Object.keys(all).slice(-80).forEach(function(id){
     const r = all[id]; if(!r || r.multi) return;
     const autoDone = r.st === 'done' && !r.doneBy;   // 210: v24~28 은 ✅ 를 「완료」로 잘못 봤음 — 사람이 완료하지 않은 것은 다시 맞춤
     if(r.st === 'done' && !autoDone) return;
-    let j; try{ j = slackApi_('conversations.replies',{channel:r.ch, ts:r.ts, limit:50}); }catch(e){ return; }
-    const msgs = j.messages || []; if(!msgs.length) return;
+    const pm = hist[r.ch+'|'+r.ts];
+    const lr = pm ? String(pm.latest_reply || '') : null;
+    let msgs;
+    if(pm && (!pm.reply_count || lr === String(r.lr || ''))) msgs = [pm];   // 답글이 그대로면 스레드는 안 읽음
+    else { let j; try{ j = slackApi_('conversations.replies',{channel:r.ch, ts:r.ts, limit:50}); }catch(e){ return; } msgs = j.messages || []; }
+    if(!msgs.length) return;
     const parent = msgs[0], patch = {}, th = {};
+    if(lr !== null && lr !== String(r.lr || '')) patch.lr = lr || null;
     msgs.slice(1).forEach(function(m){
       const n = m.user ? slkPerson_(slkUser_(m.user, names)) : slkPerson_(String(m.username||'').replace(/\s*\(FS 포털\)\s*$/,''));
       th[slkKey_(m.ts)] = {n:n, t:slkClean_(m.text).slice(0,1500), at:Math.round(+m.ts*1000), p:/FS 포털/.test(m.username||'')||null};
     });
     if(Object.keys(th).length) patch.th = th;
     const rx = (parent.reactions||[]).map(function(x){ return x.name; });
-    if(rx.length) patch.rx = rx.join(',');
+    if(rx.length && rx.join(',') !== String(r.rx || '')) patch.rx = rx.join(',');
     if(autoDone){ patch.st = 'new'; patch.doneAt = null; }
     // 210: ✅(white_check_mark) = 담당·DP 가 「확인(접수)」했다는 뜻 (사용자 확인 2026-11-09). 완료는 포털 「완료」로만
     const ackR = (parent.reactions||[]).filter(function(x){ return /^(white_check_mark|heavy_check_mark|ballot_box_with_check|v)$/.test(x.name); })[0];
@@ -874,8 +900,32 @@ function slkSync_(names){
       if(rep){ patch.st = 'doing'; patch.who = r.who || rep.n; patch.whoAt = rep.at; }
       else if(rx.indexOf('eyes') >= 0){ patch.st = 'doing'; }
     }
-    dbPatch_('talk/slack/req/'+id, patch);
+    if(Object.keys(patch).length) dbPatch_('talk/slack/req/'+id, patch);   // 바뀐 게 없으면 쓰지 않음
   });
+}
+/* 213: Slack 이벤트(새 글·답글·반응)가 오면 바로 가져오기 — TAT 단축. 보낸 내용은 믿지 않고 「지금 확인하라」는 신호로만 씀
+ *  (Apps Script 는 요청 머리글을 못 읽어 Slack 서명 확인이 안 되므로, 채널이 정해진 세 곳인지만 보고 실제 내용은 Slack API 로 다시 읽음).
+ *  스크립트 속성 SLACK_VERIFY_TOKEN 이 있으면 이벤트의 token 과 같은지도 확인. 같은 종류는 5초에 한 번만 */
+function slackEvent_(req){
+  const vt = P_('SLACK_VERIFY_TOKEN'); if(vt && req.token !== vt) return {ok:false};
+  if(!P_('SLACK_BOT_TOKEN')) return {ok:false};
+  const ev = req.event || {}, ch = ev.channel || (ev.item && ev.item.channel) || '';
+  if(!SLACK_CH[ch]) return {ok:true, skip:1};
+  const isReact = /^reaction_/.test(ev.type || ''), isReply = ev.type === 'message' && ev.thread_ts && ev.thread_ts !== ev.ts;
+  const kind = (isReact || isReply) ? 'sync' : 'new';
+  if(kind === 'sync' && SLACK_CH[ch].type !== 'req') return {ok:true, skip:1};   // 대화 채널의 반응·답글은 옮기지 않음
+  const c = CacheService.getScriptCache(); if(c.get('slkev:'+kind)) return {ok:true, dup:1};
+  c.put('slkev:'+kind, '1', 5);
+  if(kind === 'new') slackPull(false, {newOnly:true, wait:4000, ev:true});
+  else slkEventSync_();
+  return {ok:true};
+}
+function slkEventSync_(){
+  const lock = LockService.getScriptLock(); if(!lock.tryLock(4000)) return;
+  try{
+    slkSync_({});
+    dbPatch_('talk/slack/meta', {ev:Date.now()});
+  }catch(e){ console.error(e); }finally{ try{lock.releaseLock();}catch(e){} }
 }
 /* 200: #group-sysmex-talk 글 → 포털 대화방 (Slack → 포털 한쪽만, 사용자 결정 2026-11-06)
  *  작성자 이름을 명단과 맞춰 사무소방(있으면) 또는 팀방, 명단에 없거나 같은 이름이 둘 이상이면 전체방.
