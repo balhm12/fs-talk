@@ -24,7 +24,7 @@
 | 고객 만족도 | 같은 DB `voc-dashboard/data` (recs: month·fsr·team·org·ts·avg·q1~q3·comment) | 읽기만. 3점 이하 = min(q1,q2,q3) ≤ 3. 후속 조치는 포털 `talk/vocfu/{해시}` |
 | KPI | `fsg-kpi.html`(접근 코드 암호화) | **관리자 PC(코드 저장된 기기)에서 그 페이지를 숨은 iframe으로 열고 `curPeriod()/stats()/renderProd()` 결과를 읽어** `talk/kpisvc`(FSG)·`talk/kpime/{팀_이름}`(개인)에 올림. 계산 기준을 복제·변경하지 않음 |
 | 수리이력(시스멕스톡 2016~) | 포털 `talk/hist/{meta,c/{연도a|b}}` — 반년 단위 gzip+base64(청크당 ≤2.4MB, 규칙 ≤4,000,000자), 읽기 승인 직원·쓰기 관리자 | `hist.html`(같은 출처 iframe 앱 `#app-hist`)이 청크를 받아 이 기기 IndexedDB(`fs-hist`)에 저장(meta의 청크 해시가 바뀐 것만 다시), 메모리에서 검색. 올리기 = 관리자가 `hist.html`의 「데이터 올리기」로 `fs-hist-upload.json`(엑셀 4개 → 정제·마스킹·반년 청크로 만든 번들) 선택 |
-| Slack 요청(198) | 포털 `talk/slack/{meta,req,feed}` — 읽기 승인 직원. `req/{cso|night}_…`·`feed` 는 서버만 씀(Slack 앱 연결 후 `slackPull` 1분마다). **#group-sysmex-talk 글은 포털 대화방으로**(200, Slack → 포털 한쪽만): `talk/msgs/{방}/s{ts}` = `{uid:"slack",name,text,ts,slk:{ch,ts,cn}}`, 방 = 작성자 이름을 명단과 맞춰 사무소방 > 팀방, 명단에 없거나 동명이인이면 전체방(`slkRoomFor_`), 푸시 없음, Slack 수정·삭제·스레드 답글은 안 옮김, 새 글은 1분 트리거 + (설정하면) Slack 이벤트로 몇 초 안에(213), `req/p_…` 는 직원의 「Slack 글 붙여넣기」(규칙: 만든 사람 `pu`, 원문·시각 고정, 지우기는 만든 사람·관리자) | 양식 나누기 `slkClean_`·`slkParse_`·`slkPerson_` 는 `notify.gs` 와 `index.html` 이 글자 그대로 같아야 함(`tests/slack_parse.js`). 봇 토큰은 스크립트 속성 `SLACK_BOT_TOKEN` 에만 |
+| Slack 요청(198) | 포털 `talk/slack/{meta,req,feed}` — 읽기 승인 직원. `req/{cso|night}_…`·`feed` 는 서버만 씀(Slack 앱 연결 후 `slackPull` 1분마다). **#group-sysmex-talk 글은 포털 대화방으로**(200, 요청 채널 글은 CS 방으로도 — 222, Slack → 포털 한쪽만): `talk/msgs/{방}/s{ts}` = `{uid:"slack",name,text,ts,slk:{ch,ts,cn}}`, 방 = 작성자 이름을 명단과 맞춰 사무소방 > 팀방, 명단에 없거나 동명이인이면 전체방(`slkRoomFor_`), 푸시 없음, Slack 수정·삭제·스레드 답글은 안 옮김, 새 글은 1분 트리거 + (설정하면) Slack 이벤트로 몇 초 안에(213), `req/p_…` 는 직원의 「Slack 글 붙여넣기」(규칙: 만든 사람 `pu`, 원문·시각 고정, 지우기는 만든 사람·관리자) | 양식 나누기 `slkClean_`·`slkParse_`·`slkPerson_` 는 `notify.gs` 와 `index.html` 이 글자 그대로 같아야 함(`tests/slack_parse.js`). 봇 토큰은 스크립트 속성 `SLACK_BOT_TOKEN` 에만 |
 | 실마리 | `https://balhm12.github.io/sysmex-ts/` 암호화 데이터 | 같은 출처라 비밀번호 키(`sysmex-ts-key`) 공유. 검색 인덱스·장비 상세(원인·조치·부품) 복호화 |
 
 ## 3. 권한·보는 기준
@@ -82,7 +82,7 @@
 - **사람이 만든 것처럼 보이게 검토한다.** 만들거나 고친 화면은 글씨체·글자 크기 단계·표(정렬, 숫자 오른쪽 맞춤, 열 폭, 머리글)·구성(여백 간격, 정렬, 제목 계층)을 확인하고 어색한 곳을 고친다. 이모지 장식, 과한 그라디언트·그림자, 같은 크기 카드의 나열, 들쑥날쑥한 모서리·굵기를 쓰지 않는다. 기존 화면의 모양은 크게 바꾸지 않는다.
 - 확인은 PC 1280과 휴대폰 390의 실제 화면 캡처로 한다(실데이터·실명은 합성 데이터로 대체). 시안은 먼저 보여 주고 승인 뒤 머지한다.
 
-## 6. 현재 상태 (2026-11-09 기준, 버전 2026-11-09.221 + hist.html v2.1(2차 개선))
+## 6. 현재 상태 (2026-11-09 기준, 버전 2026-11-09.222 + hist.html v2.1(2차 개선))
 
 - 배포됨: 디자인 v3, 하단 탭 홈·조직도·대화·기술·메뉴(좌우 밀기), 오늘의 브리핑·다음 일정·길찾기, 기술정보 검색(#tech)·바코드 스캔, 팀 현황(#team), Ctrl+K·글자 크기, 스켈레톤·당겨서 새로고침, 마지막 받은 값 먼저 보여 주기(일정·만족도·KPI·실마리 — 빠른 첫 화면 용도), 1분 둘러보기·새 기능 안내, 접근성(터치 40~44px·대비), 사용 현황(관리), 아침 일정 브리핑(notify v18), KPI 1인당 생산성·사무소별 비교(실데이터 확인 00:04), 조직도 한 줄 행·바로 전화/1:1, 대화 목록 「우리 팀」 우선
 - 자동 개선 사이클 C1~C10 완료(2026-10-30 22:45 ~ 10-31 02:20)
@@ -94,6 +94,7 @@
 
 ## 7. 변경 이력 (최근 것 위)
 
+- 2026-11-09 · 222 **CS 방에 Slack CSO·CS쉐어링 글**(사용자 요청): 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg)의 맨 위 글을 모두(학술요청·완료 글 포함, 스레드 답글 제외) 포털 `talk/msgs/cs/s{ts}` 로도 옮김(`slkToCs_`, 요청함 반영과 별개, 푸시 없음, Slack → 포털 한쪽만). 처음 한 번 최근 7일치 옮기기(`slkCsBackfill_`, 스크립트 속성 `SLK_CS_BF_{채널}`). 이름 옆 표시 「Slack · CSO」/「Slack · CS쉐어링」. CS 방 글은 전체방에도 함께 보임(`ALL_SRC`). ②**CSO 직원 알아보기**(사용자 확인 「요청 채널 작성자 = CSO 맴버」, CS쉐어링은 「[CSIS] 상담사 …」): 요청 채널에 글을 쓴 사람 중 포털 명단에 없는 사람을 Slack 사용자 id 로 `talk/slack/cso/{id}={n,at}` 에 기록(실명은 DB 에만, `slkMarkCso_`) → 이 사람들의 #group-sysmex-talk 일반 글은 전체방 대신 **CS 방**. 「연결 전 미리보기」도 같은 기준(「CS 방 · CSO 직원」). ③**이름 맞추기 보강**(사용자 지적 「이름으로 매칭 — 이경민·채대석 등」): `slkPerson_` 가 「[서부팀]」 같은 대괄호 머리와 「SKR FSW」 같은 영문 앞머리(뒤에 한글 이름이 있을 때)도 뺌, 「CS쉐어링·CSIS·CSO」 이름(봇·워크플로)은 CS 방, 배포 뒤 한 번 전체방에 있던 Slack 글을 새 기준으로 다시 맞춰 옮김(`slkReroute_`, 스크립트 속성 `SLK_REROUTE_222`, 키 `s…` 범위만 — 포털 글은 그대로). 시험 `tests/slack_pull.js` 222·222-B·222-C, `tests/slack_parse.js` 222. notify v34
 - 2026-11-09 · 221 PC 왼쪽 레일에서 「조직도」를 맨 아래(메뉴 다음)로(사용자 요청). 순서 = 홈·요청·대화·기술·Talk·(관리)·업무 앱·메뉴·조직도 … 설정
 - 2026-11-09 · 220 ①PC 왼쪽 레일 「기술」 아래 **「Talk」 = Sysmex Talk 검색**(`#rTalk` → `goHist`, 사용자 요청) ②통합 검색(홈 검색 「전체」)은 Sysmex Talk 자료(약 26MB, 기기 IndexedDB)를 직접 찾지 않음 — 결과 맨 위에 「Sysmex Talk에서 「검색어」 찾기」 줄(`.stalk`)을 두어 한 번에 같은 검색어로 엶(사용자 질문 「홈 검색이 Sysmex Talk 까지 되나」)
 - 2026-11-09 · 219 「수리이력 검색」 이름을 **「Sysmex Talk 검색」**으로(사용자 지시): 바로가기·메뉴(`HLINKS.hist`), 포털 안 앱 탭(`APPS.hist`), 홈 검색 범위, 기술 화면 「Sysmex Talk에서 찾기」, Slack 요청 상세 「Sysmex Talk ›」, 둘러보기·새 기능 안내 문구, 사용 현황 이름, `hist.html` 창 제목. 저장 경로(`talk/hist`)·함수 이름(`goHist`)·키는 그대로

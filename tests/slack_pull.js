@@ -10,7 +10,7 @@ const ctx={
   if(u.startsWith('https://slack.com/api/')){const m=u.split('/api/')[1].split('?')[0];const q=new URLSearchParams(u.split('?')[1]||'');
     let r={ok:true};if(m==='conversations.history')r={ok:true,messages:hist[q.get('channel')]||[]};
     if(m==='conversations.replies'){const p=hist[q.get('channel')].find(x=>x.ts===q.get('ts'));r={ok:true,messages:[p,{ts:p.latest_reply,user:'U2',text:'제가 봅니다'}]};}
-    if(m==='users.info')r={ok:true,user:{real_name:q.get('user')==='U1'?'테스트1':'테스트2'}};
+    if(m==='users.info')r={ok:true,user:{real_name:q.get('user')==='U1'?'테스트1':q.get('user')==='U3'?'[CSIS] 상담사 테스트칠':'테스트2'}};
     if(m==='auth.test')r={ok:true,user_id:'B1',team_id:'T'};
     return {getContentText:()=>JSON.stringify(r),getResponseCode:()=>200};}
   const path=u.replace(props.DB_URL+'/','').split('.json')[0];
@@ -95,4 +95,53 @@ if(require.main===module){
   assert(b.st==='doing' && b.mv && b.mv.n==='테스트2' && b.who==='테스트2','B 방문 중');
   assert(c.st==='new' && !c.mv && !c.fin,'C 그대로');
   console.log('slack_pull 215: 통과');
+}
+// 222: 요청 채널(CSO·CS쉐어링) 글 → CS 방 (처음 한 번 7일치 + 새 글), talk 채널 글은 CS 방에 안 감, 같은 글은 한 번
+if(require.main===module){
+  const assert=require('assert');
+  const cs=()=>Object.values((db.talk.msgs||{}).cs||{});
+  assert(props.SLK_CS_BF_C0AT8RP3QDN && props.SLK_CS_BF_C0AHFJGKMTL, '처음 한 번 옮기기 표시');
+  const t0=Date.now()/1000-20;
+  hist.C0AHFJGKMTL=[{ts:t0.toFixed(6),user:'U2',text:'[CS쉐어링 접수] 테스트사병원 야간 문의'}];
+  hist.C0AT8RP3QDN.push({ts:(t0+1).toFixed(6),user:'U1',text:'&lt;학술 요청&gt; 테스트오병원 자료 요청'});
+  hist.C0C6U7RQ44D=[{ts:(t0+2).toFixed(6),user:'U1',text:'테스트육병원 마칩니다'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true); g.slackPull(true);
+  const M=cs();
+  assert(M.some(m=>m.slk.cn==='handover-cssharing-fsg'&&/테스트사병원/.test(m.text)), 'CS쉐어링 글이 CS 방에');
+  assert(M.some(m=>/학술 요청/.test(m.text)), '요청함에 안 가는 학술요청도 CS 방에는 표시');
+  assert(M.every(m=>m.uid==='slack'&&m.slk.cn!=='group-sysmex-talk'), 'talk 채널 글은 CS 방에 없음');
+  assert.strictEqual(M.filter(m=>/테스트사병원/.test(m.text)).length,1,'같은 글은 한 번');
+  console.log('slack_pull 222: 통과');
+}
+// 222-B: 요청 채널에 글 쓴 명단 밖 사람 = CSO → #group-sysmex-talk 일반 글은 전체방 대신 CS 방, 명단에 있는 사람은 CSO 로 안 봄
+if(require.main===module){
+  const assert=require('assert');
+  const t0=Date.now()/1000-10;
+  hist.C0AHFJGKMTL=[{ts:t0.toFixed(6),user:'U3',text:'[CS쉐어링 접수] 테스트팔병원 야간 문의'}];
+  hist.C0AT8RP3QDN=[{ts:(t0+1).toFixed(6),user:'U1',text:'테스트구병원 이동합니다'}];
+  hist.C0C6U7RQ44D=[{ts:(t0+2).toFixed(6),user:'U3',text:'테스트십병원 회신 부탁드립니다'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true);
+  const cso=db.talk.slack.cso||{};
+  assert(cso.U3 && !cso.U1, 'U3(명단 밖)만 CSO 로 기록, U1(명단)은 아님');
+  const inCs=Object.values(db.talk.msgs.cs).some(m=>/테스트십병원/.test(m.text));
+  const inAll=Object.values(db.talk.msgs.all||{}).some(m=>/테스트십병원/.test(m.text));
+  assert(inCs && !inAll, 'CSO 직원의 talk 글은 CS 방으로');
+  console.log('slack_pull 222-B: 통과');
+}
+// 222-C: 전체방에 있던 Slack 글을 새 이름 기준으로 다시 맞춤([서부팀]·SKR FSW 앞머리, CS쉐어링 봇 → CS 방), 포털 글은 그대로
+if(require.main===module){
+  const assert=require('assert');
+  db.talk.msgs.all=Object.assign(db.talk.msgs.all||{},{
+    s111:{uid:'slack',name:'SKR FSW 테스트2',text:'가',ts:1,slk:{ch:'C0C6U7RQ44D',ts:'1.0',cn:'group-sysmex-talk'}},
+    s112:{uid:'slack',name:'CS쉐어링 전화접수 인계사항',text:'나',ts:2,slk:{ch:'C0C6U7RQ44D',ts:'2.0',cn:'group-sysmex-talk'}},
+    s113:{uid:'slack',name:'[동부팀]모름이',text:'다',ts:3,slk:{ch:'C0C6U7RQ44D',ts:'3.0',cn:'group-sysmex-talk'}},
+    '-p1':{uid:'u1',name:'테스트1',text:'포털 글',ts:4}});
+  delete props.SLK_REROUTE_222; g.slackPull(true);
+  const A=db.talk.msgs.all;
+  assert(!A.s111 && db.talk.msgs.west && db.talk.msgs.west.s111 && db.talk.msgs.west.s111.name==='테스트2','SKR FSW 테스트2 → 팀방');
+  assert(!A.s112 && db.talk.msgs.cs.s112,'CS쉐어링 봇 → CS 방');
+  assert(A.s113 && A.s113.name==='모름이' && A['-p1'],'명단 밖은 전체방(이름만 정리), 포털 글 그대로');
+  console.log('slack_pull 222-C: 통과');
 }

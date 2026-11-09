@@ -53,4 +53,5 @@ eq(['FS EAST 윤테스트','SKR FS 테스트30','SKR FS Central 테스트31','FS
  eq(/patch\.st = 'done'/.test(sy),false,'slkSync_: ✅ 로 완료 처리 안 함');eq(/patch\.ack/.test(sy),true,'slkSync_: ✅ → ack');
  eq(/isDpToday_\(name\)/.test(pick('slackAct_')),false,'slackAct_: ack 는 승인된 직원 누구나(211)');
  eq(/slkCanAck\(r\)/.test(pickH('slkDo')),true,'화면: ack 는 slkCanAck(승인된 직원)');}
+eq(['[서부팀]테스트40','SKR FSW 테스트41','[CSIS] 상담사 CS쉐어링','SKR FSE 테스트42 (Ray)','John Smith','CS쉐어링 전화접수 인계사항'].map(slkPerson_),['테스트40','테스트41','상담사 CS쉐어링','테스트42','John Smith','CS쉐어링 전화접수 인계사항'],'222 이름 앞 [팀]·SKR FSW 빼기');
 console.log(fail?fail+'개 실패':'모두 통과');process.exit(fail?1:0);
