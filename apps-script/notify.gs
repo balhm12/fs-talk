@@ -103,7 +103,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v29';
+const NOTIFY_VER = 'v30';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -923,7 +923,7 @@ function slackAct_(req){
   const id = String(req.id||''); if(!/^[a-z]+_[-\w]{6,40}$/.test(id)) return {ok:false,err:'bad id',ver:NOTIFY_VER};
   const r = db_('talk/slack/req/'+id); if(!r || !SLACK_CH[r.ch]) return {ok:false,err:'요청이 없습니다',ver:NOTIFY_VER};
   const op = String(req.op||''), name = String(me.name||'').slice(0,20), text = String(req.text||'').trim().slice(0,1500);
-  if(op === 'ack' && !isAdm && !(r.who === name || r.mention === name || isDpToday_(name))) return {ok:false,err:'담당자·오늘 DP·관리자만 확인할 수 있습니다',ver:NOTIFY_VER};
+  // 211: ✅ 확인은 승인된 직원 누구나 (근무표대로 안 하는 경우가 많음 — 사용자 결정)
   const post = function(t){ return slackApi_('chat.postMessage',{channel:r.ch, thread_ts:r.ts, text:t, username:name+' (FS 포털)', unfurl_links:false}, true); };
   const now = Date.now(), patch = {};
   if(r.multi && op !== 'claim' && op !== 'ack' && op !== 'done' && op !== 'reopen') return {ok:false,err:'야간 인계 요약 글은 스레드 회신 대신 담당·완료만 할 수 있습니다',ver:NOTIFY_VER};

@@ -51,6 +51,6 @@ eq(['FS EAST 윤테스트','SKR FS 테스트30','SKR FS Central 테스트31','FS
 // 210: ✅ = 확인(접수) — slkSync_ 가 ✅ 로 「완료」 처리하지 않음, slackAct_ ack 는 담당·오늘 DP·관리자
 {const gs=require('fs').readFileSync(__dirname+'/../apps-script/notify.gs','utf8');const sy=pick('slkSync_');
  eq(/patch\.st = 'done'/.test(sy),false,'slkSync_: ✅ 로 완료 처리 안 함');eq(/patch\.ack/.test(sy),true,'slkSync_: ✅ → ack');
- eq(/isDpToday_\(name\)/.test(pick('slackAct_')),true,'slackAct_: ack 는 오늘 DP 확인');
- eq(/slkCanAck\(r\)/.test(pickH('slkDo')),true,'화면: ack 는 담당·DP·관리자');}
+ eq(/isDpToday_\(name\)/.test(pick('slackAct_')),false,'slackAct_: ack 는 승인된 직원 누구나(211)');
+ eq(/slkCanAck\(r\)/.test(pickH('slkDo')),true,'화면: ack 는 slkCanAck(승인된 직원)');}
 console.log(fail?fail+'개 실패':'모두 통과');process.exit(fail?1:0);
