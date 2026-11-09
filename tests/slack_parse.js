@@ -46,6 +46,11 @@ eq(['FS EAST 윤테스트','SKR FS 테스트30','SKR FS Central 테스트31','FS
 // 205: Slack 요청함 바꾸기(붙여넣기·담당·회신·완료·삭제)는 관리자만 — 규칙·서버·화면 세 곳
 {const rules=JSON.parse(require('fs').readFileSync(__dirname+'/../database.rules.json','utf8'));const w=rules.rules.talk.slack.req.$id['.write'];
  eq(/talk\/admins\//.test(w)&&/status'\)\.val\(\) === 'approved'/.test(w),true,'규칙: 요청함 쓰기 = 승인된 관리자');
- eq(/talk\/admins\/'\+uid\) !== true/.test(pick('slackAct_')),true,'서버 slackAct_: 관리자 확인');
- eq(/if\(!isAdmin\)/.test(pickH('slkDo'))&&/if\(!isAdmin\)return/.test(pickH('openSlkPaste')),true,'화면: 직원은 확인만');}
+ eq(/!isAdm && String\(req\.op\|\|''\) !== 'ack'/.test(pick('slackAct_')),true,'서버 slackAct_: ack 외에는 관리자 확인');
+ eq(/if\(!isAdmin&&!\(op==="ack"&&slkCanAck\(r\)\)\)/.test(pickH('slkDo'))&&/if\(!isAdmin\)return/.test(pickH('openSlkPaste')),true,'화면: 직원은 확인만');}
+// 210: ✅ = 확인(접수) — slkSync_ 가 ✅ 로 「완료」 처리하지 않음, slackAct_ ack 는 담당·오늘 DP·관리자
+{const gs=require('fs').readFileSync(__dirname+'/../apps-script/notify.gs','utf8');const sy=pick('slkSync_');
+ eq(/patch\.st = 'done'/.test(sy),false,'slkSync_: ✅ 로 완료 처리 안 함');eq(/patch\.ack/.test(sy),true,'slkSync_: ✅ → ack');
+ eq(/isDpToday_\(name\)/.test(pick('slackAct_')),true,'slackAct_: ack 는 오늘 DP 확인');
+ eq(/slkCanAck\(r\)/.test(pickH('slkDo')),true,'화면: ack 는 담당·DP·관리자');}
 console.log(fail?fail+'개 실패':'모두 통과');process.exit(fail?1:0);
