@@ -1683,6 +1683,10 @@ html[data-theme=dark] .hm5tog{color:#8CC4F5}
 /* 218: 요청함 연결 줄 — 「Slack 바로 받기」가 붙으면서 휴대폰에서 상태 글자가 세로로 쪼개지던 것 */
 .slkcn{flex-wrap:wrap}.slkcn>span:nth-child(2){flex:1 1 auto;min-width:160px}.slkcn .slkevt,.slkcn .slkerr{flex:0 1 auto}
 @media (max-width:820px){.slkcn>span:nth-child(2){flex:1 1 calc(100% - 20px)}.slkcn .hmore{margin-left:0}}
+.stalk{display:flex;align-items:center;gap:10px;width:100%;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin:0 0 10px;font:inherit;color:var(--text);text-align:left;cursor:pointer}
+.stalk>span{flex:1;min-width:0;display:flex;flex-direction:column}.stalk b{font-size:14px;color:var(--blue)}.stalk small{font-size:12px;color:var(--sub)}
+html[data-theme=dark] .stalk b{color:#8CC4F5}
+@media (pointer:coarse){.stalk{min-height:48px}}
 </style>
 
 </head>
@@ -1768,6 +1772,7 @@ html[data-theme=dark] .hm5tog{color:#8CC4F5}
     <button id="rSearch" title="검색" hidden><span class="ri" data-ic="search"></span>검색</button>
     <button id="rSaved" title="저장한 글" hidden><span class="ri" data-ic="bookmark"></span>저장</button>
     <button id="rTech" title="기술정보 검색"><span class="ri" data-ic="doc"></span>기술</button>
+    <button id="rTalk" title="Sysmex Talk 검색 — 2016~ 현장 대화 기록"><span class="ri" data-ic="search"></span>Talk</button>
     <button id="rAdmin" title="관리" hidden><span class="ri" data-ic="shield"></span>관리</button>
     <div class="rsep"></div>
     <button id="rApps" title="업무 앱 — 설치일정·근무일정·실마리·전국시스템" aria-haspopup="true" aria-expanded="false"><span class="ri" data-ic="sysgrid"></span>업무 앱</button>
@@ -1915,7 +1920,7 @@ html[data-theme=dark] .hm5tog{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.219";
+const APP_VERSION="2026-11-09.220";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3402,8 +3407,10 @@ function renderExt(q){
   const ws=q.split(/\s+/).filter(Boolean),hit=s=>{s=String(s||"").toLowerCase();return ws.every(w=>s.includes(w));};
   const bl=boardList("tech").concat(boardList("video")).filter(x=>hit([x.t,x.d,x.n,x.no,x.ecr].join(" ")));
   const ev=schData?schData.ev.filter(e=>hit([e.title,e.device,e.team,e.assignee].join(" "))):[];
-  if(!bl.length&&!ev.length){box.hidden=true;return;}
   box.hidden=false;
+  /* 220: 통합 검색에서 Sysmex Talk(2016~ 대화 38만 건)까지 한 번에 — 자료가 커서(약 26MB) 이 화면에서 바로 찾지 않고, 같은 검색어로 Sysmex Talk 검색을 엶 */
+  {const tk=el("button","stalk");tk.type="button";tk.appendChild(icEl("search","",16));const tx=el("span");tx.appendChild(el("b",null,"Sysmex Talk에서 「"+String(($("q")||{}).value||q).trim().slice(0,30)+"」 찾기"));tx.appendChild(el("small",null,"2016~ 현장 대화 기록"));tk.appendChild(tx);tk.appendChild(icEl("chevron","",16));tk.onclick=()=>goHist(String($("q").value||q).trim());box.appendChild(tk);}
+  if(!bl.length&&!ev.length)return;
   if(bl.length){const hd=el("div","silhd");hd.appendChild(icEl("doc","",16));hd.appendChild(el("b",null,"기술정보·교육"));box.appendChild(hd);bl.slice(0,6).forEach(x=>box.appendChild(boardRow(x)));}
   if(ev.length){const hd=el("div","silhd");hd.appendChild(icEl("calendar","",16));hd.appendChild(el("b",null,"이번 주 일정"));const lk=el("button","sillink","설치일정 열기 ›");lk.onclick=()=>openApp("install");hd.appendChild(lk);box.appendChild(hd);
     ev.slice(0,5).forEach(e=>{const r=el("div","schev"+(e.start<=schData.today?" now":""));r.appendChild(el("span","schd",schDateLbl(e,schData.today).lb));const cc=SCH_CAT[e.category]||[e.category||"일정","#9E9E9E"];const tg=el("span","schc",cc[0]);tg.style.setProperty("--c",cc[1]);r.appendChild(tg);
@@ -4928,7 +4935,7 @@ document.addEventListener("click",e=>{if(infoOpen&&!$("info").contains(e.target)
 function showView(){
   ["chatView","searchView","savedView","settingsView","adminView","homeView","appView","orgView","techView","teamView","menuView","reqView"].forEach(v=>$(v).classList.toggle("on",v===view+"View"));
   $("app").classList.toggle("v-home",view==="home"||view==="app"||view==="org"||view==="tech"||view==="team"||view==="menu"||view==="req");$("app").classList.toggle("v-app",view==="app");
-  document.querySelectorAll("[data-app]").forEach(a=>a.classList.toggle("on",view==="app"&&a.dataset.app===appKey));
+  document.querySelectorAll("[data-app]").forEach(a=>a.classList.toggle("on",view==="app"&&a.dataset.app===appKey));$("rTalk").classList.toggle("on",view==="app"&&appKey==="hist");
   $("rTech").classList.toggle("on",view==="tech");
   if(view==="app")showApp();
   const ta=$("topAv");ta.textContent="";$("infoBtn").hidden=view!=="chat";
@@ -4998,6 +5005,7 @@ $("tMenu").onclick=()=>go("menu");
 $("rSettings").onclick=()=>go("settings");
 /* 217: PC 왼쪽 레일 정리 — 검색·저장은 메뉴로, 설치·근무·실마리·전국시스템은 「업무 앱」 펼침 */
 $("rMenu").onclick=()=>go("menu");
+$("rTalk").onclick=()=>goHist("");   // 220: 왼쪽 레일 「Talk」 = Sysmex Talk 검색
 {const fly=$("rFly"),ab=$("rApps");const shut=()=>{fly.hidden=true;ab.setAttribute("aria-expanded","false");ab.classList.remove("open");};
  ab.onclick=e=>{e.stopPropagation();const o=fly.hidden;fly.hidden=!o;ab.setAttribute("aria-expanded",o?"true":"false");ab.classList.toggle("open",o);if(o){const r=ab.getBoundingClientRect();fly.style.top=Math.max(8,Math.min(innerHeight-260,r.top))+"px";}};
  fly.addEventListener("click",shut);document.addEventListener("click",e=>{if(!fly.hidden&&!fly.contains(e.target)&&e.target!==ab)shut();});document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!fly.hidden)shut();});}
@@ -6670,7 +6678,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
