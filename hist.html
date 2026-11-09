@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Sysmex Talk Archive · 수리이력 검색</title>
+<title>Sysmex Talk 검색</title>
 <style>
 :root{--pri:#005BAC;--sec:#00B8EE;--ok:#3FBA46;--warn:#E69E0B;--bad:#E7413E;--tx:#3F3F3F;--sub:#5E6977;--line:#DDDDDD;--card:#F7F9FC;--soft:#EAF2FB;--bg:#fff;--hl:#FFF1B8;
  --font:Pretendard,"Malgun Gothic","맑은 고딕",Arial,sans-serif}
@@ -868,7 +868,7 @@ function adminUI(parent){
       b.disabled=true;b.textContent="파일 확인 중…";
       const B=JSON.parse(await file.text());
       // 1) 올리기 전 검증 — 하나라도 어긋나면 아무것도 쓰지 않는다
-      if(!B||!B.meta||!Array.isArray(B.meta.chunks)||!B.chunks)throw new Error("올바른 수리이력 번들이 아닙니다 (meta·chunks 없음)");
+      if(!B||!B.meta||!Array.isArray(B.meta.chunks)||!B.chunks)throw new Error("올바른 Sysmex Talk 번들이 아닙니다 (meta·chunks 없음)");
       const keys=B.meta.chunks.map(c=>c.k);
       for(const k of keys){if(!/^[0-9]{4}[ab]$/.test(k))throw new Error("구간 이름이 올바르지 않습니다: "+k);
         if(typeof B.chunks[k]!=="string"||!B.chunks[k])throw new Error("meta에 있는 구간 자료가 번들에 없습니다: "+k);
