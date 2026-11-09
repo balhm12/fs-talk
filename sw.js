@@ -1,4 +1,16 @@
 /* FS 포털 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면) + 푸시 알림 수신. 메시지 데이터는 캐시하지 않음 */
+/* 238: 알림을 누르면 그 방으로 — Firebase 의 클릭 처리는 이미 열린 창을 앞으로 가져오기만 하고(주소 #room-… 를 못 씀, 아이폰 홈 화면 앱은 처음 열 때도 주소 끝을 버림),
+ *  이 처리기는 Firebase 보다 먼저 등록해야 먼저 불림. 누른 방을 기록(앱이 새로 열릴 때 읽음)하고 열려 있는 창에도 알림 */
+self.addEventListener("notificationclick", e => {
+  try {
+    const d = e.notification.data || {}, f = d.FCM_MSG || d;
+    const room = String((f.data && f.data.room) || d.room || "");
+    if (!/^[\w-]+$/.test(room)) return;
+    e.waitUntil(caches.open("fstalk-meta").then(c => c.put("./openroom", new Response(room + "|" + Date.now())))
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then(list => list.forEach(c => c.postMessage({ fsOpenRoom: room }))).catch(() => {}));
+  } catch (err) {}
+});
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 firebase.initializeApp({
