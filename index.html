@@ -1927,7 +1927,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.227";
+const APP_VERSION="2026-11-09.228";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1939,7 +1939,7 @@ const FIREBASE_CONFIG={
 };
 const ROOMS=[
   {id:"notice",name:"전체공지",icon:"📢",desc:"FSG 전체 공지",grp:"전체"},
-  {id:"all",name:"전체방",icon:"🌐",desc:"FS·CS 방 대화가 함께 보입니다(Slack 글 제외) · 여기서 쓴 글은 전체방에만 올라가요",grp:"전체"},
+  // 228: 전체방(all) 삭제 — 사용자 결정 「운영에 의미가 없음」. 화면·목록·검색·음성 대상에서 빠짐, 저장된 글(talk/msgs/all)은 지우지 않음
   {id:"ts",name:"FS",icon:"🛠",desc:"Field Service · 현장 조치 공유",grp:"전체"},
   {id:"cs",name:"CS",icon:"☎",desc:"고객지원",grp:"전체"},
   {id:"west",name:"FS WEST",icon:"W",desc:"FS WEST 팀방",grp:"팀"},
@@ -5818,7 +5818,7 @@ function setPlaceholder(){if(isSk(room)){const r=getRoom(room);input.placeholder
 setPlaceholder();window.matchMedia("(max-width:820px)").addEventListener("change",setPlaceholder);window.matchMedia("(max-width:1100px)").addEventListener("change",setPlaceholder);
 
 /* ---------- 검색 ---------- */
-$("fRoom").appendChild(new Option("모든 방",""));ROOMS.forEach(r=>$("fRoom").appendChild(new Option((r.sub?"  └ ":"")+(r.id==="all"?"전체방에 직접 쓴 글":r.name),r.id)));
+$("fRoom").appendChild(new Option("모든 방",""));ROOMS.forEach(r=>$("fRoom").appendChild(new Option((r.sub?"  └ ":"")+r.name,r.id)));
 function renderSearch(){
   const box=$("chips");box.textContent="";
   const cnt={};msgs.forEach(m=>{(m.text.match(/#[^\s#]+/g)||[]).forEach(t=>{cnt[t]=(cnt[t]||0)+1;});});
@@ -6741,7 +6741,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
