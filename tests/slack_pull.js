@@ -171,3 +171,19 @@ if(require.main===module){
   assert(+props.SLK_TS_C0AT8RP3QDN>=t0+300 && props.SLK_RESCAN_227,'읽은 시각은 뒤로 안 감·한 번 표시');
   console.log('slack_pull 227: 통과');
 }
+// 229: 주소(permalink)만 있는 글 → 그 글 내용을 펼쳐 저장, 이미 들어온 것도 한 번 펼침
+if(require.main===module){
+  const assert=require('assert');
+  const lts='1794175506.273949', now=Date.now()/1000;
+  hist.C0AHFJGKMTL=[{ts:lts,user:'U3',text:'11/8 CS쉐어링 전화접수 인계사항\n[CS쉐어링 접수] [인계 : L2]\n1) 기 관 명(지역) : 테스트희망병원 (서울)'}];
+  hist.C0AT8RP3QDN=[];hist.C0C6U7RQ44D=[{ts:(now-5).toFixed(6),bot_id:'B9',subtype:'bot_message',username:'CS쉐어링 전화접수 인계사항',text:'<https://skr-x.slack.com/archives/C0AHFJGKMTL/p1794175506273949>'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(now-10);
+  props.SLK_TS_C0AHFJGKMTL=String(+lts+1);
+  g.slackPull(true);
+  const k='s'+(now-5).toFixed(6).replace('.','_'),v=db.talk.msgs.sk_talk[k];
+  assert(v&&/^↪ #handover-cssharing-fsg 글\n/.test(v.text)&&/테스트희망병원/.test(v.text),'새 글: 주소 대신 내용 '+(v&&v.text.slice(0,40)));
+  db.talk.msgs.sk_talk.s999_1={uid:'slack',name:'CS쉐어링 전화접수 인계사항',text:'https://skr-x.slack.com/archives/C0AHFJGKMTL/p1794175506273949',ts:1,slk:{ch:'C0C6U7RQ44D',ts:'999.1',cn:'group-sysmex-talk'}};
+  delete props.SLK_LINK_229;g.slackPull(true);
+  assert(/테스트희망병원/.test(db.talk.msgs.sk_talk.s999_1.text)&&props.SLK_LINK_229,'옛 글도 한 번 펼침');
+  console.log('slack_pull 229: 통과');
+}
