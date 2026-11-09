@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v40';
+const NOTIFY_VER = 'v41';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1016,8 +1016,25 @@ function slkTeamRooms_(raw, text, name, C){
   while((m = re.exec(String(raw||'')))) add(SLK_GRP_ROOM[m[1].toLowerCase()]);
   if(!grp.length){ const re2 = /인계\s*:\s*FS\s*(WEST|EAST|CENTRAL|SOUTH)\s*(대전|광주|부산|대구)?/gi; while((m = re2.exec(String(text||'')))) add(slkTeamRoom_(m[1], m[2])); }
   const au = slkRoomFor_(name, slkRoster_()), author = au === 'all' ? '' : au;
-  if(C.type === 'req') return grp.length ? grp : (author ? [author] : []);
+  if(C.type === 'req') return grp.length ? grp : (author ? [author] : (C.k === 'night' ? slkNightRooms_(raw, text) : []));
   return author ? [author] : grp;
+}
+/* 237: CS쉐어링(주말·야간) 지역 배정 — 사용자 결정: 서울·경기·강원·제주·인천은 EAST·WEST·FSS 공동 대응, 그 밖은 지방 팀. 멘션된 담당자의 팀이 우선, 없으면 기관명 (지역).
+ * slkNightRegion_ 은 index.html 의 slkNightRegion 과 글자 그대로 같아야 함(tests/night_region.js) */
+function slkNightRegion_(a){ a = String(a||'');
+  if(/^(서울|경기|강원|제주|인천|목동)/.test(a)) return 'ew';
+  if(/(대전|세종|충남|충북|충청|청주|전북|전남|전라|광주)/.test(a)) return 'central';
+  if(/(부산|대구|울산|경남|경북|경상|포항)/.test(a)) return 'south';
+  return ''; }
+function slkNightRooms_(raw, text){
+  const rooms = [], add = function(r){ if(r && r !== 'all' && rooms.indexOf(r) < 0) rooms.push(r); };
+  let m; const re = /<@[A-Z0-9]+\|([^>]*)>/g, ros = slkRoster_();
+  const PAIR = {daejeon:'central', gwangju:'central', busan:'south', daegu:'south'};   // 대전·광주, 부산·대구는 함께 처리(사용자 결정) → 팀 방
+  while((m = re.exec(String(raw||'')))){ const r = slkRoomFor_(slkPerson_(m[1]), ros); add(PAIR[r] || r); }   // 담당자 멘션 = 담당 팀이 우선
+  if(rooms.length) return rooms;
+  const re2 = /기\s*관\s*명[^:：\n]*[:：][^\n]*\(([^)\n]{1,10})\)\s*$/gm;
+  while((m = re2.exec(String(text||'')))){ const g = slkNightRegion_(m[1]); if(g === 'ew'){ add('east'); add('west'); add('fss'); } else if(g) add(g); }
+  return rooms;
 }
 /* 227: 글 머리말(첫 ==== 줄 위)이나 그룹 멘션 라벨에 적힌 FS 팀 — CSO 가 「… FS WEST 로 전달」처럼 다시 넘긴 글 */
 function slkHeadTeam_(raw, text){
