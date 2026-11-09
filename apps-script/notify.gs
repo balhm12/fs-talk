@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v36';
+const NOTIFY_VER = 'v37';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -866,6 +866,7 @@ function slackPull(force, opt){
       props.setProperty('SLK_TS_'+ch, String(maxTs));   // maxTs 는 oldLast 에서 시작해 커지기만 함
     });
     if(!props.getProperty('SLK_RESCAN_227')) props.setProperty('SLK_RESCAN_227','1');
+    if(!props.getProperty('SLK_LINK_229')){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!props.getProperty('SLK_MIG_224')){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
     const min = new Date().getMinutes();
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
@@ -1019,8 +1020,39 @@ function slkHeadTeam_(raw, text){
   const h = /인계\s*:\s*FS\s*(WEST|EAST|CENTRAL|SOUTH)/i.exec(parts[0]) || /(?:^|[^A-Za-z])FS\s*(WEST|EAST|CENTRAL|SOUTH)(?![A-Za-z])/i.exec(parts[0]);
   return h ? 'FS ' + h[1].toUpperCase() : '';
 }
+/* 229: 글이 Slack 글 주소(permalink) 하나뿐이면 — 「CS쉐어링 전화접수 인계사항」 워크플로처럼 — 그 글 내용을 펼쳐 보여 줌 (사용자 지적 「주소로만 나옴」) */
+const SLK_LINK_RE = /^<?https:\/\/[\w.-]+\.slack\.com\/archives\/(C[A-Z0-9]+)\/p(\d{10})(\d{6})(?:\?([^\s>|]*))?(?:\|[^>]*)?>?$/;
+function slkExpandLink_(m, text){
+  const mm = SLK_LINK_RE.exec(String(text||'').trim()); if(!mm) return text;
+  const lch = mm[1], lts = mm[2]+'.'+mm[3], th = /thread_ts=(\d+\.\d+)/.exec(mm[4]||'');
+  let body = '';
+  ((m && m.attachments) || []).some(function(a){ const x = a.text || a.fallback || ''; if(x){ body = slkClean_(x); return true; } return false; });
+  if(!body){
+    try{
+      const j = th ? slackApi_('conversations.replies', {channel:lch, ts:th[1], limit:200})
+                   : slackApi_('conversations.history', {channel:lch, latest:lts, inclusive:'true', limit:1});
+      const o = (j.messages||[]).filter(function(x){ return x.ts === lts; })[0];
+      if(o) body = slkClean_(String(o.text||''));
+    }catch(e){ console.error(e); }
+  }
+  if(!body) return text;
+  const cn = (SLACK_CH[lch] && SLACK_CH[lch].name) || 'Slack';
+  return '↪ #'+cn+' 글\n'+body;
+}
+function slkLinkFix229_(){   // 한 번 — 이미 들어온 주소만 있는 글을 펼침
+  let n = 0;
+  ['sk_talk','sk_cso','sk_night'].forEach(function(room){
+    const all = dbQuery_('talk/msgs/'+room,'orderBy="$key"&startAt="s"&endAt="s~"') || {};
+    Object.keys(all).forEach(function(k){
+      const v = all[k]; if(!v || v.uid !== 'slack' || !SLK_LINK_RE.test(String(v.text||'').trim())) return;
+      const t = slkExpandLink_(null, v.text); if(t !== v.text){ dbPatch_('talk/msgs/'+room+'/'+k, {text:String(t).slice(0,4000)}); n++; }
+    });
+  });
+  return n;
+}
 function slkToChan_(m, raw, text, name, at, ch, C, opt){
   if(!C.pr) return;
+  text = slkExpandLink_(m, text);
   const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
   if(!t) return;
   const key = 's'+slkKey_(m.ts), v = {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}};
