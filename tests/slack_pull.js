@@ -187,3 +187,18 @@ if(require.main===module){
   assert(/테스트희망병원/.test(db.talk.msgs.sk_talk.s999_1.text)&&props.SLK_LINK_229,'옛 글도 한 번 펼침');
   console.log('slack_pull 229: 통과');
 }
+// 232: 같은 글을 두 채널에 올리면 팀 방엔 한 번, 이미 두 번 들어간 것은 정리
+if(require.main===module){
+  const assert=require('assert');const now=Date.now()/1000;
+  const form='&lt;기술요청&gt;&lt;인계 : FS EAST &gt;\n1) 기 관 명 : 테스트척병원\n2) 장 비 명 : XN-1000\n3) 요청사항 : CAL 전 점검';
+  hist.C0AT8RP3QDN=[{ts:(now-6).toFixed(6),user:'U3',text:form}];hist.C0AHFJGKMTL=[];hist.C0C6U7RQ44D=[{ts:(now-5).toFixed(6),user:'U3',text:form}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(now-10);
+  g.slackPull(true);
+  const E=Object.values(db.talk.msgs.east||{}).filter(v=>v&&/테스트척병원/.test(v.text));
+  assert.strictEqual(E.length,1,'팀 방엔 한 번');
+  assert(Object.values(db.talk.msgs.sk_cso).some(v=>v&&/테스트척병원/.test(v.text))&&Object.values(db.talk.msgs.sk_talk).some(v=>v&&/테스트척병원/.test(v.text)),'채널 방엔 각각');
+  db.talk.msgs.east.s100_1t={uid:'slack',name:'X',text:'같은 글',ts:1000,slk:{}};db.talk.msgs.east.s101_1t={uid:'slack',name:'X',text:'같은  글',ts:2000,slk:{}};
+  delete props.SLK_DEDUP_232;g.slackPull(true);
+  assert(db.talk.msgs.east.s100_1t&&!db.talk.msgs.east.s101_1t,'이미 두 번 들어간 것 정리(나중 것 삭제)');
+  console.log('slack_pull 232: 통과');
+}
