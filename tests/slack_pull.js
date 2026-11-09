@@ -1,0 +1,47 @@
+const fs=require('fs');const src=fs.readFileSync(process.env.GS||require('path').join(__dirname,'../apps-script/notify.gs'),'utf8');
+const db={talk:{roster:{'FSS Team':{'테스트1':'',},'FS WEST':{'테스트2':''}},slack:{req:{}}}};
+const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cache={};let calls=[];
+function get(p){let o=db;for(const k of p.split('/').filter(Boolean)){o=o&&o[decodeURIComponent(k)];}return o;}
+function set(p,v,patch){const ks=p.split('/').filter(Boolean).map(decodeURIComponent);let o=db;for(const k of ks.slice(0,-1)){o[k]=o[k]||{};o=o[k];}const L=ks[ks.length-1];if(patch){o[L]=o[L]||{};for(const k in v){if(v[k]===null)delete o[L][k];else o[L][k]=v[k];}}else o[L]=v;}
+const now=Date.now()/1000;
+const hist={C0AT8RP3QDN:[{ts:(now-60).toFixed(6),user:'U1',text:'<기술 요청>\n<인계 : FS WEST>\n기관명 : 테스트병원\n장비 : XN-1000\n요청사항 : 에러 확인',reactions:[{name:'white_check_mark',users:['U2']}],reply_count:1,latest_reply:(now-30).toFixed(6)}],C0AHFJGKMTL:[],C0C6U7RQ44D:[{ts:(now-50).toFixed(6),user:'U1',text:'테스트병원 마칩니다 완료'}]};
+const ctx={
+ UrlFetchApp:{fetch(u,o={}){calls.push(u);if(/[" ]/.test(u))throw new Error('잘못된 인수: '+u);
+  if(u.startsWith('https://slack.com/api/')){const m=u.split('/api/')[1].split('?')[0];const q=new URLSearchParams(u.split('?')[1]||'');
+    let r={ok:true};if(m==='conversations.history')r={ok:true,messages:hist[q.get('channel')]||[]};
+    if(m==='conversations.replies'){const p=hist[q.get('channel')].find(x=>x.ts===q.get('ts'));r={ok:true,messages:[p,{ts:p.latest_reply,user:'U2',text:'제가 봅니다'}]};}
+    if(m==='users.info')r={ok:true,user:{real_name:q.get('user')==='U1'?'테스트1':'테스트2'}};
+    if(m==='auth.test')r={ok:true,user_id:'B1',team_id:'T'};
+    return {getContentText:()=>JSON.stringify(r),getResponseCode:()=>200};}
+  const path=u.replace(props.DB_URL+'/','').split('.json')[0];
+  if(o.method==='put')set(path,JSON.parse(o.payload));else if(o.method==='patch')set(path,JSON.parse(o.payload),1);else if(o.method==='delete')set(path,undefined);
+  let v=get(path);if(u.includes('orderBy'))v=v||{};
+  return {getContentText:()=>JSON.stringify(v===undefined?null:v),getResponseCode:()=>200};}},
+ PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||null,setProperty:(k,v)=>props[k]=v})},
+ LockService:{getScriptLock:()=>({tryLock:()=>true,waitLock(){},releaseLock(){}})},
+ CacheService:{getScriptCache:()=>({get:k=>cache[k]??null,put:(k,v)=>cache[k]=v})},
+ Utilities:{formatDate:(d)=>d.toISOString().slice(0,10).replace(/-/g,''),computeDigest:()=>[1,2,3,4,5,6,7,8],DigestAlgorithm:{MD5:1,SHA_1:1,SHA_256:1},Charset:{UTF_8:1},base64EncodeWebSafe:b=>Buffer.from(b).toString('base64'),base64Encode:s=>Buffer.from(String(s)).toString('base64')},
+ ContentService:{createTextOutput:t=>({t,setMimeType(){return this}}),MimeType:{JSON:1}},
+ ScriptApp:{getProjectTriggers:()=>[]},Logger:{log(){}},console};
+ctx.accessToken_=null;
+const f=new Function(...Object.keys(ctx),src+';return {slackPull,doPost,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
+const g=f(...Object.values(ctx));
+module.exports={g,db,props,calls,cache,hist};
+// 213: Slack 가져오기 회귀 시험 — 한 글 오류가 전체를 멈추지 않는지, 따옴표 쿼리, 확인(✅) 동기화, 이벤트 처리
+if(require.main===module){
+  const assert=require('assert');cache.at='tok';
+  g.slackPull(true);
+  const m=db.talk.slack.meta, R=Object.values(db.talk.slack.req);
+  assert(m.ok && !m.err, 'meta 오류 없음: '+m.err);
+  assert(R.length===1 && R[0].st==='doing' && R[0].ack.n==='테스트2' && R[0].fin, '요청·확인·마무리 표시');
+  assert(Object.keys(props).filter(k=>k.startsWith('SLK_TS_')).length===3, '세 채널 모두 읽은 시각 저장');
+  assert(!calls.some(u=>/[" ]/.test(u)), '따옴표·공백 없는 주소');
+  const n=calls.filter(u=>u.includes('conversations.replies')).length; g.slackPull(true);
+  assert(calls.filter(u=>u.includes('conversations.replies')).length===n, '답글이 그대로면 스레드 다시 안 읽음');
+  assert.strictEqual(g.doPost({postData:{contents:JSON.stringify({type:'url_verification',challenge:'abc'})}}).t,'abc');
+  g.doPost({postData:{contents:JSON.stringify({type:'event_callback',event:{type:'reaction_added',item:{channel:'C0AT8RP3QDN'}}})}});
+  assert(db.talk.slack.meta.ev, '이벤트 시각 기록');
+  assert(/skip/.test(g.doPost({postData:{contents:JSON.stringify({type:'event_callback',event:{type:'message',channel:'CXXXX'}})}}).t), '다른 채널 무시');
+  props.SLACK_VERIFY_TOKEN='vt'; assert(/false/.test(g.doPost({postData:{contents:JSON.stringify({type:'event_callback',token:'no',event:{type:'message',channel:'C0AT8RP3QDN'}})}}).t), '토큰 다르면 거절');
+  console.log('slack_pull: 통과');
+}
