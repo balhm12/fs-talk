@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* 234: 아이폰에서 입력칸을 누르면 화면이 확대돼 전송 버튼이 밖으로 밀리던 것 — iOS 만 maximum-scale=1(iOS 는 이 값이 있어도 두 손가락 확대는 그대로 됨, 안드로이드는 손대지 않음) */(function(){try{if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){var m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute("content","width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover");}}catch(e){}})();</script>
 <meta name="theme-color" content="#005BAC">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -1927,7 +1928,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.233";
+const APP_VERSION="2026-11-09.234";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
