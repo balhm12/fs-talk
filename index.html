@@ -1928,7 +1928,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.237";
+const APP_VERSION="2026-11-10.238";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2272,7 +2272,7 @@ $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("
 let started=false,renderQ=false;
 function start(){
   if(started){renderNav();return;}
-  started=true;setTimeout(posterAuto,3000);setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
+  started=true;setTimeout(()=>{try{window.openNoteRoom&&window.openNoteRoom();}catch(e){}},600);setTimeout(posterAuto,3000);setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();renderNav();syncMuteBtn();syncAlarmMarks();},()=>{});
   myKey=personKey(me.team,me.name);
   R("joined/"+myKey).set(true).catch(()=>{});
@@ -6316,6 +6316,12 @@ function renderInstall(){
   box.appendChild(c);
 }
 if("serviceWorker" in navigator&&window.isSecureContext){
+  /* 238: 알림을 누르면 그 방으로 — 서비스워커가 누른 방을 알려 주거나(열려 있을 때) 기록해 둠(새로 열릴 때) */
+  const openNoteRoom=async()=>{try{if(!started||!window.caches)return;const c=await caches.open("fstalk-meta"),r=await c.match("./openroom");if(!r)return;await c.delete("./openroom");
+    const [id,t]=(await r.text()).split("|");if(/^[\w-]+$/.test(id)&&Date.now()-(+t||0)<90000)go("room-"+id);}catch(e){}};
+  window.openNoteRoom=openNoteRoom;
+  navigator.serviceWorker.addEventListener("message",e=>{const d=e.data;if(d&&d.fsOpenRoom&&/^[\w-]+$/.test(d.fsOpenRoom)){if(started){go("room-"+d.fsOpenRoom);try{caches.open("fstalk-meta").then(c=>c.delete("./openroom"));}catch(x){}}}});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(openNoteRoom,300);});
   window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});});
 }
 renderInstall();
