@@ -827,7 +827,11 @@ function slackPull(force, opt){
             const day = Utilities.formatDate(new Date(at), 'Asia/Seoul', 'yyyyMMdd');
             const id = blocks.length > 1 ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : (C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'));
             const cur = db_('talk/slack/req/'+id);
-            if(cur && !(blocks.length > 1)) return;   // 같은 요청이 다른 채널에 또 올라온 것 — 처음 것을 그대로 둠
+            if(cur && !(blocks.length > 1)){
+              // 214: 같은 요청이 #group-sysmex-talk 에 먼저 왔으면 handover 채널 글로 바꿔 둠 — ✅ 확인은 handover 원래 글에서 읽고 거기에 단다(사용자 확인)
+              if(C.type === 'req' && cur.ch && SLACK_CH[cur.ch] && SLACK_CH[cur.ch].type !== 'req') dbPatch_('talk/slack/req/'+id, {ch:ch, ts:m.ts, lr:null});
+              return;
+            }
             const base = {ch:ch, ts:m.ts, kind:(C.k === 'talk' ? 'cso' : C.k), by:slkPerson_(who), at:(cur&&cur.at)||at, t:b.slice(0,4000), f:f, mention:mention||null, multi:blocks.length>1||null};
             if(!cur){ base.st = 'new'; added++; }
             dbPatch_('talk/slack/req/'+id, base);
@@ -868,8 +872,24 @@ function slkSync_(names){
       cursor = j.response_metadata && j.response_metadata.next_cursor || '';
     }while(cursor && ++page < 3);
   });
+  // 214: #group-sysmex-talk 에서 먼저 들어온 요청은 같은 id 의 handover 글을 찾아 그쪽으로 옮김(확인 ✅ 는 handover 에서)
+  let hmap = null;
+  const hId = function(){
+    if(hmap) return hmap; hmap = {};
+    Object.keys(hist).forEach(function(k){
+      const m = hist[k], ch = k.split('|')[0], C = SLACK_CH[ch], text = slkClean_(String(m.text||''));
+      if(/\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1) return;
+      const f = slkParse_(text); if(!f) return;
+      const day = Utilities.formatDate(new Date(Math.round(+m.ts*1000)), 'Asia/Seoul', 'yyyyMMdd');
+      hmap[(C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'))] = {ch:ch, ts:m.ts};
+    });
+    return hmap;
+  };
   Object.keys(all).slice(-80).forEach(function(id){
     const r = all[id]; if(!r || r.multi) return;
+    if(r.ch && SLACK_CH[r.ch] && SLACK_CH[r.ch].type !== 'req'){
+      const h = hId()[id]; if(h){ dbPatch_('talk/slack/req/'+id, {ch:h.ch, ts:h.ts, lr:null}); r.ch = h.ch; r.ts = h.ts; r.lr = null; }
+    }
     const autoDone = r.st === 'done' && !r.doneBy;   // 210: v24~28 은 ✅ 를 「완료」로 잘못 봤음 — 사람이 완료하지 않은 것은 다시 맞춤
     if(r.st === 'done' && !autoDone) return;
     const pm = hist[r.ch+'|'+r.ts];
