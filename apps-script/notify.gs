@@ -32,6 +32,7 @@ function doPost(e){
     if(req.type === 'adminsync') return out_(adminSync_(req));
     if(req.type === 'slack') return out_(slackAct_(req));
     if(req.type === 'slackTest') return out_(slackTest_(req));
+    if(req.type === 'slackBulk') return out_(slackBulk_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
     const isGroup = /^g_[-\w]{10,40}$/.test(room);
@@ -102,7 +103,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v27';
+const NOTIFY_VER = 'v28';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -917,6 +918,23 @@ function slackAct_(req){
   return {ok:true,ver:NOTIFY_VER};
 }
 /* 관리 화면 「Slack 연결 시험」 — 관리자만. 토큰·채널 초대 상태와 마지막 가져오기 결과 */
+/* 208: 관리자 「목록 정리」 — 요청 여러 건을 완료로 정리(Slack 에는 아무것도 안 보냄) 또는 포털에서 삭제.
+ *  삭제한 요청은 slackPull 이 마지막으로 읽은 시각 이후 글만 가져오므로 다시 들어오지 않음 */
+function slackBulk_(req){
+  const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid);
+  if(!(db_('talk/admins/'+uid) === true && me && me.status === 'approved')) return {ok:false,err:'관리자만 할 수 있습니다',ver:NOTIFY_VER};
+  const op = String(req.op||''); if(op !== 'done' && op !== 'del') return {ok:false,err:'bad op',ver:NOTIFY_VER};
+  const ids = (Array.isArray(req.ids) ? req.ids : []).map(String).filter(function(id){ return /^[a-z]+_[-\w]{6,40}$/.test(id); }).slice(0,400);
+  if(!ids.length) return {ok:false,err:'대상이 없습니다',ver:NOTIFY_VER};
+  const now = Date.now(), name = String(me.name||'').slice(0,20), patch = {};
+  ids.forEach(function(id){
+    if(op === 'del') patch[id] = null;
+    else { patch[id+'/st'] = 'done'; patch[id+'/doneAt'] = now; patch[id+'/doneBy'] = name; }
+  });
+  dbPatch_('talk/slack/req', patch);
+  return {ok:true, n:ids.length, ver:NOTIFY_VER};
+}
 function slackTest_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid);
