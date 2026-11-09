@@ -1596,7 +1596,7 @@ html[data-theme=dark] .hreq{border-top-color:#6AA9E6}
 .hreqr .slkago{margin-left:0;font-size:12px;color:var(--sub);flex:0 0 auto}.hreqr .slksb,.hreqr .slkurg,.hreqr .slktm{flex:0 0 auto}
 .hreqe{margin:0;font-size:13px;color:var(--sub)}.hreqw{margin:0;font-size:12.5px;color:#B42318;font-weight:600}html[data-theme=dark] .hreqw{color:#F59A98}
 .hreqm{border:0;background:none;color:var(--blue);font:600 13px var(--font);text-align:left;padding:2px 2px;cursor:pointer}
-.slkerr{color:#B42318;font-weight:600}html[data-theme=dark] .slkerr{color:#F59A98}
+.slkerr{color:#B42318;font-weight:600}html[data-theme=dark] .slkerr{color:#F59A98}.slkevt{color:var(--sub);font-size:12px}
 @media (max-width:820px){.hreq{padding:10px 12px}.hreqx small{display:none}.hreqh{flex-wrap:nowrap}.hreqc{font-size:12.5px;gap:8px;white-space:nowrap;overflow:hidden}.hreqc span:nth-child(3){display:none}.hreqh .hmore{flex:0 0 auto}}
 @media (pointer:coarse){.hreqr{min-height:44px}.hreqh .hmore,.hreqm{min-height:44px}}
 .slkurg{font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;background:#C62F34;color:#fff}
@@ -1854,7 +1854,7 @@ html[data-theme=dark] .slkst.new{background:rgba(231,65,62,.18);color:#F59A98}ht
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.212";
+const APP_VERSION="2026-11-09.214";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3973,6 +3973,7 @@ function renderReqPage(){
   cn.appendChild(el("span","slkdot"+(live?" on":"")));
   cn.appendChild(el("span",null,live?"Slack 자동 연결됨 · "+new Date(slkMeta.at).toTimeString().slice(0,5)+" 확인":isAdmin?"Slack 자동 연결 전 — Slack 글의 ⋮ → 「텍스트 복사」 후 「Slack 글 붙여넣기」":"Slack 자동 연결 전 — 관리자가 올린 요청을 확인할 수 있습니다"));
   if(isAdmin&&slkMeta&&slkMeta.err)cn.appendChild(el("span","slkerr","· 오류: "+String(slkMeta.err).slice(0,100)));   // 212
+  if(isAdmin&&slkMeta&&live)cn.appendChild(el("span","slkevt",slkMeta.ev&&Date.now()-slkMeta.ev<36e5?"· Slack 바로 받기 "+new Date(slkMeta.ev).toTimeString().slice(0,5):"· Slack 바로 받기 없음(1분마다 확인)"));   // 214: 이벤트 수신 확인용
   if(isAdmin){const pv=el("button","hmore","연결 전 미리보기");pv.onclick=openSlkPreview;cn.appendChild(pv);const t=el("button","hmore","연결 시험");t.onclick=slkTest;cn.appendChild(t);}
   b.appendChild(cn);
   const all=slkList(),wk=Date.now()-7*864e5;

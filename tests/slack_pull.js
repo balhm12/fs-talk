@@ -19,8 +19,8 @@ const ctx={
   return {getContentText:()=>JSON.stringify(v===undefined?null:v),getResponseCode:()=>200};}},
  PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||null,setProperty:(k,v)=>props[k]=v})},
  LockService:{getScriptLock:()=>({tryLock:()=>true,waitLock(){},releaseLock(){}})},
- CacheService:{getScriptCache:()=>({get:k=>cache[k]??null,put:(k,v)=>cache[k]=v})},
- Utilities:{formatDate:(d)=>d.toISOString().slice(0,10).replace(/-/g,''),computeDigest:()=>[1,2,3,4,5,6,7,8],DigestAlgorithm:{MD5:1,SHA_1:1,SHA_256:1},Charset:{UTF_8:1},base64EncodeWebSafe:b=>Buffer.from(b).toString('base64'),base64Encode:s=>Buffer.from(String(s)).toString('base64')},
+ CacheService:{getScriptCache:()=>({get:k=>cache[k]??null,put:(k,v)=>cache[k]=v,remove:k=>delete cache[k]})},
+ Utilities:{formatDate:(d)=>d.toISOString().slice(0,10).replace(/-/g,''),computeDigest:(a,s)=>[...require('crypto').createHash('md5').update(String(s)).digest()],DigestAlgorithm:{MD5:1,SHA_1:1,SHA_256:1},Charset:{UTF_8:1},base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),base64Encode:s=>Buffer.from(String(s)).toString('base64')},
  ContentService:{createTextOutput:t=>({t,setMimeType(){return this}}),MimeType:{JSON:1}},
  ScriptApp:{getProjectTriggers:()=>[]},Logger:{log(){}},console};
 ctx.accessToken_=null;
@@ -44,4 +44,39 @@ if(require.main===module){
   assert(/skip/.test(g.doPost({postData:{contents:JSON.stringify({type:'event_callback',event:{type:'message',channel:'CXXXX'}})}}).t), '다른 채널 무시');
   props.SLACK_VERIFY_TOKEN='vt'; assert(/false/.test(g.doPost({postData:{contents:JSON.stringify({type:'event_callback',token:'no',event:{type:'message',channel:'C0AT8RP3QDN'}})}}).t), '토큰 다르면 거절');
   console.log('slack_pull: 통과');
+}
+// 214: 같은 요청이 #group-sysmex-talk 에 먼저 → handover 로 옮기고, handover 글의 ✔ 를 확인으로 읽음
+if(require.main===module){
+  const assert=require('assert');
+  const form='&lt;기술요청&gt;&lt;인계 : FS WEST &gt;\n1) 기 관 명 : 테스트이병원\n2) 장 비 명 : XN-550\n3) 요청사항 : 방문 서비스 요청';
+  const t0=(Date.now()/1000-40);
+  hist.C0C6U7RQ44D.unshift({ts:t0.toFixed(6),user:'U1',text:form});
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  hist.C0AT8RP3QDN=[];   // handover 글은 아직 안 옴
+  g.slackPull(true);
+  let R=Object.entries(db.talk.slack.req).find(([k,v])=>v.f&&v.f.hosp==='테스트이병원');
+  assert(R && R[1].ch==='C0C6U7RQ44D','먼저 온 talk 글로 요청 생성');
+  // 시나리오 A: handover 글이 이미 읽힌 뒤(옛 자료) — sync 가 옮김
+  hist.C0AT8RP3QDN=[{ts:(t0+5).toFixed(6),user:'U1',text:form,reactions:[{name:'heavy_check_mark',users:['U2']}]}];
+  g.slackPull(true);
+  R=db.talk.slack.req[R[0]];
+  assert.strictEqual(R.ch,'C0AT8RP3QDN','handover 로 옮김');
+  assert(R.ack && R.ack.n==='테스트2' && R.st==='doing','handover 의 ✔ 를 확인으로');
+  console.log('slack_pull 214: 통과');
+}
+// 214-A: handover 글을 이미 지나 읽은 뒤(배포 전 자료) — 확인 맞추기가 handover 짝을 찾아 옮김
+if(require.main===module){
+  const assert=require('assert');
+  const form='&lt;기술요청&gt;&lt;인계 : FS EAST &gt;\n1) 기 관 명 : 테스트삼병원\n2) 장 비 명 : XR-1000\n3) 요청사항 : 에러 문의';
+  const t0=(Date.now()/1000-30);
+  hist.C0C6U7RQ44D=[{ts:t0.toFixed(6),user:'U1',text:form}]; hist.C0AT8RP3QDN=[];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true);
+  const id=Object.keys(db.talk.slack.req).find(k=>db.talk.slack.req[k].f.hosp==='테스트삼병원');
+  hist.C0AT8RP3QDN=[{ts:(t0+3).toFixed(6),user:'U1',text:form,reactions:[{name:'white_check_mark',users:['U2']}]}];
+  props.SLK_TS_C0AT8RP3QDN=String(t0+10);   // 이미 지나 읽음
+  g.slackPull(true);
+  const r=db.talk.slack.req[id];
+  assert(r.ch==='C0AT8RP3QDN' && r.ack && r.ack.n==='테스트2','확인 맞추기에서 handover 로 옮기고 ✅ 읽음');
+  console.log('slack_pull 214-A: 통과');
 }
