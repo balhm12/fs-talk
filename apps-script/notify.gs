@@ -105,7 +105,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v31';
+const NOTIFY_VER = 'v32';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -839,8 +839,9 @@ function slackPull(force, opt){
     });
     const min = new Date().getMinutes();
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
-    const evLive = meta.ev && now - meta.ev < 10*60*1000;
-    if(!opt.newOnly && (force || !evLive || min % 5 === 0)){ try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
+    const evLive = meta.ev && now - meta.ev < 10*60*1000, cch = CacheService.getScriptCache();
+    // 214: 이벤트가 잠금에 막혀 못 한 확인 맞추기(slkSyncPend)는 다음 1분 트리거가 바로 함
+    if(!opt.newOnly && (force || !evLive || min % 5 === 0 || cch.get('slkSyncPend'))){ cch.remove('slkSyncPend'); try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!opt.newOnly && min % 30 === 0){ try{ slkTrimFeed_(); }catch(e){ console.error(e); } }
     meta.ms = Date.now() - now;
     if(opt.ev) meta.ev = now;
@@ -914,18 +915,22 @@ function slackEvent_(req){
   const isReact = /^reaction_/.test(ev.type || ''), isReply = ev.type === 'message' && ev.thread_ts && ev.thread_ts !== ev.ts;
   const kind = (isReact || isReply) ? 'sync' : 'new';
   if(kind === 'sync' && SLACK_CH[ch].type !== 'req') return {ok:true, skip:1};   // 대화 채널의 반응·답글은 옮기지 않음
-  const c = CacheService.getScriptCache(); if(c.get('slkev:'+kind)) return {ok:true, dup:1};
+  const c = CacheService.getScriptCache();
+  if(kind === 'sync') c.put('slkSyncPend', '1', 600);   // 214: 이번에 못 하더라도 다음 1분 트리거가 반드시 맞춤
+  if(c.get('slkev:'+kind)) return {ok:true, dup:1};
   c.put('slkev:'+kind, '1', 5);
   if(kind === 'new') slackPull(false, {newOnly:true, wait:4000, ev:true});
   else slkEventSync_();
   return {ok:true};
 }
 function slkEventSync_(){
-  const lock = LockService.getScriptLock(); if(!lock.tryLock(4000)) return;
+  const lock = LockService.getScriptLock(); if(!lock.tryLock(8000)) return;   // 잠금에 막히면 slkSyncPend 로 다음 1분에
   try{
     slkSync_({});
-    dbPatch_('talk/slack/meta', {ev:Date.now()});
-  }catch(e){ console.error(e); }finally{ try{lock.releaseLock();}catch(e){} }
+    CacheService.getScriptCache().remove('slkSyncPend');
+    dbPatch_('talk/slack/meta', {ev:Date.now(), evs:Date.now()});
+  }catch(e){ console.error(e); try{ dbPatch_('talk/slack/meta', {err:'확인 맞추기(이벤트): '+String(e.message||e).slice(0,150)}); }catch(e2){} }
+  finally{ try{lock.releaseLock();}catch(e){} }
 }
 /* 200: #group-sysmex-talk 글 → 포털 대화방 (Slack → 포털 한쪽만, 사용자 결정 2026-11-06)
  *  작성자 이름을 명단과 맞춰 사무소방(있으면) 또는 팀방, 명단에 없거나 같은 이름이 둘 이상이면 전체방.
