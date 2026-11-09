@@ -1,12 +1,12 @@
 const fs=require('fs');const src=fs.readFileSync(process.env.GS||require('path').join(__dirname,'../apps-script/notify.gs'),'utf8');
 const db={talk:{roster:{'FSS Team':{'테스트1':'',},'FS WEST':{'테스트2':''}},slack:{req:{}}}};
-const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cache={};let calls=[];const sent=[];
+const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cache={};let calls=[];const sent=[];const fcm=[];
 function get(p){let o=db;for(const k of p.split('/').filter(Boolean)){o=o&&o[decodeURIComponent(k)];}return o;}
 function set(p,v,patch){const ks=p.split('/').filter(Boolean).map(decodeURIComponent);let o=db;for(const k of ks.slice(0,-1)){o[k]=o[k]||{};o=o[k];}const L=ks[ks.length-1];if(patch){o[L]=o[L]||{};for(const k in v){if(v[k]===null)delete o[L][k];else o[L][k]=v[k];}}else o[L]=v;}
 const now=Date.now()/1000;
 const hist={C0AT8RP3QDN:[{ts:(now-60).toFixed(6),user:'U1',text:'<기술 요청>\n<인계 : FS WEST>\n기관명 : 테스트병원\n장비 : XN-1000\n요청사항 : 에러 확인',reactions:[{name:'white_check_mark',users:['U2']}],reply_count:1,latest_reply:(now-30).toFixed(6)}],C0AHFJGKMTL:[],C0C6U7RQ44D:[{ts:(now-50).toFixed(6),user:'U1',text:'테스트병원 이동합니다'}]};
 const ctx={
- UrlFetchApp:{fetch(u,o={}){calls.push(u);if(/[" ]/.test(u))throw new Error('잘못된 인수: '+u);
+ UrlFetchApp:{fetchAll(rs){return rs.map(r=>{fcm.push(JSON.parse(r.payload).message);return {getResponseCode:()=>200,getContentText:()=>'{}'};});},fetch(u,o={}){calls.push(u);if(/[" ]/.test(u))throw new Error('잘못된 인수: '+u);
   if(u.startsWith('https://slack.com/api/')){const m=u.split('/api/')[1].split('?')[0];const q=new URLSearchParams(u.split('?')[1]||'');
     let r={ok:true};if(m==='conversations.history')r={ok:true,messages:hist[q.get('channel')]||[]};
     if(m==='conversations.replies'){const p=hist[q.get('channel')].find(x=>x.ts===q.get('ts'));r={ok:true,messages:[p,{ts:p.latest_reply,user:'U2',text:'제가 봅니다'}]};}
@@ -219,4 +219,41 @@ if(require.main===module){
   const L2=Object.entries(db.talk.slack.req).filter(([k,r])=>r&&r.f&&r.f.hosp==='테스트경기지부');
   assert(L2.length===1&&L2[0][0]==='cso_dDUP000000001','이미 두 건이면 진행한 것만 남김');
   console.log('slack_pull 233: 통과');
+}
+// 235: Slack 글도 알림 — 채널 방·팀 방 켬/끔 기준, 본인 제외, 같은 글 한 번, 다른 팀 방은 관리자가 직접 켠 것만, 오래된 글은 안 보냄
+if(require.main===module){
+  const assert=require('assert');
+  db.talk.users={a:{name:'테스트2',team:'FS WEST',status:'approved'},b:{name:'테스트3',team:'FS WEST',status:'approved'},
+    c:{name:'테스트4',team:'FS EAST',status:'approved'},d:{name:'테스트5',team:'FSS Team',status:'approved'},e:{name:'테스트6',team:'FS EAST',status:'approved'},f:{name:'테스트7',team:'FS EAST',status:'approved'}};
+  db.talk.tokens={};['a','b','c','d','e','f'].forEach(u=>db.talk.tokens[u]={k1:{token:'T-'+u}});
+  db.talk.admins={d:true};
+  db.talk.mute={b:{west:true,sk_talk:true},c:{sk_talk:true},d:{sk_talk:true,west:false},f:{_all:true}};
+  const ts=(Date.now()/1000-20).toFixed(6);
+  hist.C0AT8RP3QDN=[];hist.C0AHFJGKMTL=[];hist.C0C6U7RQ44D=[{ts,user:'U2',text:'테스트병원 점검 끝났습니다'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(Date.now()/1000-60);
+  fcm.length=0;g.slackPull(true);
+  const to=u=>fcm.filter(m=>m.token==='T-'+u);
+  assert.strictEqual(to('a').length,0,'쓴 사람(테스트2) 본인은 안 받음');
+  assert.strictEqual(to('b').length,0,'팀 방·채널 방 둘 다 끈 사람은 안 받음');
+  assert.strictEqual(to('c').length,0,'채널 방 끈 다른 팀 사람은 안 받음');
+  assert.strictEqual(to('e').length,1,'채널 방 켠(기본) 사람은 한 번');
+  assert(/sk_talk/.test(to('e')[0].webpush.fcm_options.link),'채널 방으로 연결');
+  assert.strictEqual(to('d').length,1,'관리자가 직접 켠 다른 팀 방(west)으로 한 번');
+  assert(/#room-west/.test(to('d')[0].webpush.fcm_options.link) && /Slack/.test(to('d')[0].webpush.notification.title),'팀 방 이름·Slack 표시');
+  assert.strictEqual(to('f').length,0,'전체 알림 끈 기기는 안 받음');
+  // 다시 읽어도(새 글 없음) 또 보내지 않음, 오래된 글은 안 보냄
+  fcm.length=0;g.slackPull(true);assert.strictEqual(fcm.length,0,'새 글 없으면 안 보냄');
+  hist.C0C6U7RQ44D=[{ts:(Date.now()/1000-3600).toFixed(6),user:'U1',text:'한 시간 전 글'}];
+  props.SLK_TS_C0C6U7RQ44D=String(Date.now()/1000-7200);fcm.length=0;g.slackPull(true);assert.strictEqual(fcm.length,0,'15분 넘은 글은 안 보냄');
+  // 포털 채널 방에서 Slack 으로 보낸 글 → 같은 팀 사람 알림, 본인 제외
+  delete cache['slks:b'];fcm.length=0;
+  db.talk.mute={};
+  const r=g.slackSend_({idToken:'tok-b',room:'sk_talk',text:'테스트 포털에서 보냄'});assert(r.ok,'보내기');
+  assert(to('a').length===1 && to('b').length===0 && to('e').length===1,'포털→Slack 글도 알림, 본인 제외');
+  // 2건 이상이면 기기마다 한 번(「새 글 n건」)
+  const t2=Date.now()/1000-10;hist.C0C6U7RQ44D=[{ts:(t2).toFixed(6),user:'U1',text:'하나'},{ts:(t2+1).toFixed(6),user:'U1',text:'둘'}];
+  props.SLK_TS_C0C6U7RQ44D=String(t2-5);fcm.length=0;g.slackPull(true);
+  assert(to('e').length===1 && /2건/.test(to('e')[0].webpush.notification.title),'여러 글은 한 번에 묶음');
+  assert(db.talk.slack.meta.push && db.talk.slack.meta.push.posts===2,'보낸 기록 meta.push');
+  console.log('slack_pull 235: 통과');
 }
