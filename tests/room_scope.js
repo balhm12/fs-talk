@@ -31,6 +31,8 @@ const WEST = { team: 'FS WEST', name: '가명서울' }, EAST = { team: 'FS EAST'
 const DJ = { team: 'FS CENTRAL', name: '가명대전' }, GJ = { team: 'FS CENTRAL', name: '가명광주' }, DJL = { team: 'FS CENTRAL', name: '가명팀장' };
 const BS = { team: 'FS SOUTH', name: '가명부산' }, FSS = { team: 'FSS Team', name: '가명지원' }, ADM = { team: 'FSS Team', name: '가명관리' };
 ['all', 'notice', 'ts', 'cs'].forEach(r => { ok(can('u1', WEST, r), r + ' 은 승인된 누구나'); });
+['sk_cso', 'sk_night', 'sk_talk'].forEach(r => { ok(can('u1', WEST, r) && can('u6', FSS, r), r + ' (Slack 채널 방, 224) 은 승인된 누구나'); });
+ok(/\$room\.matches\(\/\^\(all\|notice\|ts\|cs\|sk_cso\|sk_night\|sk_talk\)\$\/\)/.test(rulesTxt), 'rules 읽기에 Slack 채널 방(224)');
 ok(can('u1', WEST, 'west'), 'WEST 팀원은 west 방');
 ok(!can('u1', EAST, 'west'), 'EAST 팀원은 west 방 불가');
 ok(!can('u1', FSS, 'west'), '지원팀도 west 방 불가(규칙과 동일)');

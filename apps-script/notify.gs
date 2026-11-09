@@ -11,7 +11,7 @@
  *   DB_URL      : https://fs-talk-fa383-default-rtdb.asia-southeast1.firebasedatabase.app
  */
 const APP_URL = 'https://balhm12.github.io/fs-talk/';
-const ROOM_NAME = {all:'전체방',notice:'전체공지',ts:'FS',cs:'CS',west:'FS WEST',east:'FS EAST',central:'FS CENTRAL',daejeon:'대전 사무소',gwangju:'광주 사무소',south:'FS SOUTH',busan:'부산 사무소',daegu:'대구 사무소',fss:'FSS Team',fsom:'FSOM Team'};
+const ROOM_NAME = {all:'전체방',notice:'전체공지',ts:'FS',cs:'CS',west:'FS WEST',east:'FS EAST',central:'FS CENTRAL',daejeon:'대전 사무소',gwangju:'광주 사무소',south:'FS SOUTH',busan:'부산 사무소',daegu:'대구 사무소',fss:'FSS Team',fsom:'FSOM Team',sk_cso:'Slack · CSO 요청',sk_night:'Slack · CS쉐어링 요청',sk_talk:'Slack · group-sysmex-talk'};
 const ROOM_SCOPE = {west:['FS WEST'],east:['FS EAST'],central:['FS CENTRAL'],daejeon:['FS CENTRAL','대전'],gwangju:['FS CENTRAL','광주'],south:['FS SOUTH'],busan:['FS SOUTH','부산'],daegu:['FS SOUTH','대구'],fss:['FSS Team'],fsom:['FSOM Team']};
 
 function P_(k){ return PropertiesService.getScriptProperties().getProperty(k); }
@@ -33,6 +33,7 @@ function doPost(e){
     if(req.type === 'link') return out_(link_(req));
     if(req.type === 'adminsync') return out_(adminSync_(req));
     if(req.type === 'slack') return out_(slackAct_(req));
+    if(req.type === 'slackSend') return out_(slackSend_(req));
     if(req.type === 'slackTest') return out_(slackTest_(req));
     if(req.type === 'slackBulk') return out_(slackBulk_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
@@ -105,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v34';
+const NOTIFY_VER = 'v35';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -298,7 +299,7 @@ const FIXED_ROOMS = ['notice','ts','cs','west','east','central','daejeon','gwang
  * 서버는 서비스 권한으로 대화를 읽으므로, 읽기 전에 요청한 사람이 그 방을 볼 수 있는지 다시 확인한다.
  * (전체방·공지·FS·CS = 승인된 누구나, 팀·사무소 방 = 그 팀(+사무소)과 관리자) */
 function canReadFixedRoom_(uid, me, room){
-  if(['all','notice','ts','cs'].indexOf(room) >= 0) return true;
+  if(['all','notice','ts','cs','sk_cso','sk_night','sk_talk'].indexOf(room) >= 0) return true;   // 224: Slack 채널 방도 승인된 누구나
   if(db_('talk/admins/'+uid) === true) return true;
   const sc = ROOM_SCOPE[room];
   if(!sc || !me || me.team !== sc[0]) return false;
@@ -702,9 +703,10 @@ function removeDigestTrigger(){
  *  - 포털 → Slack: doPost type 'slack' (op: claim·reply·done·reopen) — 승인된 직원만, 그 사람 이름으로 스레드에 씀
  * ===================================================================== */
 const SLACK_CH = {
-  C0AT8RP3QDN: {k:'cso',   name:'handover-cso-fsg',      type:'req'},   // CSO → FSG 기술 문의 이관
-  C0AHFJGKMTL: {k:'night', name:'handover-cssharing-fsg', type:'req'},   // 야간 전화 접수(CS쉐어링) 인계
-  C0C6U7RQ44D: {k:'talk',  name:'group-sysmex-talk',      type:'feed', room:true}   // 현장 대화 → 작성자 팀·사무소방(200)
+  C0AT8RP3QDN: {k:'cso',   name:'handover-cso-fsg',      type:'req',  pr:'sk_cso'},     // CSO → FSG 기술 문의 이관
+  C0AHFJGKMTL: {k:'night', name:'handover-cssharing-fsg', type:'req',  pr:'sk_night'},   // 야간 전화 접수(CS쉐어링) 인계
+  C0C6U7RQ44D: {k:'talk',  name:'group-sysmex-talk',      type:'feed', pr:'sk_talk'}     // 현장 대화
+  // 224: pr = 포털의 채널 방(Slack ↔ 포털 양쪽). 채널 글은 그 방 + 해당 팀·사무소방에도 보임(slkToChan_)
 };
 const SLK_FEED_KEEP_DAYS = 30;
 
@@ -793,8 +795,8 @@ function slackPull(force, opt){
     let added = 0;
     Object.keys(SLACK_CH).forEach(function(ch){
       const C = SLACK_CH[ch];
-      if(C.type === 'req' && !props.getProperty('SLK_CS_BF_'+ch)){   // 222: 처음 한 번 — 최근 7일 요청 채널 글을 CS 방에도
-        try{ slkCsBackfill_(ch, C, names, now - 7*864e5); props.setProperty('SLK_CS_BF_'+ch, '1'); }catch(e){ meta.err = 'CS 방 옮기기: '+String(e.message||e).slice(0,160); console.error(e); }
+      if(!props.getProperty('SLK_CHAN_BF_'+ch)){   // 224: 처음 한 번 — 최근 7일 채널 글을 채널 방에(팀 방에는 새 글부터)
+        try{ slkChanBackfill_(ch, C, names, now - 7*864e5); props.setProperty('SLK_CHAN_BF_'+ch, '1'); }catch(e){ meta.err = '채널 방 채우기: '+String(e.message||e).slice(0,160); console.error(e); }
       }
       const last = props.getProperty('SLK_TS_'+ch) || String((now - 3*864e5)/1000);
       let cursor = '', maxTs = last, page = 0;
@@ -812,17 +814,16 @@ function slackPull(force, opt){
           const men = /<@([A-Z0-9]+)\|([^>]*)>/.exec(raw);
           const mention = men ? slkPerson_(men[2]) : (/<@([A-Z0-9]+)>/.exec(raw) ? slkPerson_(slkUser_(/<@([A-Z0-9]+)>/.exec(raw)[1], names)) : '');
           const at = Math.round(+m.ts*1000);
-          if(C.type === 'feed' && /<\s*(기술|학술)\s*요청\s*>/.test(text)){   // 202: 대화방엔 안 옮김
+          if(C.type === 'req') slkMarkCso_(m, slkPerson_(who));
+          slkToChan_(m, raw, text, slkPerson_(who), at, ch, C);   // 224: 모든 맨 위 글 → 채널 방 + 해당 팀·사무소방
+          if(C.type === 'feed' && /<\s*(기술|학술)\s*요청\s*>/.test(text)){   // 202: 요청 양식은 요청함 쪽으로
             if(/학술\s*요청/.test(text) || !/<\s*인계\s*:\s*FS/i.test(text)) return;   // 학술요청·<완료 : …>·CSO 인계는 FSG 요청 아님
           }
           else if(C.type === 'feed'){
             dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
-            slkToRoom_(m, text, slkPerson_(who), at, ch, C);
             slkFieldHint_(text, slkPerson_(who), at);
             return;
           }
-          if(C.type === 'req') slkMarkCso_(m, slkPerson_(who));
-          if(C.type === 'req') slkToCs_(m, text, slkPerson_(who), at, ch, C);   // 222: CSO·CS쉐어링 글은 CS 방에도(요청함과 별개, 모든 글)
           // 요청 채널: 양식 블록마다 요청 1건 (야간 인계 요약 글은 여러 건 — 같은 내용은 같은 id 라 두 번 들어오지 않음)
           const blocks = /\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1
             ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
@@ -846,7 +847,7 @@ function slackPull(force, opt){
       }while(cursor && ++page < 3);
       props.setProperty('SLK_TS_'+ch, String(maxTs));
     });
-    if(!props.getProperty('SLK_REROUTE_222')){ try{ slkReroute_(); props.setProperty('SLK_REROUTE_222','1'); }catch(e){ meta.err = '전체방 글 다시 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
+    if(!props.getProperty('SLK_MIG_224')){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
     const min = new Date().getMinutes();
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
     const evLive = meta.ev && now - meta.ev < 10*60*1000, cch = CacheService.getScriptCache();
@@ -969,62 +970,101 @@ function slkRoomFor_(name, roster){
   return keys.filter(function(k){ return ROOM_SCOPE[k][0] === p.team && ROOM_SCOPE[k][1] && ROOM_SCOPE[k][1] === p.office; })[0]
       || keys.filter(function(k){ return ROOM_SCOPE[k][0] === p.team && !ROOM_SCOPE[k][1]; })[0] || 'all';
 }
-function slkToRoom_(m, text, name, at, ch, C){
-  if(!C.room) return;
-  if(!slkToRoom_.roster) slkToRoom_.roster = db_('talk/roster') || {};
+/* 224: Slack 채널 ↔ 포털 채널 방 (사용자 결정 2026-11-09)
+ *  - 세 채널의 맨 위 글 → 포털 채널 방(sk_cso·sk_night·sk_talk) + 해당 팀·사무소방 복사본(같은 키 s{ts}, 푸시 없음)
+ *  - 팀 정하기: 요청 채널 = @그룹 멘션(라벨이 있을 때) > 양식의 「인계 : FS …」 > 작성자 팀, group-sysmex-talk = 작성자 팀 > 멘션·양식
+ *  - 명단에 없는 작성자(CSO 직원 등)이고 멘션·양식도 없으면 채널 방에만
+ *  - 포털 채널 방에서 쓴 글은 slackSend_ 가 Slack 으로 보내고 같은 방식으로 저장 */
+const SLK_GRP_ROOM = {fswest:'west',fseast:'east',fscentral:'central','fscentral-daejeon':'daejeon','fscentral-gwangju':'gwangju',fssouth:'south','fssouth-busan':'busan','fssouth-daegu':'daegu',fss:'fss',fsom:'fsom'};
+function slkRoster_(){ if(!slkRoster_.v) slkRoster_.v = db_('talk/roster') || {}; return slkRoster_.v; }
+function slkTeamRoom_(t, o){
+  const T = 'FS ' + String(t).toUpperCase(), keys = Object.keys(ROOM_SCOPE);
+  return (o && keys.filter(function(k){ return ROOM_SCOPE[k][0] === T && ROOM_SCOPE[k][1] === o; })[0])
+      || keys.filter(function(k){ return ROOM_SCOPE[k][0] === T && !ROOM_SCOPE[k][1]; })[0] || '';
+}
+function slkTeamRooms_(raw, text, name, C){
+  const grp = [], add = function(r){ if(r && grp.indexOf(r) < 0) grp.push(r); };
+  let m; const re = /<!subteam\^[A-Z0-9]+\|@?([A-Za-z0-9._-]+)>/g;
+  while((m = re.exec(String(raw||'')))) add(SLK_GRP_ROOM[m[1].toLowerCase()]);
+  if(!grp.length){ const re2 = /인계\s*:\s*FS\s*(WEST|EAST|CENTRAL|SOUTH)\s*(대전|광주|부산|대구)?/gi; while((m = re2.exec(String(text||'')))) add(slkTeamRoom_(m[1], m[2])); }
+  const au = slkRoomFor_(name, slkRoster_()), author = au === 'all' ? '' : au;
+  if(C.type === 'req') return grp.length ? grp : (author ? [author] : []);
+  return author ? [author] : grp;
+}
+function slkToChan_(m, raw, text, name, at, ch, C, opt){
+  if(!C.pr) return;
   const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
   if(!t) return;
-  let room = slkRoomFor_(name, slkToRoom_.roster);
-  if(room === 'all' && ((m.user && slkCso_()[m.user]) || SLK_CS_NAME.test(name))) room = 'cs';   // 222: CSO 직원(요청 채널에 글 쓰는 명단 밖 사람)은 전체방 대신 CS 방
-  dbPut_('talk/msgs/'+room+'/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
+  const key = 's'+slkKey_(m.ts), v = {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}};
+  dbPut_('talk/msgs/'+C.pr+'/'+key, v);
+  if(opt && opt.noTeam) return;
+  slkTeamRooms_(raw, text, name, C).forEach(function(r){ dbPut_('talk/msgs/'+r+'/'+key+'t', v); });   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
 }
-/* 222: 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg) 글 → 포털 CS 방 (Slack → 포털 한쪽만, 사용자 요청 2026-11-09)
- *  모든 맨 위 글(학술요청·완료 글 포함, 스레드 답글 제외), 키 's'+ts 라 중복 없음, 푸시 없음. 요청함 반영과는 따로 */
-function slkToCs_(m, text, name, at, ch, C){
-  const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
-  if(!t) return;
-  dbPut_('talk/msgs/cs/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
+/* 포털 채널 방에서 쓴 글 → Slack 채널(「이름 (FS 포털)」) + 포털 채널 방·팀 방에 저장. 승인된 직원 누구나(사용자 결정) */
+function slackSend_(req){
+  const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid) || {};
+  if(me.status !== 'approved') return {ok:false,err:'승인된 사용자가 아닙니다',ver:NOTIFY_VER};
+  const room = String(req.room||''), ch = Object.keys(SLACK_CH).filter(function(c){ return SLACK_CH[c].pr === room; })[0];
+  if(!ch) return {ok:false,err:'bad room',ver:NOTIFY_VER};
+  const text = String(req.text||'').replace(/\r/g,'').trim().slice(0,3000);
+  if(!text) return {ok:false,err:'내용이 비었습니다',ver:NOTIFY_VER};
+  if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'Slack 연결 전입니다',ver:NOTIFY_VER};
+  const cache = CacheService.getScriptCache(); if(cache.get('slks:'+uid)) return {ok:false,err:'잠시 후 다시 보내 주세요',ver:NOTIFY_VER};
+  cache.put('slks:'+uid, '1', 2);
+  const C = SLACK_CH[ch], name = String(me.name||'').slice(0,20);
+  const esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const j = slackApi_('chat.postMessage', {channel:ch, text:esc, username:name+' (FS 포털)', unfurl_links:false}, true);
+  if(!j || !j.ts) return {ok:false,err:'Slack 전송 실패',ver:NOTIFY_VER};
+  const now = Date.now(), key = 's'+slkKey_(j.ts);
+  const v = {uid:uid, name:name, text:text.slice(0,4000), ts:now, slk:{ch:ch, ts:j.ts, cn:C.name, out:true}};
+  dbPut_('talk/msgs/'+room+'/'+key, v);
+  slkTeamRooms_(text, text, name, C).forEach(function(r){ dbPut_('talk/msgs/'+r+'/'+key+'t', v); });
+  if(C.type === 'feed'){ try{ slkFieldHint_(text, name, now); }catch(e){ console.error(e); } }
+  return {ok:true, ts:j.ts, ver:NOTIFY_VER};
 }
-/* 222: CSO 직원 알아보기 — 요청 채널에 글을 쓴 사람 중 포털 명단에 이름이 없는 사람(사용자 확인: 요청 채널 작성자 = CSO).
- *  실명을 저장소에 두지 않으려고 Slack 사용자 id 로 DB talk/slack/cso/{id} = {n,at} 에만 기록 */
-const SLK_CS_NAME = /CS\s*쉐어링|CSIS|CSO/i;   // 222: 「CS쉐어링 전화접수 인계사항」 같은 CS 쪽 봇·워크플로 이름
-/* 222: 이름 정리 규칙을 바꾼 뒤 한 번 — 전체방에 들어와 있던 Slack 글을 새 기준으로 다시 맞춰 팀·사무소방/CS 방으로 옮김 */
-function slkReroute_(){
-  if(!slkToRoom_.roster) slkToRoom_.roster = db_('talk/roster') || {};
-  const cso = {}; Object.keys(slkCso_()).forEach(function(k){ const v = slkCso_()[k]; if(v && v.n) cso[v.n] = 1; });
-  const all = dbQuery_('talk/msgs/all','orderBy="$key"&startAt="s"&endAt="s~"') || {};
+/* 224: 한 번 — 222 때 CS 방·전체방에 들어간 Slack 글을 채널 방으로 옮김(CS 방은 포털 전용으로 되돌림) */
+function slkMig224_(){
   let moved = 0;
-  Object.keys(all).forEach(function(k){
-    const v = all[k]; if(!v || v.uid !== 'slack' || !v.slk) return;
-    const n = slkPerson_(v.name);
-    let room = slkRoomFor_(n, slkToRoom_.roster);
-    if(room === 'all' && (cso[n] || SLK_CS_NAME.test(n))) room = 'cs';
-    if(room === 'all'){ if(n !== v.name) dbPatch_('talk/msgs/all/'+k, {name:n}); return; }
-    v.name = n; dbPut_('talk/msgs/'+room+'/'+k, v); dbDelete_('talk/msgs/all/'+k); moved++;
+  ['cs','all'].forEach(function(src){
+    const all = dbQuery_('talk/msgs/'+src,'orderBy="$key"&startAt="s"&endAt="s~"') || {};
+    Object.keys(all).forEach(function(k){
+      const v = all[k]; if(!v || v.uid !== 'slack' || !v.slk) return;
+      const C = SLACK_CH[v.slk.ch]; const to = (C && C.pr) || 'sk_talk';
+      dbPut_('talk/msgs/'+to+'/'+k, v); dbDelete_('talk/msgs/'+src+'/'+k); moved++;
+    });
+  });
+  // 200 때 팀·사무소방에 넣은 Slack 글 키(s{ts})는 채널 방 키와 같아 화면에서 겹침 → 팀 방 복사본 키(s{ts}t)로 바꿈
+  Object.keys(ROOM_SCOPE).forEach(function(room){
+    const all = dbQuery_('talk/msgs/'+room,'orderBy="$key"&startAt="s"&endAt="s~"') || {};
+    Object.keys(all).forEach(function(k){
+      const v = all[k]; if(!v || v.uid !== 'slack' || !v.slk || /t$/.test(k)) return;
+      dbPut_('talk/msgs/'+room+'/'+k+'t', v); dbDelete_('talk/msgs/'+room+'/'+k); moved++;
+    });
   });
   return moved;
 }
 function slkCso_(){ if(!slkCso_.v) slkCso_.v = db_('talk/slack/cso') || {}; return slkCso_.v; }
+/* 222: CSO 직원 알아보기 — 요청 채널에 글을 쓴 사람 중 포털 명단에 이름이 없는 사람. Slack 사용자 id 로 DB talk/slack/cso/{id} 에만(실명은 저장소에 두지 않음) */
 function slkMarkCso_(m, name){
   if(!m.user || !name || !/^[A-Z0-9]+$/.test(m.user)) return;
-  if(!slkToRoom_.roster) slkToRoom_.roster = db_('talk/roster') || {};
-  const R = slkToRoom_.roster;
+  const R = slkRoster_();
   if(Object.keys(R).some(function(t){ return R[t] && Object.prototype.hasOwnProperty.call(R[t], name); })) return;   // 명단에 있는 사람(엔지니어)은 아님
   const c = slkCso_(); if(c[m.user] && c[m.user].n === name) return;
   c[m.user] = {n:String(name).slice(0,40), at:Date.now()};
   dbPut_('talk/slack/cso/'+m.user, c[m.user]);
 }
-function slkCsBackfill_(ch, C, names, since){
+function slkChanBackfill_(ch, C, names, since){
   let cursor = '', page = 0;
   do{
     const prm = {channel:ch, oldest:String(since/1000), limit:200}; if(cursor) prm.cursor = cursor;
     const j = slackApi_('conversations.history', prm);
     (j.messages||[]).forEach(function(m){
-      if(m.subtype && ['bot_message','thread_broadcast'].indexOf(m.subtype) < 0) return;
+      if(m.subtype && ['bot_message','thread_broadcast','file_share'].indexOf(m.subtype) < 0) return;
       if(m.bot_id && m.username && /FS 포털/.test(m.username)) return;
-      const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
-      slkMarkCso_(m, slkPerson_(who));
-      slkToCs_(m, slkClean_(String(m.text||'')), slkPerson_(who), Math.round(+m.ts*1000), ch, C);
+      const who = slkPerson_(m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || ''));
+      if(C.type === 'req') slkMarkCso_(m, who);
+      slkToChan_(m, String(m.text||''), slkClean_(String(m.text||'')), who, Math.round(+m.ts*1000), ch, C, {noTeam:true});
     });
     cursor = j.response_metadata && j.response_metadata.next_cursor || '';
   }while(cursor && ++page < 3);
