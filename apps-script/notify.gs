@@ -53,7 +53,7 @@ function doPost(e){
     if(cache.get('sent:'+msgId)){ try{lock.releaseLock();}catch(e){} return out_({ok:true,dup:true,ver:NOTIFY_VER}); }
     cache.put('sent:'+msgId,'1',600); try{ lock.releaseLock(); }catch(e){}
 
-    const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {};
+    const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {}, admins = db_('talk/admins') || {};
     const me = users[uid] || {};   // 보낸 사람의 다른 기기(같은 이름·팀)에는 보내지 않음
     const myKey = me.team + '_' + me.name;
     const dmKeys = isDm ? room.slice(3).split('__') : null;
@@ -74,7 +74,7 @@ function doPost(e){
       const ment = !!mentioned[u.name];
       if(isDm){ if(dmKeys.indexOf(u.team + '_' + u.name) < 0) return; }
       else if(isGroup){ if(!gMembers[u.team + '_' + u.name]) return; }
-      else if(!ment && sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1]))) return;
+      else if(!ment && sc && !(u.team===sc[0] && (!sc[1] || u.office===sc[1])) && !(admins[id]===true && mute[id] && mute[id][room]===false)) return;   // 235: 관리자가 다른 팀 방 알림을 직접 켰으면 보냄
       const pk = u.team + '_' + u.name; st.people[pk] = true;
       const hasTok = Object.keys(tokens[id] || {}).some(function(k){ return tokens[id][k] && tokens[id][k].token; });
       if(!hasTok){ st.noPush[pk] = u.name; return; }
@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v39';
+const NOTIFY_VER = 'v40';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -881,6 +881,7 @@ function slackPull(force, opt){
     // 214: 이벤트가 잠금에 막혀 못 한 확인 맞추기(slkSyncPend)는 다음 1분 트리거가 바로 함
     if(!opt.newOnly && (force || !evLive || min % 5 === 0 || cch.get('slkSyncPend'))){ cch.remove('slkSyncPend'); try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!opt.newOnly && min % 30 === 0){ try{ slkTrimFeed_(); }catch(e){ console.error(e); } }
+    try{ const pr = slkPushFlush_(SLK_PUSHQ.splice(0)); if(pr) meta.push = pr; }catch(e){ console.error(e); }   // 235: 새 Slack 글 알림
     meta.ms = Date.now() - now;
     if(opt.ev) meta.ev = now;
     meta.at = now; meta.ok = true; if(!meta.err) delete meta.err; meta.chans = {}; Object.keys(SLACK_CH).forEach(function(c){ meta.chans[c] = SLACK_CH[c].name; });
@@ -998,7 +999,7 @@ function slkRoomFor_(name, roster){
       || keys.filter(function(k){ return ROOM_SCOPE[k][0] === p.team && !ROOM_SCOPE[k][1]; })[0] || 'all';
 }
 /* 224: Slack 채널 ↔ 포털 채널 방 (사용자 결정 2026-11-09)
- *  - 세 채널의 맨 위 글 → 포털 채널 방(sk_cso·sk_night·sk_talk) + 해당 팀·사무소방 복사본(같은 키 s{ts}, 푸시 없음)
+ *  - 세 채널의 맨 위 글 → 포털 채널 방(sk_cso·sk_night·sk_talk) + 해당 팀·사무소방 복사본(키 s{ts}t) — 235부터 알림도(slkPushFlush_)
  *  - 팀 정하기: 요청 채널 = @그룹 멘션(라벨이 있을 때) > 양식의 「인계 : FS …」 > 작성자 팀, group-sysmex-talk = 작성자 팀 > 멘션·양식
  *  - 명단에 없는 작성자(CSO 직원 등)이고 멘션·양식도 없으면 채널 방에만
  *  - 포털 채널 방에서 쓴 글은 slackSend_ 가 Slack 으로 보내고 같은 방식으로 저장 */
@@ -1079,6 +1080,57 @@ function slkLinkFix229_(){   // 한 번 — 이미 들어온 주소만 있는 �
   });
   return n;
 }
+/* 235: Slack 글(채널 방·팀 방 복사본·포털에서 Slack 으로 보낸 글)도 알림 — 사용자 지적 「알람을 켰던 방에 알람이 안 울림」.
+ *  화면의 알림 켬/끔(index.html isMuted·defOff)과 같은 기준: 방에 끔(true)이면 안 보냄, 우리 팀·사무소·Slack 채널 방은 기본 켬,
+ *  다른 팀·사무소 방은 관리자가 직접 켠(false) 경우만. 같은 글이 채널 방·팀 방 둘 다면 한 번만(팀 방 이름으로).
+ *  한 번 돌 때 새 글이 여럿이면 기기마다 한 번(「새 글 n건」) — 하루 UrlFetch 한도를 아끼려고. 15분 넘은 글(처음 채우기·다시 보기)은 안 보냄.
+ *  하루 보낸 수가 SLK_PUSH_MAX 를 넘으면 Slack 채널 방만 해당되는 알림은 건너뜀(팀 방 알림은 계속). */
+var SLK_PUSHQ = [];
+const SLK_PUSH_MAX = 6000;
+function roomPushOk_(u, id, room, mute, admins){
+  const m = (mute[id] || {})[room];
+  if(m === true) return false;
+  const sc = ROOM_SCOPE[room];
+  if(!sc) return true;                                   // Slack 채널 방·공지 등 = 기본 켬
+  if(u.team === sc[0] && (!sc[1] || u.office === sc[1])) return true;
+  return m === false && admins[id] === true;            // 다른 팀 방 = 관리자가 직접 켠 것만
+}
+function slkPushFlush_(q){
+  q = (q || []).filter(function(p){ return p && p.rooms && p.rooms.length && +p.at > Date.now() - 15*60*1000; });
+  if(!q.length) return null;
+  const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {}, admins = db_('talk/admins') || {};
+  const props = PropertiesService.getScriptProperties(), day = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyyMMdd');
+  const dv = String(props.getProperty('SLK_PUSH_DAY') || '').split('|'), used = dv[0] === day ? +dv[1] || 0 : 0, over = used >= SLK_PUSH_MAX;
+  const byTitle = {}, targets = []; let skipped = 0;
+  Object.keys(users).forEach(function(id){
+    const u = users[id];
+    if(!u || u.status !== 'approved' || (mute[id] && mute[id]._all)) return;
+    const t = tokens[id] || {}, tk = Object.keys(t).filter(function(k){ return t[k] && t[k].token; });
+    if(!tk.length) return;
+    const pk = u.team + '_' + u.name, hits = [];
+    q.forEach(function(p){
+      if(p.by === pk || (!p.by && p.name === u.name)) return;           // 쓴 사람 본인(다른 기기 포함)에게는 안 보냄
+      const ok = p.rooms.filter(function(r){ return roomPushOk_(u, id, r, mute, admins); });
+      if(!ok.length) return;
+      const team = ok.filter(function(r){ return ROOM_SCOPE[r]; })[0];
+      if(!team && over){ skipped++; return; }
+      hits.push({p:p, room:team || ok[0]});
+    });
+    if(!hits.length) return;
+    const last = hits[hits.length-1];
+    const title = hits.length === 1 ? (ROOM_NAME[last.room] || last.room) + ' · ' + last.p.name + ' (Slack)' : 'Slack 새 글 ' + hits.length + '건 · ' + (ROOM_NAME[last.room] || last.room);
+    const body = (hits.length === 1 ? '' : last.p.name + ': ') + String(last.p.text || '').replace(/\s+/g,' ').slice(0,140);
+    tk.forEach(function(k){ targets.push({uid:id, key:k, token:t[k].token, title:title, body:body, room:last.room}); });
+  });
+  // 받는 기기마다 제목·내용이 달라 방 단위로 묶어 보냄
+  const groups = {};
+  targets.forEach(function(x){ const g = x.room + '\u0001' + x.title + '\u0001' + x.body; (groups[g] = groups[g] || []).push(x); });
+  let sent = 0;
+  Object.keys(groups).forEach(function(g){ const L = groups[g], x = L[0];
+    sent += send_(L, x.title, x.body, APP_URL + '#room-' + encodeURIComponent(x.room), 'room-' + x.room, {room:x.room}); });
+  props.setProperty('SLK_PUSH_DAY', day + '|' + (used + targets.length));
+  return {at:Date.now(), posts:q.length, devices:targets.length, sent:sent, skipped:skipped, day:used + targets.length};
+}
 function slkToChan_(m, raw, text, name, at, ch, C, opt){
   if(!C.pr) return;
   text = slkExpandLink_(m, text);
@@ -1086,12 +1138,14 @@ function slkToChan_(m, raw, text, name, at, ch, C, opt){
   if(!t) return;
   const key = 's'+slkKey_(m.ts), v = {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}};
   dbPut_('talk/msgs/'+C.pr+'/'+key, v);
+  const pq = (opt && opt.noTeam) ? null : {rooms:[C.pr], name:v.name, text:t, at:at};
+  if(pq) SLK_PUSHQ.push(pq);
   if(opt && opt.noTeam) return;
   // 232: CSO 가 같은 글을 handover 와 group-sysmex-talk 에 같이 올리면 팀 방에 두 번 들어가던 것 → 같은 사람·같은 내용은 15분 안에 한 번만
   const cache = CacheService.getScriptCache(), hsh = slkHash_((name||'')+'|'+String(text||'').replace(/\s+/g,''));
   slkTeamRooms_(raw, text, name, C).forEach(function(r){
     const ck = 'slkdup:'+r+':'+hsh; if(cache.get(ck)) return; cache.put(ck, '1', 900);
-    dbPut_('talk/msgs/'+r+'/'+key+'t', v);
+    dbPut_('talk/msgs/'+r+'/'+key+'t', v); pq.rooms.push(r);
   });   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
 }
 /* 포털 채널 방에서 쓴 글 → Slack 채널(「이름 (FS 포털)」) + 포털 채널 방·팀 방에 저장. 승인된 직원 누구나(사용자 결정) */
@@ -1113,8 +1167,10 @@ function slackSend_(req){
   const now = Date.now(), key = 's'+slkKey_(j.ts);
   const v = {uid:uid, name:name, text:text.slice(0,4000), ts:now, slk:{ch:ch, ts:j.ts, cn:C.name, out:true}};
   dbPut_('talk/msgs/'+room+'/'+key, v);
-  slkTeamRooms_(text, text, name, C).forEach(function(r){ dbPut_('talk/msgs/'+r+'/'+key+'t', v); });
+  const rooms = [room];
+  slkTeamRooms_(text, text, name, C).forEach(function(r){ dbPut_('talk/msgs/'+r+'/'+key+'t', v); rooms.push(r); });
   if(C.type === 'feed'){ try{ slkFieldHint_(text, name, now); }catch(e){ console.error(e); } }
+  try{ slkPushFlush_([{rooms:rooms, name:name, text:text, at:now, by:me.team+'_'+me.name}]); }catch(e){ console.error(e); }   // 235
   return {ok:true, ts:j.ts, ver:NOTIFY_VER};
 }
 /* 224: 한 번 — 222 때 CS 방·전체방에 들어간 Slack 글을 채널 방으로 옮김(CS 방은 포털 전용으로 되돌림) */
