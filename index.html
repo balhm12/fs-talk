@@ -1920,7 +1920,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.222";
+const APP_VERSION="2026-11-09.223";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -1932,7 +1932,7 @@ const FIREBASE_CONFIG={
 };
 const ROOMS=[
   {id:"notice",name:"전체공지",icon:"📢",desc:"FSG 전체 공지",grp:"전체"},
-  {id:"all",name:"전체방",icon:"🌐",desc:"FS·CS 방 대화가 함께 보입니다 · 여기서 쓴 글은 전체방에만 올라가요",grp:"전체"},
+  {id:"all",name:"전체방",icon:"🌐",desc:"FS·CS 방 대화가 함께 보입니다(Slack 글 제외) · 여기서 쓴 글은 전체방에만 올라가요",grp:"전체"},
   {id:"ts",name:"FS",icon:"🛠",desc:"Field Service · 현장 조치 공유",grp:"전체"},
   {id:"cs",name:"CS",icon:"☎",desc:"고객지원",grp:"전체"},
   {id:"west",name:"FS WEST",icon:"W",desc:"FS WEST 팀방",grp:"팀"},
@@ -2049,7 +2049,8 @@ const dmVisible=id=>{const d=dms[id];return !!d&&(!d.left||(+d.ts||0)>+d.left);}
 const shown=m=>!isPriv(m.room)||m.ts>dmLeft(m.room);
 const ALL_SRC=new Set(["all","ts","cs"]);          // 전체방에 함께 보이는 방: 전체방 자체 글 + FS + CS (나머지 방은 각자 방에서만)
 const inAll=r=>ALL_SRC.has(r);
-const inRoom=(m,id)=>id==="all"?inAll(m.room):(m.room===id&&shown(m));
+const inAllMsg=m=>inAll(m.room)&&!(m.slk&&m.room!=="all");   // 223: FS·CS 방의 Slack 글(CSO 요청 등)은 전체방에 합치지 않음 — 그 방에서만
+const inRoom=(m,id)=>id==="all"?inAllMsg(m):(m.room===id&&shown(m));
 const myGroup=id=>isGroup(id)&&!!groups[id]&&!!(groups[id].members||{})[myKey];
 let dms={};
 function dmOther(id){if(!isDm(id)||!myKey)return null;const ks=id.slice(3).split("__");if(ks.length!==2||ks[0]===ks[1])return null;return ks[0]===myKey?ks[1]:ks[1]===myKey?ks[0]:null;}
@@ -2411,7 +2412,7 @@ function buildNavStats(){
   for(const m of msgs){
     if(!shown(m))continue;
     const u=!isMine(m)&&m.ts>readFor(m),mm=u&&mentionsMe(m);
-    bump(m.room,m,u,mm);if(inAll(m.room)&&m.room!=="all")bump("all",m,u&&m.ts>myRead("all"),mm);else if(m.room==="all"){}
+    bump(m.room,m,u,mm);if(inAllMsg(m)&&m.room!=="all")bump("all",m,u&&m.ts>myRead("all"),mm);else if(m.room==="all"){}
   }
   return st;
 }
