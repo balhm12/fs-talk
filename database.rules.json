@@ -641,6 +641,18 @@
             },
             "$other": {
               ".validate": false
+            },
+            "ack": {
+              ".validate": "newData.hasChildren(['n','at'])",
+              "n": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "at": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
             }
           }
         },

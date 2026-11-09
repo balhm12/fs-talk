@@ -103,7 +103,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v28';
+const NOTIFY_VER = 'v29';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -729,6 +729,21 @@ function slkClean_(t){
 }
 /* 「이준호(Juno)」 → 「이준호」 — 포털 명단 이름과 맞추기 */
 function slkPerson_(n){ return String(n||'').replace(/\s*[\(（][^\)）]*[\)）]\s*/g,' ').replace(/^\s*(?:SKR\s+)?FS(?:\s+(?:WEST|EAST|CENTRAL|SOUTH|SS|OM))?\s+/i,'').replace(/\s+/g,' ').trim(); }
+function slkBotId_(){
+  const c = CacheService.getScriptCache(), h = c.get('slkBot'); if(h !== null) return h;
+  let id = ''; try{ id = slackApi_('auth.test',{}).user_id || ''; }catch(e){}
+  c.put('slkBot', id, 21600); return id;
+}
+/* 210: 오늘 근무일정표에서 이 사람 칸에 「DP」가 있는지 (서버도 화면과 같은 조건으로 확인) */
+function isDpToday_(name){
+  if(!name) return false;
+  const day = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  return SCH_TEAMS.some(function(t){
+    let e = null; try{ e = schGet_('work-schedule/'+t+'/'+day+'/'+encodeURIComponent(name)); }catch(err){ return false; }
+    if(!e || typeof e !== 'object') return false;
+    return ['am1','am2','pm1','pm2','weekend','night'].some(function(k){ return schKey_(e[k]) === 'DP'; });
+  });
+}
 function slkUser_(uid, cacheObj){
   if(!uid) return '';
   if(cacheObj[uid] !== undefined) return cacheObj[uid];
@@ -832,7 +847,9 @@ function slackPull(force){
 function slkSync_(names){
   const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-7*864e5)) || {};
   Object.keys(all).slice(-40).forEach(function(id){
-    const r = all[id]; if(!r || r.st === 'done' || r.multi) return;
+    const r = all[id]; if(!r || r.multi) return;
+    const autoDone = r.st === 'done' && !r.doneBy;   // 210: v24~28 은 ✅ 를 「완료」로 잘못 봤음 — 사람이 완료하지 않은 것은 다시 맞춤
+    if(r.st === 'done' && !autoDone) return;
     let j; try{ j = slackApi_('conversations.replies',{channel:r.ch, ts:r.ts, limit:50}); }catch(e){ return; }
     const msgs = j.messages || []; if(!msgs.length) return;
     const parent = msgs[0], patch = {}, th = {};
@@ -843,8 +860,16 @@ function slkSync_(names){
     if(Object.keys(th).length) patch.th = th;
     const rx = (parent.reactions||[]).map(function(x){ return x.name; });
     if(rx.length) patch.rx = rx.join(',');
-    if(rx.some(function(n){ return /^(white_check_mark|heavy_check_mark|ballot_box_with_check|done|완료)$/.test(n); })){ patch.st = 'done'; patch.doneAt = patch.doneAt || Date.now(); }
-    else if(r.st === 'new'){
+    if(autoDone){ patch.st = 'new'; patch.doneAt = null; }
+    // 210: ✅(white_check_mark) = 담당·DP 가 「확인(접수)」했다는 뜻 (사용자 확인 2026-11-09). 완료는 포털 「완료」로만
+    const ackR = (parent.reactions||[]).filter(function(x){ return /^(white_check_mark|heavy_check_mark|ballot_box_with_check|v)$/.test(x.name); })[0];
+    if(ackR && !r.ack){
+      const uids = (ackR.users||[]).filter(function(u){ return u !== slkBotId_(); });
+      const an = uids.length ? slkPerson_(slkUser_(uids[0], names)) : '';
+      patch.ack = {n: an || '', at: Date.now()};
+    }
+    if(ackR && (r.st === 'new' || autoDone)){ patch.st = 'doing'; if(!r.who && patch.ack && patch.ack.n) { patch.who = patch.ack.n; patch.whoAt = Date.now(); } }
+    else if(r.st === 'new' || autoDone){
       const rep = Object.keys(th).map(function(k){ return th[k]; }).filter(function(x){ return x.n && x.n !== r.by; })[0];
       if(rep){ patch.st = 'doing'; patch.who = r.who || rep.n; patch.whoAt = rep.at; }
       else if(rx.indexOf('eyes') >= 0){ patch.st = 'doing'; }
@@ -892,14 +917,16 @@ function slkTrimFeed_(){
 function slackAct_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid); if(!me || me.status !== 'approved') return {ok:false,err:'승인된 직원만 할 수 있습니다',ver:NOTIFY_VER};
-  if(db_('talk/admins/'+uid) !== true) return {ok:false,err:'담당·회신·완료는 관리자만 할 수 있습니다',ver:NOTIFY_VER};   // 205: 직원은 확인만
+  const isAdm = db_('talk/admins/'+uid) === true;
+  if(!isAdm && String(req.op||'') !== 'ack') return {ok:false,err:'담당·회신·완료는 관리자만 할 수 있습니다',ver:NOTIFY_VER};   // 205: 직원은 확인만 (210: ✅ 확인은 담당·오늘 DP 도)
   if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'Slack 연결 전입니다 (관리자가 SLACK_BOT_TOKEN 설정)',ver:NOTIFY_VER};
   const id = String(req.id||''); if(!/^[a-z]+_[-\w]{6,40}$/.test(id)) return {ok:false,err:'bad id',ver:NOTIFY_VER};
   const r = db_('talk/slack/req/'+id); if(!r || !SLACK_CH[r.ch]) return {ok:false,err:'요청이 없습니다',ver:NOTIFY_VER};
   const op = String(req.op||''), name = String(me.name||'').slice(0,20), text = String(req.text||'').trim().slice(0,1500);
+  if(op === 'ack' && !isAdm && !(r.who === name || r.mention === name || isDpToday_(name))) return {ok:false,err:'담당자·오늘 DP·관리자만 확인할 수 있습니다',ver:NOTIFY_VER};
   const post = function(t){ return slackApi_('chat.postMessage',{channel:r.ch, thread_ts:r.ts, text:t, username:name+' (FS 포털)', unfurl_links:false}, true); };
   const now = Date.now(), patch = {};
-  if(r.multi && op !== 'claim' && op !== 'done' && op !== 'reopen') return {ok:false,err:'야간 인계 요약 글은 스레드 회신 대신 담당·완료만 할 수 있습니다',ver:NOTIFY_VER};
+  if(r.multi && op !== 'claim' && op !== 'ack' && op !== 'done' && op !== 'reopen') return {ok:false,err:'야간 인계 요약 글은 스레드 회신 대신 담당·완료만 할 수 있습니다',ver:NOTIFY_VER};
   if(op === 'claim'){
     if(!r.multi){ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'eyes'}, true); post('👀 '+name+'님이 담당합니다'+(text?'\n'+text:'')); }
     patch.st = 'doing'; patch.who = name; patch.whoAt = now;
@@ -907,11 +934,13 @@ function slackAct_(req){
     if(!text) return {ok:false,err:'내용이 비었습니다',ver:NOTIFY_VER};
     const j = post(text); patch['th/'+slkKey_(j.ts)] = {n:name, t:text, at:now, p:true};
     if(r.st === 'new'){ patch.st = 'doing'; patch.who = r.who || name; patch.whoAt = now; }
-  }else if(op === 'done'){
-    if(!r.multi){ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); post('✅ 처리 완료 — '+name+(text?'\n'+text:'')); }
+  }else if(op === 'ack'){   // 210: ✅ = 확인(접수)
+    if(!r.multi){ try{ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); }catch(e){} post('✅ '+name+' 확인'+(text?'\n'+text:'')); }
+    patch.ack = {n:name, at:now}; if(r.st === 'new'){ patch.st = 'doing'; } if(!r.who){ patch.who = name; patch.whoAt = now; }
+  }else if(op === 'done'){   // 210: ✅ 는 「확인」이라 완료에는 반응을 달지 않음
+    if(!r.multi){ post('처리 완료 — '+name+(text?'\n'+text:'')); }
     patch.st = 'done'; patch.doneAt = now; patch.doneBy = name; if(!r.who) patch.who = name;
   }else if(op === 'reopen'){
-    if(!r.multi) try{ slackApi_('reactions.remove',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); }catch(e){}
     patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null;
   }else return {ok:false,err:'bad op',ver:NOTIFY_VER};
   dbPatch_('talk/slack/req/'+id, patch);
