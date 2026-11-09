@@ -1692,6 +1692,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 .htools .htool.hmute{display:flex;flex-direction:column;gap:2px;width:auto;min-width:48px;padding:2px 6px}.htool.hmute .tbl{font-size:11px;line-height:1.1;color:var(--sub);white-space:nowrap}.htool.hmute.off,.htool.hmute.off .tbl{color:#C62F34}.htool.hmute.nc .tbl{color:var(--sub)}html[data-theme=dark] .htool.hmute.off,html[data-theme=dark] .htool.hmute.off .tbl{color:#FF8A80}
 .mutemk{position:absolute;right:6px;bottom:18px;width:16px;height:16px;border-radius:50%;background:#C62F34;color:#fff;display:flex;align-items:center;justify-content:center}.mutemk svg{width:11px;height:11px}#rChat,#tChat{position:relative}
 .ralrow{display:flex;align-items:center;gap:12px;padding:8px 2px;border-bottom:1px solid var(--line);min-height:44px}.ralrow .ralt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ralrow .ralt b{font-size:15px}.ralrow .ralt small{font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ralrow.raltop{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0 4px;background:var(--soft)}.ralrow.dim{opacity:.55}.ralg{margin:14px 0 2px;font-size:12px;font-weight:700;color:var(--sub)}
+.slkrr{font-weight:700;color:#C62F34}html[data-theme=dark] .slkrr{color:#FF8A80}.slkrrb b{color:#C62F34}html[data-theme=dark] .slkrrb b{color:#FF8A80}
 </style>
 
 </head>
@@ -1926,7 +1927,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.226";
+const APP_VERSION="2026-11-09.227";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3813,7 +3814,7 @@ function renderMore(){   /* 196: 「더 보기」 접힌 요약 — 고객 만�
 }
 /* 212: 홈 맨 위 Slack 요청 — 새 요청(우리 팀 기준, 그룹장·지원 팀·관리자는 전체) 최신 순, 휴대폰 2건·PC 3건, 누르면 그 요청 상세 */
 function renderHomeReq(){const bx=$("hreq");if(!bx||!me)return;bx.textContent="";
-  const sc=slkDefScope(),all=slkList().filter(r=>slkIn(r,sc)),nw=all.filter(r=>r.st==="new").sort((a,c)=>c.at-a.at),dg=all.filter(r=>r.st==="doing"),unc=all.filter(r=>r.st!=="done"&&!slkChk[r.id]);
+  const sc=slkDefScope(),all=slkList().filter(r=>slkIn(r,sc)),nw=all.filter(r=>r.st==="new").sort((a,c)=>slkAtE(c)-slkAtE(a)),dg=all.filter(r=>r.st==="doing"),unc=all.filter(r=>r.st!=="done"&&!slkChk[slkCk(r)]);
   const hd=el("div","hreqh");const tl=el("button","hreqt");tl.appendChild(icEl("headset","",18));tl.appendChild(el("b",null,"Slack 요청"));tl.onclick=()=>go("req");hd.appendChild(tl);
   const ct=el("div","hreqc");ct.appendChild(el("span","hreqn"+(nw.length?" on":""),"새 요청 "+nw.length));ct.appendChild(el("span",null,"처리 중 "+dg.length));if(unc.length)ct.appendChild(el("span",null,"확인 안 함 "+unc.length));hd.appendChild(ct);
   const mo=el("button","hmore","요청함 ›");mo.onclick=()=>go("req");hd.appendChild(mo);bx.appendChild(hd);
@@ -3825,9 +3826,10 @@ function renderHomeReq(){const bx=$("hreq");if(!bx||!me)return;bx.textContent=""
   L.forEach(r=>{const f=r.f||{},row=el("button","hreqr");
     row.appendChild(el("span","slksb s-"+slkSrc(r),slkSrc(r)==="night"?"CS쉐어링":slkSrc(r)==="cso"?"CSO":"기타"));
     if(slkUrgent(f))row.appendChild(el("span","slkurg","긴급"));
+    if(slkRrN(r))row.appendChild(el("span","slkurg","재요청"));
     const tx=el("span","hreqx");tx.appendChild(el("b",null,[f.hosp,f.eq].filter(Boolean).join(" · ")||"요청"));const q=slkFirst(f.req||f.sym,60);if(q)tx.appendChild(el("small",null,q));row.appendChild(tx);
     const tm=slkTeam(r);if(tm&&sc==="all")row.appendChild(el("span","slktm",tm.replace(/^FS /,"")));
-    row.appendChild(el("span","slkago",slkWhen(r.at)));row.onclick=()=>{go("req");setTimeout(()=>{if(!slkChk[r.id])slkChkSet([r.id],true);openSlkReq(r.id);},60);};ls.appendChild(row);});
+    row.appendChild(el("span","slkago",slkWhen(slkAtE(r))));row.onclick=()=>{go("req");setTimeout(()=>{if(!slkChk[slkCk(r)])slkChkSet([slkCk(r)],true);openSlkReq(r.id);},60);};ls.appendChild(row);});
   if(nw.length>L.length){const m=el("button","hreqm","새 요청 "+(nw.length-L.length)+"건 더 보기 ›");m.onclick=()=>{slkSt="new";go("req");};ls.appendChild(m);}
   bx.appendChild(ls);}
 function renderBrief(){try{renderStart();}catch(e){}
@@ -4012,6 +4014,8 @@ function slkHow(f){const t=[f&&f.req,f&&f.sym,f&&f.when].filter(Boolean).join(" 
 /* 210: ✅(V) 확인 = 담당·오늘 DP·관리자. 오늘 DP 는 근무일정표 내 칸의 「DP」(서버 isDpToday_ 도 같은 기준으로 다시 확인) */
 function slkDpToday(){if(!me||!schData||!schData.w||schData.today!==ymd(new Date()))return false;return (schData.w.plan||[]).concat(schData.w.duty||[]).some(x=>x.nm===me.name&&/^DP(\b|\s|·|$)/.test(String(x.k||"")));}
 function slkCanAck(r){return !!me;}   // 211: 근무표대로 안 하는 경우가 많아 승인된 직원 누구나 ✅ 확인 (사용자 결정)
+const slkRrN=r=>r&&r.rr?Object.keys(r.rr).length:0;const slkCk=r=>slkRrN(r)?r.id+"_r"+slkRrN(r):r.id;   // 227: 재요청이 붙으면 「확인함」을 다시 풀어 보이게
+const slkAtE=r=>Math.max(+r.at||0,+r.rrAt||0);   // 227: 재요청 시각까지 본 최근 시각
 function slkChkSet(ids,v){if(!myKey||!ids.length)return;const p={};ids.forEach(id=>p[id]=v?true:null);R("prefs/"+myKey+"/slkchk").update(p).catch(()=>toast("저장하지 못했습니다."));}
 function slkFirst(s,n){s=String(s||"").split("\n").map(x=>x.replace(/^[-•·\s]+/,"").trim()).filter(Boolean).join(" · ");return s.length>n?s.slice(0,n)+"…":s;}
 function slkTel(s){const m=/0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}/.exec(String(s||""));return m?m[0].replace(/\D/g,""):"";}
@@ -4100,12 +4104,12 @@ function renderReqPage(){
     ch("","전체",L0.length);SLK_KIND.map(k=>k[0]).concat(["etc"]).forEach(k=>{if(cnt[k])ch(k,SLK_KN[k],cnt[k]);});
     if(slkKindF&&!cnt[slkKindF])slkKindF="";b.appendChild(kb);}
   const L1=L0.filter(r=>!slkKindF||slkKind(r.f)===slkKindF);
-  const unc=L1.filter(r=>!slkChk[r.id]);
+  const unc=L1.filter(r=>!slkChk[slkCk(r)]);
   {const cb=el("div","slkchkbar");const u=el("button","hchip sm"+(slkUnchk?" on":""),"확인 안 한 것만 "+unc.length);u.setAttribute("aria-pressed",slkUnchk);u.onclick=()=>{slkUnchk=!slkUnchk;renderReqPage();};cb.appendChild(u);
-    if(unc.length){const a=el("button","hmore","보이는 "+unc.length+"건 모두 확인");a.onclick=()=>{slkChkSet(unc.map(r=>r.id),true);toast(unc.length+"건을 확인으로 표시했습니다.");track("slk_chk");};cb.appendChild(a);}
+    if(unc.length){const a=el("button","hmore","보이는 "+unc.length+"건 모두 확인");a.onclick=()=>{slkChkSet(unc.map(slkCk),true);toast(unc.length+"건을 확인으로 표시했습니다.");track("slk_chk");};cb.appendChild(a);}
     if(isAdmin&&L1.length){const a=el("button","hmore slkclean","목록 정리");a.onclick=()=>openSlkClean(L1);cb.appendChild(a);}
     b.appendChild(cb);}
-  const L=L1.filter(r=>!slkUnchk||!slkChk[r.id]).sort((a,c)=>(slkSt==="done"?(c.doneAt||c.at)-(a.doneAt||a.at):c.at-a.at));
+  const L=L1.filter(r=>!slkUnchk||!slkChk[slkCk(r)]).sort((a,c)=>(slkSt==="done"?(c.doneAt||c.at)-(a.doneAt||a.at):slkAtE(c)-slkAtE(a)));
   const box=el("div","slklist");
   if(!L.length){const e=el("div","slkempty");
     e.appendChild(el("b",null,slkSt==="all"?"요청이 없습니다":slkSt==="new"?"새 요청이 없습니다":slkSt==="doing"?"처리 중인 요청이 없습니다":"최근 7일 완료한 요청이 없습니다"));
@@ -4114,8 +4118,8 @@ function renderReqPage(){
     else if(slkScope!=="all")e.appendChild(el("span",null,"다른 팀 요청은 「전체」에서 볼 수 있어요."));
     box.appendChild(e);}
   L.forEach(r=>{const f=r.f,row=el("button","slkrow"),tp=el("span","slktop");
-    const it=el("div","slkitem"+(slkChk[r.id]?" chk":""));const ck=el("button","slkck"+(slkChk[r.id]?" on":""));ck.setAttribute("aria-pressed",!!slkChk[r.id]);ck.setAttribute("aria-label",slkChk[r.id]?"확인함 — 누르면 해제":"확인으로 표시");ck.title=slkChk[r.id]?"확인함":"확인으로 표시";
-    ck.onclick=()=>slkChkSet([r.id],!slkChk[r.id]);it.appendChild(ck);it.appendChild(row);
+    const it=el("div","slkitem"+(slkChk[slkCk(r)]?" chk":""));const ck=el("button","slkck"+(slkChk[slkCk(r)]?" on":""));ck.setAttribute("aria-pressed",!!slkChk[slkCk(r)]);ck.setAttribute("aria-label",slkChk[slkCk(r)]?"확인함 — 누르면 해제":"확인으로 표시");ck.title=slkChk[slkCk(r)]?"확인함":"확인으로 표시";
+    ck.onclick=()=>slkChkSet([slkCk(r)],!slkChk[slkCk(r)]);it.appendChild(ck);it.appendChild(row);
     tp.appendChild(el("span","slkst "+r.st,SLK_ST[r.st]||r.st));
     tp.appendChild(el("span","slksb s-"+slkSrc(r),SLK_SRC[slkSrc(r)]||"요청"));
     {const k=slkKind(f);tp.appendChild(el("span","slkkd k-"+k,SLK_KN[k]));if(slkUrgent(f))tp.appendChild(el("span","slkurg","긴급"));const h=slkHow(f);if(h)tp.appendChild(el("span","slksrc",h));}
@@ -4124,8 +4128,8 @@ function renderReqPage(){
     row.appendChild(el("b","slkh",[f.hosp+(f.area?" ("+f.area+")":""),f.eq].filter(Boolean).join(" · ")));
     const q=slkFirst(f.req||f.sym,80);if(q)row.appendChild(el("span","slkq",q));
     const who=r.st==="done"?(r.doneBy?"완료 "+r.doneBy:"완료"):r.who?"담당 "+r.who:r.mention?"@"+r.mention:"담당자 없음";
-    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention&&!r.ack?" none":""),who);if(r.ack&&r.st!=="done")ft.appendChild(el("b","slkackb"," · ✅ 확인"+(r.ack.n&&r.ack.n!==r.who?" "+r.ack.n:"")));if(r.mv&&r.st!=="done")ft.appendChild(el("b","slkmv"," · 방문 중"+(r.mv.n?" "+r.mv.n:"")));if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));if(r.autoFin&&r.st==="done")ft.appendChild(el("em",null," · 현장 「마칩니다」로 완료"));row.appendChild(ft);
-    row.onclick=()=>{if(!slkChk[r.id])slkChkSet([r.id],true);openSlkReq(r.id);};box.appendChild(it);});   // 208: 열어 보면 확인으로
+    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention&&!r.ack?" none":""),who);if(r.ack&&r.st!=="done")ft.appendChild(el("b","slkackb"," · ✅ 확인"+(r.ack.n&&r.ack.n!==r.who?" "+r.ack.n:"")));if(r.mv&&r.st!=="done")ft.appendChild(el("b","slkmv"," · 방문 중"+(r.mv.n?" "+r.mv.n:"")));if(slkRrN(r))ft.appendChild(el("b","slkrr"," · 재요청"+(slkRrN(r)>1?" "+slkRrN(r)+"회":"")+" "+slkWhen(r.rrAt)));if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));if(r.autoFin&&r.st==="done")ft.appendChild(el("em",null," · 현장 「마칩니다」로 완료"));row.appendChild(ft);
+    row.onclick=()=>{if(!slkChk[slkCk(r)])slkChkSet([slkCk(r)],true);openSlkReq(r.id);};box.appendChild(it);});   // 208: 열어 보면 확인으로
   b.appendChild(box);
 }
 function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign({id},r0),f=r.f||{};track("slk_v");
@@ -4138,6 +4142,7 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   const who=r.who?(r.st==="done"?"완료 "+(r.doneBy||r.who):"담당 "+r.who):r.mention?"지정 @"+r.mention+" (아직 담당 표시 없음)":"아직 담당자가 없습니다";
   c.appendChild(el("p","slkwho",who));
   if(r.ack)c.appendChild(el("p","slkack","✅ 확인"+(r.ack.n?" · "+r.ack.n:"")+" · "+slkAgo(r.ack.at)));   // 210
+  if(slkRrN(r)){const rb=el("div","slkfin slkrrb");rb.appendChild(el("b",null,"재요청 "+slkRrN(r)+"회"));Object.values(r.rr).sort((a,b)=>a.at-b.at).forEach(x=>{const ln=el("span",null,(x.n||"")+" · "+slkWhen(x.at)+" — "+slkFirst(String(x.t||"").split(/\n\s*={5,}/)[0],160));rb.appendChild(ln);});c.appendChild(rb);}   // 227
   if(r.mv){const mb=el("div","slkfin slkmvb");mb.appendChild(el("b",null,"방문 중 · "+(r.mv.n||"")+" · "+slkAgo(r.mv.at)));mb.appendChild(el("span",null,slkFirst(r.mv.t,160)));c.appendChild(mb);}   // 215: 현장 「이동합니다」
   if(r.autoFin&&r.st==="done")c.appendChild(el("p","hp","현장 「마칩니다」 글로 자동 완료했습니다. 잘못이면 「다시 열기」."));
   const tb=el("div","slkf");const row=(k,v,lnk)=>{if(!v)return;const d=el("div","bdr");d.appendChild(el("span","bdk",k));const vv=el("span","bdv",v);d.appendChild(vv);if(lnk)d.appendChild(lnk);tb.appendChild(d);};
@@ -6736,7 +6741,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){

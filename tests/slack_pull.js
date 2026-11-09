@@ -142,3 +142,32 @@ if(require.main===module){
   r=g.slackSend_({idToken:'bad',room:'sk_talk',text:'x'}); assert(!r.ok && r.err==='auth','토큰 없으면 거절');
   console.log('slack_pull 224-B: 통과');
 }
+// 227: 머리말로 FS 팀에 다시 넘긴 학술요청 = 요청, 같은 날 재요청은 「재요청」으로 붙이고 완료였으면 다시 새 요청, 같은 글(두 채널)은 재요청 아님, 한 번 다시 보기
+if(require.main===module){
+  const assert=require('assert');const RQ=()=>Object.values(db.talk.slack.req);
+  const t0=Date.now()/1000-600;
+  const form=h=>`&lt;기술요청&gt;&lt;인계 : FS WEST &gt;\n1) 기 관 명 : ${h}\n2) 장 비 명 : UC-3500\n3) 요청사항 : 에러 해소 방법 문의`;
+  hist.C0AT8RP3QDN=[
+    {ts:t0.toFixed(6),user:'U3',text:'CSO Team 먼저 인계드렸으나,\nFS WEST CAL 시행 거래처로 확인되어 전달드립니다.\n==============================\n&lt;학술요청&gt;&lt;인계 : CSO &gt;\n1) 기 관 명 : 테스트칠병원\n2) 장 비 명 : XR-3000\n3) 요청사항 : CAL 일정 요청'},
+    {ts:(t0+10).toFixed(6),user:'U3',text:form('테스트팔병원')}];
+  hist.C0AHFJGKMTL=[];hist.C0C6U7RQ44D=[{ts:(t0+12).toFixed(6),user:'U3',text:form('테스트팔병원')}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true);
+  const a=RQ().find(r=>r.f&&r.f.hosp==='테스트칠병원');assert(a&&a.f.team==='FS WEST'&&a.st==='new','머리말 FS WEST 전달 → 요청(학술요청 양식이어도)');
+  let b=RQ().find(r=>r.f&&r.f.hosp==='테스트팔병원');assert(b&&!b.rr,'두 채널 같은 글은 재요청 아님');
+  const bid=Object.keys(db.talk.slack.req).find(k=>db.talk.slack.req[k]===b);db.talk.slack.req[bid].st='done';db.talk.slack.req[bid].doneBy='테스트2';
+  hist.C0AT8RP3QDN=[{ts:(t0+200).toFixed(6),user:'U3',text:'&lt; 기술 요청 &gt;&lt; 인계 : FS WEST &gt;\n바코드 재등록후 사용했으나 증상 동일함\n기술 회신 요청\n=======================\n'+form('테스트팔병원')}];hist.C0C6U7RQ44D=[];
+  g.slackPull(true);
+  b=db.talk.slack.req[bid];assert(b.rr&&Object.keys(b.rr).length===1&&b.st==='new'&&!b.doneBy&&b.rrAt,'재요청 → rr 붙이고 완료를 새 요청으로');
+  g.slackPull(true);assert(Object.keys(db.talk.slack.req[bid].rr).length===1,'같은 재요청 두 번 안 붙음');
+  // 다시 보기: 이미 읽은 글이지만 요청이 없던 것 → 요청함에만, 채널 방은 다시 안 씀
+  delete db.talk.slack.req[Object.keys(db.talk.slack.req).find(k=>db.talk.slack.req[k].f&&db.talk.slack.req[k].f.hosp==='테스트칠병원')];
+  const ck='s'+t0.toFixed(6).replace('.','_');delete db.talk.msgs.sk_cso[ck];
+  hist.C0AT8RP3QDN=[{ts:t0.toFixed(6),user:'U3',text:'CSO Team 먼저 인계드렸으나,\nFS WEST CAL 시행 거래처로 확인되어 전달드립니다.\n==============================\n&lt;학술요청&gt;&lt;인계 : CSO &gt;\n1) 기 관 명 : 테스트칠병원\n2) 장 비 명 : XR-3000\n3) 요청사항 : CAL 일정 요청'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0+300);
+  delete props.SLK_RESCAN_227;g.slackPull(true);
+  assert(RQ().some(r=>r.f&&r.f.hosp==='테스트칠병원'),'다시 보기로 빠졌던 요청 생김');
+  assert(!db.talk.msgs.sk_cso[ck],'다시 보기는 채널 방을 다시 쓰지 않음');
+  assert(+props.SLK_TS_C0AT8RP3QDN>=t0+300 && props.SLK_RESCAN_227,'읽은 시각은 뒤로 안 감·한 번 표시');
+  console.log('slack_pull 227: 통과');
+}
