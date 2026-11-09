@@ -96,3 +96,21 @@ if(require.main===module){
   assert(c.st==='new' && !c.mv && !c.fin,'C 그대로');
   console.log('slack_pull 215: 통과');
 }
+// 222: 요청 채널(CSO·CS쉐어링) 글 → CS 방 (처음 한 번 7일치 + 새 글), talk 채널 글은 CS 방에 안 감, 같은 글은 한 번
+if(require.main===module){
+  const assert=require('assert');
+  const cs=()=>Object.values((db.talk.msgs||{}).cs||{});
+  assert(props.SLK_CS_BF_C0AT8RP3QDN && props.SLK_CS_BF_C0AHFJGKMTL, '처음 한 번 옮기기 표시');
+  const t0=Date.now()/1000-20;
+  hist.C0AHFJGKMTL=[{ts:t0.toFixed(6),user:'U2',text:'[CS쉐어링 접수] 테스트사병원 야간 문의'}];
+  hist.C0AT8RP3QDN.push({ts:(t0+1).toFixed(6),user:'U1',text:'&lt;학술 요청&gt; 테스트오병원 자료 요청'});
+  hist.C0C6U7RQ44D=[{ts:(t0+2).toFixed(6),user:'U1',text:'테스트육병원 마칩니다'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true); g.slackPull(true);
+  const M=cs();
+  assert(M.some(m=>m.slk.cn==='handover-cssharing-fsg'&&/테스트사병원/.test(m.text)), 'CS쉐어링 글이 CS 방에');
+  assert(M.some(m=>/학술 요청/.test(m.text)), '요청함에 안 가는 학술요청도 CS 방에는 표시');
+  assert(M.every(m=>m.uid==='slack'&&m.slk.cn!=='group-sysmex-talk'), 'talk 채널 글은 CS 방에 없음');
+  assert.strictEqual(M.filter(m=>/테스트사병원/.test(m.text)).length,1,'같은 글은 한 번');
+  console.log('slack_pull 222: 통과');
+}

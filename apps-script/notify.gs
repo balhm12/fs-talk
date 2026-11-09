@@ -105,7 +105,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v33';
+const NOTIFY_VER = 'v34';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -793,6 +793,9 @@ function slackPull(force, opt){
     let added = 0;
     Object.keys(SLACK_CH).forEach(function(ch){
       const C = SLACK_CH[ch];
+      if(C.type === 'req' && !props.getProperty('SLK_CS_BF_'+ch)){   // 222: 처음 한 번 — 최근 7일 요청 채널 글을 CS 방에도
+        try{ slkCsBackfill_(ch, C, names, now - 7*864e5); props.setProperty('SLK_CS_BF_'+ch, '1'); }catch(e){ meta.err = 'CS 방 옮기기: '+String(e.message||e).slice(0,160); console.error(e); }
+      }
       const last = props.getProperty('SLK_TS_'+ch) || String((now - 3*864e5)/1000);
       let cursor = '', maxTs = last, page = 0;
       do{
@@ -818,6 +821,7 @@ function slackPull(force, opt){
             slkFieldHint_(text, slkPerson_(who), at);
             return;
           }
+          if(C.type === 'req') slkToCs_(m, text, slkPerson_(who), at, ch, C);   // 222: CSO·CS쉐어링 글은 CS 방에도(요청함과 별개, 모든 글)
           // 요청 채널: 양식 블록마다 요청 1건 (야간 인계 요약 글은 여러 건 — 같은 내용은 같은 id 라 두 번 들어오지 않음)
           const blocks = /\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1
             ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
@@ -970,6 +974,27 @@ function slkToRoom_(m, text, name, at, ch, C){
   if(!t) return;
   const room = slkRoomFor_(name, slkToRoom_.roster);
   dbPut_('talk/msgs/'+room+'/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
+}
+/* 222: 요청 채널(#handover-cso-fsg·#handover-cssharing-fsg) 글 → 포털 CS 방 (Slack → 포털 한쪽만, 사용자 요청 2026-11-09)
+ *  모든 맨 위 글(학술요청·완료 글 포함, 스레드 답글 제외), 키 's'+ts 라 중복 없음, 푸시 없음. 요청함 반영과는 따로 */
+function slkToCs_(m, text, name, at, ch, C){
+  const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
+  if(!t) return;
+  dbPut_('talk/msgs/cs/s'+slkKey_(m.ts), {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}});
+}
+function slkCsBackfill_(ch, C, names, since){
+  let cursor = '', page = 0;
+  do{
+    const prm = {channel:ch, oldest:String(since/1000), limit:200}; if(cursor) prm.cursor = cursor;
+    const j = slackApi_('conversations.history', prm);
+    (j.messages||[]).forEach(function(m){
+      if(m.subtype && ['bot_message','thread_broadcast'].indexOf(m.subtype) < 0) return;
+      if(m.bot_id && m.username && /FS 포털/.test(m.username)) return;
+      const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
+      slkToCs_(m, slkClean_(String(m.text||'')), slkPerson_(who), Math.round(+m.ts*1000), ch, C);
+    });
+    cursor = j.response_metadata && j.response_metadata.next_cursor || '';
+  }while(cursor && ++page < 3);
 }
 /* 현장 마무리 보고(「○○병원 마칩니다」)에 열린 요청의 기관명이 있으면 요청에 표시 — 자동으로 닫지는 않음 */
 /* 215: 현장 글(#group-sysmex-talk)의 기관명이 열린 요청과 맞으면 (사용자 결정 2026-11-09)

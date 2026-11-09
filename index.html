@@ -1920,7 +1920,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.221";
+const APP_VERSION="2026-11-09.222";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -5120,7 +5120,7 @@ function renderMsgs(scroll){
     const col=el("div","col");
     if(!cont&&(!mine||(room==="all"&&m.room!=="all"))){
       const who=el("div","who");
-      if(!mine){who.appendChild(el("b",null,m.name||"알 수 없음"));const tg=roleTag(personTeam(m.name));if(tg)who.appendChild(tg);if(m.slk){const st=el("span","slksrcm","Slack");st.title="Slack #"+(m.slk.cn||"group-sysmex-talk")+"에서 가져온 글";who.appendChild(st);}}
+      if(!mine){who.appendChild(el("b",null,m.name||"알 수 없음"));const tg=roleTag(personTeam(m.name));if(tg)who.appendChild(tg);if(m.slk){const cn=m.slk.cn||"group-sysmex-talk",st=el("span","slksrcm",/cssharing/.test(cn)?"Slack · CS쉐어링":/cso/.test(cn)?"Slack · CSO":"Slack");st.title="Slack #"+cn+"에서 가져온 글";who.appendChild(st);}}
       if(room==="all"&&m.room!=="all")who.appendChild(el("span","rb",roomName(m.room)));
       col.appendChild(who);
     }
