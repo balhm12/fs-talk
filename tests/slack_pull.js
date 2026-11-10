@@ -18,7 +18,7 @@ const ctx={
   if(o.method==='put')set(path,JSON.parse(o.payload));else if(o.method==='patch')set(path,JSON.parse(o.payload),1);else if(o.method==='delete')set(path,undefined);
   let v=get(path);if(u.includes('orderBy'))v=v||{};
   return {getContentText:()=>JSON.stringify(v===undefined?null:v),getResponseCode:()=>200};}},
- PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||null,setProperty:(k,v)=>props[k]=v})},
+ PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||null,getProperties:()=>Object.assign({},props),setProperty:(k,v)=>props[k]=v})},
  LockService:{getScriptLock:()=>({tryLock:()=>true,waitLock(){},releaseLock(){}})},
  CacheService:{getScriptCache:()=>({get:k=>cache[k]??null,put:(k,v)=>cache[k]=v,remove:k=>delete cache[k]})},
  Utilities:{formatDate:(d)=>d.toISOString().slice(0,10).replace(/-/g,''),computeDigest:(a,s)=>[...require('crypto').createHash('md5').update(String(s)).digest()],DigestAlgorithm:{MD5:1,SHA_1:1,SHA_256:1},Charset:{UTF_8:1},base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),base64Encode:s=>Buffer.from(String(s)).toString('base64')},
