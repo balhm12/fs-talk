@@ -34,7 +34,7 @@ if(require.main===module){
   g.slackPull(true);
   const m=db.talk.slack.meta, R=Object.values(db.talk.slack.req);
   assert(m.ok && !m.err, 'meta 오류 없음: '+m.err);
-  assert(R.length===1 && R[0].st==='doing' && R[0].ack.n==='테스트2' && R[0].mv && R[0].mv.n==='테스트1', '요청·확인·이동(방문 중) 표시');
+  assert(R.length===1 && R[0].st==='doing' && R[0].ack.n==='테스트2' && !R[0].mv, '요청·확인 표시, 담당·확인자가 아닌 사람(테스트1)의 「이동」은 방문 중으로 안 바뀜(258)');
   assert(Object.keys(props).filter(k=>k.startsWith('SLK_TS_')).length===3, '세 채널 모두 읽은 시각 저장');
   assert(!calls.some(u=>/[" ]/.test(u)), '따옴표·공백 없는 주소');
   const n=calls.filter(u=>u.includes('conversations.replies')).length; g.slackPull(true);
@@ -81,21 +81,68 @@ if(require.main===module){
   assert(r.ch==='C0AT8RP3QDN' && r.ack && r.ack.n==='테스트2','확인 맞추기에서 handover 로 옮기고 ✅ 읽음');
   console.log('slack_pull 214-A: 통과');
 }
-// 215: 「A 마치고 B 이동합니다」 → A 완료·B 방문 중, 다른 병원은 그대로
+// 215: 「A 마치고 B 이동합니다」 → A 완료·B 방문 중, 다른 병원은 그대로 (258: B 는 글쓴이가 그 요청의 담당일 때만 방문 중)
 if(require.main===module){
   const assert=require('assert');
   const mk=(h)=>'&lt;기술요청&gt;&lt;인계 : FS WEST &gt;\n1) 기 관 명 : '+h+'\n2) 장 비 명 : XN-550\n3) 요청사항 : 방문 요청';
   const t0=(Date.now()/1000-20);
   hist.C0AT8RP3QDN=[{ts:t0.toFixed(6),user:'U1',text:mk('테스트오병원')},{ts:(t0+1).toFixed(6),user:'U1',text:mk('테스트육병원')},{ts:(t0+2).toFixed(6),user:'U1',text:mk('테스트칠병원')}];
-  hist.C0C6U7RQ44D=[{ts:(t0+5).toFixed(6),user:'U2',text:'테스트오병원 소음 마치고, 식사 후 테스트육병원 확인 이동 합니다'}];
+  hist.C0C6U7RQ44D=[];
   for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
   g.slackPull(true);
   const by=h=>Object.values(db.talk.slack.req).find(v=>v.f.hosp===h);
+  by('테스트육병원').who='테스트2'; by('테스트육병원').st='doing';   // 258: 테스트2 가 이 요청의 담당
+  hist.C0C6U7RQ44D=[{ts:(t0+5).toFixed(6),user:'U2',text:'테스트오병원 소음 마치고, 식사 후 테스트육병원 확인 이동 합니다'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);
+  g.slackPull(true);
   const a=by('테스트오병원'),b=by('테스트육병원'),c=by('테스트칠병원');
   assert(a.st==='done' && a.autoFin && a.doneBy==='테스트2','A 완료');
-  assert(b.st==='doing' && b.mv && b.mv.n==='테스트2' && b.who==='테스트2','B 방문 중');
+  assert(b.st==='doing' && b.mv && b.mv.n==='테스트2' && b.who==='테스트2','B 방문 중(담당자 본인 글)');
   assert(c.st==='new' && !c.mv && !c.fin,'C 그대로');
   console.log('slack_pull 215: 통과');
+}
+// 258: 현장 「이동」 글 판별 — 담당·확인자만, 용건(이전설치·서비스 대기) 제외, 경로변경 시 앞선 방문 중 해제 (사용자 지적 2026-11-11 박재우·김재모)
+if(require.main===module){
+  const assert=require('assert');
+  const mk=(h,extra)=>'&lt;기술요청&gt;&lt;인계 : FS WEST &gt;\n1) 기 관 명 : '+h+'\n2) 장 비 명 : XN-550\n3) 요청사항 : '+(extra||'방문 요청');
+  const t0=(Date.now()/1000-20);
+  hist.C0AT8RP3QDN=['테스트전주병원','테스트국군병원','테스트세종병원','테스트고대병원'].map((h,i)=>({ts:(t0+i).toFixed(6),user:'U1',text:mk(h)}));
+  hist.C0C6U7RQ44D=[];
+  const reset=()=>{for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t0-1);};
+  reset();g.slackPull(true);
+  const by=h=>Object.values(db.talk.slack.req).find(v=>v.f.hosp===h);
+  // 테스트2 가 전주·국군·세종 요청의 담당, 고대 요청은 담당 없음
+  ['테스트전주병원','테스트국군병원','테스트세종병원'].forEach(h=>{by(h).who='테스트2';by(h).st='doing';});
+  const at=(i,text,user)=>({ts:(t0+10+i).toFixed(6),user:user||'U2',text});
+  // 1) 용건이 있는 이동 — 이전설치(요청에 없음)·서비스 대기 → 요청 상태 그대로
+  hist.C0C6U7RQ44D=[at(0,'테스트전주병원 un, hiscl 이전설치 이동합니다'),at(1,'서비스 대기(테스트세종병원) 이동합니다.')];
+  reset();g.slackPull(true);
+  assert(!by('테스트전주병원').mv,'이전설치 이동은 전주 요청을 방문 중으로 안 바꿈');
+  assert(!by('테스트세종병원').mv,'서비스 대기 이동은 세종 요청을 방문 중으로 안 바꿈');
+  // 2) 담당·확인자가 아닌 사람의 이동(새 요청 포함) — 방문 중·담당 자동 지정 없음
+  hist.C0C6U7RQ44D=[at(2,'테스트고대병원 이동합니다','U3')];
+  reset();g.slackPull(true);
+  assert(by('테스트고대병원').st==='new' && !by('테스트고대병원').mv && !by('테스트고대병원').who,'담당 없는 새 요청은 이동 글로 처리 중·담당이 되지 않음');
+  hist.C0C6U7RQ44D=[at(3,'테스트국군병원 이동합니다','U3')];
+  reset();g.slackPull(true);
+  assert(!by('테스트국군병원').mv,'담당(테스트2)이 아닌 사람(테스트칠)의 이동은 반영 안 됨');
+  // 3) 담당자 본인의 이동은 방문 중
+  hist.C0C6U7RQ44D=[at(4,'테스트전주병원 이동합니다')];
+  reset();g.slackPull(true);
+  assert(by('테스트전주병원').mv && by('테스트전주병원').mv.n==='테스트2','담당 본인의 이동은 방문 중으로 표시');
+  // 4) 경로변경 — 앞선 방문 중(전주)은 지우고 새 병원(국군)은 방문 중
+  hist.C0C6U7RQ44D=[at(5,'경로변경하여 테스트국군병원 이동합니다')];
+  reset();g.slackPull(true);
+  assert(!by('테스트전주병원').mv,'경로변경하면 앞서 이동한 전주 요청의 방문 중 표시를 지움');
+  assert(by('테스트국군병원').mv && by('테스트국군병원').mv.n==='테스트2','새 병원은 방문 중');
+  // 5) 요청 글에 용건이 있으면(설치 요청) 같은 용건의 이동은 반영
+  hist.C0AT8RP3QDN=[{ts:(t0+20).toFixed(6),user:'U1',text:mk('테스트설치병원','XN 신규 설치 문의')}];
+  hist.C0C6U7RQ44D=[];reset();g.slackPull(true);
+  by('테스트설치병원').who='테스트2';by('테스트설치병원').st='doing';
+  hist.C0C6U7RQ44D=[at(6,'테스트설치병원 설치 이동합니다')];
+  reset();g.slackPull(true);
+  assert(by('테스트설치병원').mv,'요청 글에 같은 용건(설치)이 있으면 이동 반영');
+  console.log('slack_pull 258: 통과');
 }
 // 224: Slack 채널 방 — 세 채널 글은 채널 방(sk_*)에, 해당 팀·사무소방에는 복사본(키 +t). 222 의 CS 방·전체방 Slack 글은 채널 방으로 옮김
 if(require.main===module){
