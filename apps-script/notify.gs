@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v50';
+const NOTIFY_VER = 'v51';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -809,6 +809,7 @@ function slkParse_(text){
     if(cur && line.trim()) f[cur] = ((f[cur]||'') + (f[cur] ? '\n' : '') + line.trim()).slice(0,600);
   });
   const rb = /회신여부\s*\[\s*([YN])\s*\]/i.exec(t); if(rb) f.back = rb[1].toUpperCase();
+  const dn = /<\s*완료\s*:\s*([^>]+?)\s*>/.exec(t); if(dn) f.cso = dn[1].trim();   // 270: CSO 가 처리하고 올린 「<완료 : 이름>」 양식
   if(f.hosp){ const rg = /\(([^)]+)\)\s*$/.exec(f.hosp); if(rg && rg[1].length <= 4){ f.area = rg[1]; f.hosp = f.hosp.replace(/\s*\([^)]+\)\s*$/,''); } }
   Object.keys(f).forEach(function(k){ f[k] = String(f[k]).replace(/[ \t]+/g,' ').trim().slice(0,600); if(!f[k]) delete f[k]; });
   return (f.hosp && (f.eq || f.req)) ? f : null;
@@ -842,7 +843,7 @@ function slackPull(force, opt){
       }
       const oldLast = PR['SLK_TS_'+ch] || String((now - 3*864e5)/1000);
       // 227: 한 번 — 최근 3일 요청을 새 규칙(머리말 인계 팀·재요청)으로 다시 봄. 이미 읽은 글은 요청함만 맞추고 채널 방·현장 반영은 다시 안 함
-      const rescan = !PR.SLK_RESCAN_227;
+      const rescan = !PR.SLK_RESCAN_227 || !PR.SLK_RESCAN_270;   // 270: 한 번 더 — 빠졌던 「<완료 : 이름>」 기술요청
       const last = rescan ? String(Math.min(+oldLast, (now - 3*864e5)/1000)) : oldLast;
       let cursor = '', maxTs = oldLast, page = 0;
       function slkOne_(m){
@@ -861,7 +862,7 @@ function slackPull(force, opt){
             slkToChan_(m, raw, text, slkPerson_(who), at, ch, C);   // 224: 모든 맨 위 글 → 채널 방 + 해당 팀·사무소방
           }
           if(C.type === 'feed' && /<\s*(기술|학술)\s*요청\s*>/.test(text)){   // 202: 요청 양식은 요청함 쪽으로
-            if(!hTeam && (/학술\s*요청/.test(text) || !/<\s*인계\s*:\s*FS/i.test(text))) return;   // 학술요청·<완료 : …>·CSO 인계는 FSG 요청 아님(머리말에 FS 팀으로 전달하면 요청)
+            if(!hTeam && (/학술\s*요청/.test(text) || (!/<\s*인계\s*:\s*FS/i.test(text) && !/<\s*완료\s*:/.test(text)))) return;   // 학술요청·CSO 인계는 FSG 요청 아님(머리말에 FS 팀으로 전달하면 요청). 270: CSO 「<기술요청><완료 : 이름>」 글은 요청(사용자 확인)
           }
           else if(C.type === 'feed'){
             if(seen) return;
@@ -884,7 +885,7 @@ function slackPull(force, opt){
               // 227: 재요청 — 같은 날 같은 기관·장비·요청인데 다른 글(내용이 다르고 1분 넘게 뒤)이면 요청에 「재요청」으로 붙이고, 완료였으면 다시 새 요청으로
               const rk = slkKey_(m.ts), norm = function(x){ return String(x||'').replace(/\s+/g,''); };
               const known = cur.ts === m.ts || (cur.rr && cur.rr[rk]);
-              if(!known && norm(cur.t) !== norm(b.slice(0,4000)) && +m.ts*1000 - (+cur.at||0) > 60*1000){
+              if(!known && !/<\s*완료\s*:/.test(b) && norm(cur.t) !== norm(b.slice(0,4000)) && +m.ts*1000 - (+cur.at||0) > 60*1000){
                 dbPut_('talk/slack/req/'+id+'/rr/'+rk, {n:slkPerson_(who), t:b.slice(0,600), at:at, ch:ch, ts:m.ts});
                 const p = {rrAt:at};
                 if(cur.st === 'done'){ p.st = 'new'; p.doneAt = null; p.doneBy = null; p.autoFin = null; p.fin = null; p.ackDone = null; added++; }
@@ -931,6 +932,7 @@ function slackPull(force, opt){
       if(fetchOk && !batchFail && String(maxTs) !== String(PR['SLK_TS_'+ch])) props.setProperty('SLK_TS_'+ch, String(maxTs));   // 262: 바뀔 때만 씀   // maxTs 는 oldLast 에서 시작해 처리한 글까지 커짐(오래된 글부터 처리)
     });
     if(!PR.SLK_RESCAN_227) props.setProperty('SLK_RESCAN_227','1');
+    if(!PR.SLK_RESCAN_270) props.setProperty('SLK_RESCAN_270','1');
     if(!PR.SLK_DEDUP_232){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_REQDUP_233){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_LINK_229){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
