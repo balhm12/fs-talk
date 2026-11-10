@@ -50,6 +50,9 @@ h2.sec small{font-weight:400;color:var(--sub);font-size:12px}
 .f label{font-size:12px;color:var(--sub);display:block;margin-bottom:2px}
 .f input[type=text],.f input[type=date],.f select{width:100%;font-size:14px;padding:8px 10px;border-radius:8px;min-height:38px}
 .opts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:8px}
+.per{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--sub)}
+.per input{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--tx);border-radius:8px;padding:6px 6px;min-height:36px}
+.dsep{margin:14px 2px 6px;padding:4px 0;font-size:13px;font-weight:700;color:var(--sub);border-bottom:1px solid var(--line)}
 .opts select{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--tx);border-radius:8px;padding:7px 8px;min-height:36px}
 .status{font-size:13px;color:var(--sub);margin:8px 0 4px}
 .status b{color:var(--tx)}
@@ -151,49 +154,31 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
 
   <div id="app" style="display:none">
     <nav>
-      <button id="nHome" class="on">HOME</button>
-      <button id="nSearch">SEARCH</button>
       <span class="sp"></span>
       <button class="lnk" id="nAudit">데이터 정보</button>
     </nav>
     <div class="prog" id="prog" style="display:none"><i id="progb"></i></div>
 
-    <!-- HOME -->
-    <section id="vHome">
-      <div class="stats" id="stats"></div>
-      <div class="srow big"><input id="hq" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="장비·증상·에러코드 검색  예) XN-550 water leak"><button class="btn pri" id="hgo">검색</button></div>
-      <div class="exs" id="hEx" style="display:none"></div>
-      <div id="hRecentW" style="display:none"><h2 class="sec">최근 검색어 <small><button class="chip" id="hRecentClr" style="min-height:24px;padding:1px 8px;font-size:11px">모두 지우기</button></small></h2><div class="chips wrapc" id="hRecent"></div></div>
-      <h2 class="sec">주제별 탐색 <small>유형별 실제 건수</small></h2>
-      <div class="topics" id="hTopics"></div>
-      <h2 class="sec">장비별 빠른 검색 <small>장비명이 언급된 글 수</small></h2>
-      <div class="chips wrapc" id="hFam"></div>
-      <h2 class="sec">자주 등장하는 키워드 <small>건수 기준 (조회수 아님)</small></h2>
-      <div class="kwrow" id="hKw"></div>
-      <h2 class="sec">최근 등록된 메시지 <small>가장 최근 기술·방문·마무리 보고</small></h2>
-      <div id="hRecentMsg"></div>
-    </section>
-
     <!-- SEARCH -->
-    <section id="vSearch" style="display:none">
+    <section id="vSearch">
       <div class="sbox">
         <div class="srow"><input id="q" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="검색어  예) XN-550 water leak · UF-5000 소음 · -제외어"><button class="btn" id="clr">지우기</button></div>
       </div>
-      <div class="chips" id="fchips"><span class="lb">장비</span></div>
-      <div class="chips" id="tchips"><span class="lb">유형</span></div>
+      <div id="hRecentW" style="display:none"><h2 class="sec">최근 검색어 <small><button class="chip" id="hRecentClr" style="min-height:24px;padding:1px 8px;font-size:11px">모두 지우기</button></small></h2><div class="chips wrapc" id="hRecent"></div></div>
       <div class="opts">
-        <select id="ord" aria-label="정렬"><option value="r">관련도순</option><option value="d">최신순</option><option value="a">오래된순</option></select>
+        <select id="ord" aria-label="정렬"><option value="d">최신순</option><option value="a">오래된순</option></select>
+        <span class="per">기간 <input id="dFrom" type="date" aria-label="시작일"> ~ <input id="dTo" type="date" aria-label="끝일"></span>
         <button class="btn" id="adv">상세 조건</button>
-        <select id="viewm" aria-label="보기 방식"><option value="msg">메시지별 보기</option><option value="case">연관 대화로 묶어 보기</option></select>
+        <select id="viewm" aria-label="보기 방식" style="display:none"><option value="msg">메시지별 보기</option><option value="case">연관 대화로 묶어 보기</option></select>
         <button class="btn" id="rst">필터 초기화</button>
       </div>
       <div class="f" id="advp">
+        <div class="chips" id="fchips"><span class="lb">장비</span></div>
+        <div class="chips" id="tchips"><span class="lb">유형</span></div>
         <div class="g">
           <div><label for="fModel">제품·장비명</label><input id="fModel" type="text" placeholder="예) XN-550, UF-5000" autocomplete="off"></div>
           <div><label for="fErr">에러코드·증상</label><input id="fErr" type="text" placeholder="예) 0.105 MPa, IMI" autocomplete="off"></div>
           <div><label for="who">작성자</label><input id="who" type="text" list="whol" placeholder="이름 일부" autocomplete="off"><datalist id="whol"></datalist></div>
-          <div><label for="dFrom">작성일 시작</label><input id="dFrom" type="date"></div>
-          <div><label for="dTo">작성일 끝</label><input id="dTo" type="date"></div>
           <div><label for="room">대화방</label><select id="room"></select></div>
           <div><label for="attf">첨부파일</label><select id="attf"><option value="">전체</option><option value="1">첨부 있음</option></select></div>
         </div>
@@ -236,8 +221,8 @@ const E=window.__HIST_EMBED||null;
 let META=null,CH=[];
 const NZ=9;                           // 검색 제외(이동·파일 알림 등) 행 표시값
 const TYPE_CLS=["","t1","t2","t3","",""];
-const state={q:"",fam:new Set(),typ:new Set(),who:"",ord:"r",yr:null,from:null,to:null,room:"",att:"",model:"",err:"",shown:0,famAny:false,kind:"",mode:"msg"};
-let HITS=[],TOTAL=0,FAMCNT=[],LASTQ=null,REL=null,IT=null,RELPOS=0,HS=null,view="home";
+const state={q:"",fam:new Set(),typ:new Set(),who:"",ord:"d",yr:null,from:null,to:null,room:"",att:"",model:"",err:"",shown:0,famAny:false,kind:"",mode:"msg"};
+let HITS=[],TOTAL=0,FAMCNT=[],LASTQ=null,REL=null,IT=null,RELPOS=0,HS=null,view="search";
 const MODEL_RE=/\b(?:XN|XR|XE|XT|XS|XP|KX|UF|UC|UN|SP|CS|CA|CN|DI|DM|HISCL|RF|BC|CV|HST|PA)[- ]?\d{1,5}[A-Za-z]{0,2}\b/gi;
 
 /* ---------- 유틸 ---------- */
@@ -595,7 +580,7 @@ function doSearch(){
     for(const {c,hits} of HITS)for(const i of hits){const f=c.fm[i];if(f)for(let b=0;b<FAMCNT.length;b++)if(f&(1<<b))FAMCNT[b]++;}
   }
   drawChips();drawYears(ycnt);drawActive();
-  state.shown=0;CPOS=0;$("#res").innerHTML="";
+  state.shown=0;CPOS=0;LASTDAY="";$("#res").innerHTML="";
   const loading=CH.length<META.chunks.length;
   const useRel=state.ord==="r"&&P.pos.length>0;
   REL=null;if(useRel)buildRel(P);
@@ -613,6 +598,8 @@ function* iterDate(){
     if(state.ord==="a"){for(let j=0;j<L.length;j++)yield [h.c,L[j]];}
     else{for(let j=L.length-1;j>=0;j--)yield [h.c,L[j]];}}
 }
+let LASTDAY="";
+function daySep(m){const d=dObj(m);const e=document.createElement("div");e.className="dsep";e.textContent=d.getUTCFullYear()+"년 "+(d.getUTCMonth()+1)+"월 "+d.getUTCDate()+"일 ("+"일월화수목금토"[d.getUTCDay()]+")";return e;}
 function more(){
   const P=allPos(),hl=hlFor(P);
   const frag=document.createDocumentFragment();let k=0;
@@ -628,6 +615,7 @@ function more(){
     let c,i;
     if(REL){if(RELPOS>=REL.length)break;[,c,i]=REL[RELPOS++];}
     else{const nx=IT.next();if(nx.done)break;[c,i]=nx.value;}
+    if(state.ord!=="r"){const dk=dayOf(c.ts[i]);if(dk!==LASTDAY){LASTDAY=dk;frag.appendChild(daySep(c.ts[i]));}}
     frag.appendChild(card(c,i,hl));k++;state.shown++;
   }
   $("#res").appendChild(frag);overflowBtns($("#res"));
@@ -652,11 +640,7 @@ function drawYears(cnt){
 }
 
 /* ---------- 화면 전환·최근 검색 ---------- */
-function show(v){
-  view=v;$("#vHome").style.display=v==="home"?"block":"none";$("#vSearch").style.display=v==="search"?"block":"none";
-  $("#nHome").classList.toggle("on",v==="home");$("#nSearch").classList.toggle("on",v==="search");
-  if(v==="home")drawHome();
-}
+function show(){view="search";drawHome();}
 function goSearch(q,opts){
   opts=opts||{};
   if(opts.reset)resetState();
@@ -666,7 +650,7 @@ function goSearch(q,opts){
   if(opts.kind)state.kind=opts.kind;
   if(opts.who){state.who=opts.who;$("#who").value=opts.who;}
   state.q=q||"";$("#q").value=state.q;
-  state.ord=state.q.trim()?"r":"d";$("#ord").value=state.ord;
+  $("#ord").value=state.ord;
   show("search");scheduleSearch(0);window.scrollTo(0,0);
   if(state.q.trim())saveRecent(state.q);
 }
@@ -698,26 +682,12 @@ function updateStats(){
 }
 function drawHome(){
   if(!META)return;
-  updateStats();
   const rc=lsGet("fs-hist-recent",[]);$("#hRecentW").style.display=rc.length?"block":"none";
   $("#hRecent").innerHTML="";rc.forEach(q=>{const b=document.createElement("span");b.className="chip rc";b.tabIndex=0;b.setAttribute("role","button");
     b.innerHTML="<span></span><b class=\"x\" role=\"button\" aria-label=\"검색어 삭제\" title=\"이 검색어 삭제\">×</b>";b.firstChild.textContent=q;
     b.onclick=e=>{if(e.target.classList.contains("x")){e.stopPropagation();lsSet("fs-hist-recent",lsGet("fs-hist-recent",[]).filter(x=>x!==q));drawHome();return;}goSearch(q,{reset:true});};
     b.onkeydown=e=>{if(e.key==="Enter")goSearch(q,{reset:true});};
     $("#hRecent").appendChild(b);});
-  $("#hKw").innerHTML="";(META.home_kw||[]).slice(0,10).forEach(([w,n])=>{const b=document.createElement("button");b.className="chip";b.innerHTML=esc(w)+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch(w,{reset:true});$("#hKw").appendChild(b);});
-  if(!CH.length)return;
-  const s=homeStats();
-  $("#hTopics").innerHTML="";TOPICS.forEach(([n,d,o,f])=>{const cnt=f(s);if(!cnt)return;
-    const b=document.createElement("button");b.className="sc";b.innerHTML="<b>"+n+"</b><em>"+N(cnt)+"건</em><span>"+d+"</span>";b.onclick=()=>goSearch("",Object.assign({reset:true},o));$("#hTopics").appendChild(b);});
-  $("#hFam").innerHTML="";
-  DICT.eqGroups.forEach(([name,names],g)=>{const n=s.gcnt[g];if(!n)return;
-    const idx=names.map(x=>META.fam.indexOf(x)).filter(x=>x>=0);
-    const b=document.createElement("button");b.className="chip";b.title=names.join(" · ");b.innerHTML=esc(name)+"<small>"+N(n)+"</small>";b.onclick=()=>goSearch("",{reset:true,fam:idx});$("#hFam").appendChild(b);});
-  const rm=$("#hRecentMsg");rm.innerHTML="";let k=0;
-  const newest=CH.slice().sort((a,b)=>a.k<b.k?1:-1);
-  outer:for(const c of newest){for(let i=c.n-1;i>=0;i--){const ty=c.ty[i];if(ty===NZ||ty===0||ty===4)continue;if(c.S.length&&c.offs[i+1]-c.offs[i]<45)continue;rm.appendChild(card(c,i,null));if(++k>=5)break outer;}}
-  overflowBtns(rm);
 }
 let EXDONE=false;
 function drawExamples(){   // 실제로 결과가 나오는 예시만 보여 줌
@@ -812,9 +782,7 @@ function openAudit(){
 
 /* ---------- 시작·연결 ---------- */
 function refreshAll(loading){
-  if(view==="home")drawHome();
-  if(view==="search")scheduleSearch(loading?1200:0);
-  if(!loading)drawExamples();
+  drawHome();scheduleSearch(loading?1200:0);
   applyHash(true);
 }
 let hashDone="";
@@ -826,15 +794,12 @@ function applyHash(fromLoad){
   if(m&&hashDone!==h){hashDone=h;try{goSearch(decodeURIComponent(m[1]),{reset:true});}catch(e){}}
 }
 function initStatic(){
-  $("#nHome").onclick=()=>show("home");$("#nSearch").onclick=()=>{show("search");scheduleSearch(0);};
   $("#nAudit").onclick=openAudit;$("#aBack").onclick=()=>$("#audit").classList.remove("on");
   $("#dBack").onclick=()=>$("#detail").classList.remove("on");
   document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("#detail").classList.remove("on");$("#audit").classList.remove("on");}});
   window.addEventListener("hashchange",()=>applyHash());
-  $("#hq").addEventListener("keydown",e=>{if(e.key==="Enter")goSearch($("#hq").value,{reset:true});});
-  $("#hgo").onclick=()=>goSearch($("#hq").value,{reset:true});
   $("#hRecentClr").onclick=()=>{lsSet("fs-hist-recent",[]);drawHome();};
-  $("#q").addEventListener("input",e=>{state.q=e.target.value;state.yr=null;if(state.ord==="d"&&state.q.trim()&&!state.ordManual)state.ord="r",$("#ord").value="r";scheduleSearch();});
+  $("#q").addEventListener("input",e=>{state.q=e.target.value;state.yr=null;scheduleSearch();});
   $("#q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.target.blur();saveRecent(state.q);scheduleSearch(0);}});
   $("#clr").onclick=()=>{$("#q").value="";state.q="";scheduleSearch(0);$("#q").focus();};
   $("#ord").onchange=e=>{state.ord=e.target.value;state.ordManual=true;scheduleSearch(0);};
@@ -855,71 +820,14 @@ function initStatic(){
 }
 function gate(h){$("#gate").style.display="block";$("#gate").innerHTML=h;$("#sub").textContent="";}
 
-/* ---------- 관리자: 데이터 올리기 ---------- */
-function adminUI(parent){
-  const b=document.createElement("button");b.className="btn";b.id="adm";b.textContent="데이터 올리기";parent.appendChild(b);
-  const f=document.createElement("input");f.type="file";f.accept=".json";f.style.display="none";document.body.appendChild(f);
-  b.onclick=()=>f.click();
-  f.onchange=async()=>{
-    const file=f.files[0];f.value="";if(!file)return;
-    const reset=()=>{b.disabled=false;b.textContent="데이터 올리기";};
-    const done=[];   // 이번에 덮어쓴 구간(실패 시 되돌릴 이전 값)
-    try{
-      b.disabled=true;b.textContent="파일 확인 중…";
-      const B=JSON.parse(await file.text());
-      // 1) 올리기 전 검증 — 하나라도 어긋나면 아무것도 쓰지 않는다
-      if(!B||!B.meta||!Array.isArray(B.meta.chunks)||!B.chunks)throw new Error("올바른 Sysmex Talk 번들이 아닙니다 (meta·chunks 없음)");
-      const keys=B.meta.chunks.map(c=>c.k);
-      for(const k of keys){if(!/^[0-9]{4}[ab]$/.test(k))throw new Error("구간 이름이 올바르지 않습니다: "+k);
-        if(typeof B.chunks[k]!=="string"||!B.chunks[k])throw new Error("meta에 있는 구간 자료가 번들에 없습니다: "+k);
-        if(B.chunks[k].length>4000000)throw new Error("구간이 너무 큽니다: "+k);}
-      if(!B.meta.from||!B.meta.to||!(B.meta.total>0))throw new Error("기간 또는 건수 정보가 없습니다");
-      // 2) 올리기 전 · 후 비교를 보여 주고 확인
-      const cur=META||{},ca=cur.audit,na=B.meta.audit;
-      const cmp="현재 → 새 파일\n기간: "+(cur.from||"–")+" ~ "+(cur.to||"–")+"  →  "+B.meta.from+" ~ "+B.meta.to+
-        "\n검색 대상: "+N(cur.total||0)+"건  →  "+N(B.meta.total)+"건"+
-        "\n전체 메시지: "+N(cur.rows_total||(ca&&ca.loaded_rows)||0)+"건  →  "+N(B.meta.rows_total||(na&&na.loaded_rows)||0)+"건"+
-        "\n구간: "+(cur.chunks?cur.chunks.length:0)+"개  →  "+keys.length+"개";
-      const shrink=(cur.chunks&&keys.length<cur.chunks.length)||(cur.total&&B.meta.total<cur.total)||(cur.from&&B.meta.from>cur.from)||(cur.to&&B.meta.to<cur.to);
-      const warn=shrink?"⚠ 주의: 새 파일이 현재보다 기간·구간·건수가 적습니다. 올리면 목록에서 빠지는 구간은 더 이상 검색되지 않습니다. 전체 자료 번들이 맞는지 확인하세요.\n\n":"";
-      if(!confirm(warn+"「"+file.name+"」을 올립니다.\n\n"+cmp+"\n\n같은 구간은 덮어쓰고 마지막에 전체 목록(meta)을 바꿉니다. 도중에 실패하면 이미 바꾼 구간을 이전 값으로 되돌립니다. 계속할까요?")){reset();return;}
-      // 3) 구간 올리기 (덮어쓰기 전 이전 값을 보관)
-      let n=0;
-      for(const k of keys){
-        b.textContent="올리는 중 "+(++n)+"/"+keys.length;
-        const old=(await db.ref("talk/hist/c/"+k).get()).val();
-        await db.ref("talk/hist/c/"+k).set(B.chunks[k]);done.push([k,old]);
-        const back=(await db.ref("talk/hist/c/"+k).get()).val();
-        if(!back||back.length!==B.chunks[k].length)throw new Error("올린 뒤 확인이 맞지 않습니다: "+k);
-      }
-      b.textContent="목록 갱신 중…";
-      const meta=Object.assign({},B.meta,{at:Date.now()});
-      await db.ref("talk/hist/meta").set(meta);
-      const m2=(await db.ref("talk/hist/meta").get()).val();
-      if(!m2||m2.total!==B.meta.total||m2.chunks.length!==keys.length)throw new Error("meta 확인이 맞지 않습니다");
-      alert("올리기 완료 · 기간 "+m2.from+" ~ "+m2.to+" · 검색 대상 "+N(m2.total)+"건 · 구간 "+keys.length+"개\n다른 기기는 다음에 열 때 바뀐 구간만 새로 받습니다.");location.reload();
-    }catch(e){
-      let msg="올리기 실패: "+e.message;
-      if(done.length){
-        try{b.textContent="되돌리는 중…";
-          for(const [k,old] of done.reverse()){if(old)await db.ref("talk/hist/c/"+k).set(old);else await db.ref("talk/hist/c/"+k).remove();}
-          msg+="\n\n이미 바꾼 "+done.length+"개 구간을 이전 값으로 되돌렸습니다. 기존 자료는 그대로입니다.";
-        }catch(e2){msg+="\n\n되돌리기도 실패했습니다("+e2.message+"). 같은 파일로 다시 올려 주세요.";}
-      }else msg+="\n\n아무것도 바꾸지 않았습니다. 기존 자료는 그대로입니다.";
-      alert(msg);reset();
-    }
-  };
-}
-
 (async function boot(){
   try{
     if(!E)await fbInit();
     META=await getMeta();
-    if(!META||!META.chunks){gate("<h2>아직 자료가 없습니다</h2><p>관리자가 이력 자료를 올리면 여기서 검색할 수 있어요.</p>");if(isAdmin&&!E)adminUI($("#gate"));return;}
+    if(!META||!META.chunks){gate("<h2>아직 자료가 없습니다</h2><p>자료를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>");return;}
     $("#app").style.display="block";
     initStatic();
-    if(isAdmin&&!E){adminUI($("nav"));}
-    renderSub(true);drawHome();
+    renderSub(true);drawHome();scheduleSearch(0);
     await loadAll();
     applyHash();
   }catch(e){
