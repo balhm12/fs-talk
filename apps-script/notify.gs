@@ -17,7 +17,31 @@ const ROOM_SCOPE = {west:['FS WEST'],east:['FS EAST'],central:['FS CENTRAL'],dae
 function P_(k){ return PropertiesService.getScriptProperties().getProperty(k); }
 function out_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
+/* 261: 시스템 상태 — 외부 호출 수·자동 실행 시간을 하루 단위로 셈(관리 화면 「시스템 상태」, 개인 계정 한도: 외부 호출 2만·자동 실행 90분)
+ *  실행마다 캐시에 더하고, Slack 가져오기가 5분마다 talk/slack/meta.stat 과 스크립트 속성 SLK_STAT 에 적음. 동시에 끝나는 실행끼리는 조금 빠질 수 있음(대략값) */
+var UF_N = 0;
+const UF_ = {
+  fetch: function(u, o){ UF_N++; return o === undefined ? UrlFetchApp.fetch(u) : UrlFetchApp.fetch(u, o); },
+  fetchAll: function(rs){ UF_N += (rs||[]).length; return UrlFetchApp.fetchAll(rs); }
+};
+function statDay_(){ return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyyMMdd'); }
+function statGet_(){
+  const day = statDay_(); let s = null;
+  try{ s = JSON.parse(CacheService.getScriptCache().get('st:'+day) || 'null'); }catch(e){}
+  if(!s){ try{ const p = JSON.parse(P_('SLK_STAT') || 'null'); if(p && p.day === day) s = p; }catch(e){} }
+  return s || {day:day, f:0, tms:0, runs:0, ex:0};
+}
+function statAdd_(trigMs){
+  try{
+    const s = statGet_(); s.f += UF_N; s.ex++; if(trigMs){ s.tms += trigMs; s.runs++; } UF_N = 0;
+    CacheService.getScriptCache().put('st:'+s.day, JSON.stringify(s), 21600);
+    return s;
+  }catch(e){ return null; }
+}
 function doPost(e){
+  try{ return doPost0_(e); } finally { statAdd_(0); }
+}
+function doPost0_(e){
   try{
     const req = JSON.parse(e.postData.contents);
     if(req.type === 'url_verification' && req.challenge) return ContentService.createTextOutput(String(req.challenge).slice(0,200));   // 213: Slack 이벤트 주소 확인
@@ -106,7 +130,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v47';
+const NOTIFY_VER = 'v48';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -180,7 +204,7 @@ function voice_(req){
   // 1) 받아쓰기 — 방 이름·장비 용어를 힌트로 주면 더 정확함
   const hint = ('FS Portal(사내 메신저·업무 포털). 방: ' + rooms.slice(0,40).join(', ') + '. 장비: XN, XN-L, UF, UC, SP-50, CN, HISCL, CS-1600, CA-620.').slice(0,600);
   const blob = Utilities.newBlob(Utilities.base64Decode(data), mt, 'voice.'+ext);
-  const tr = UrlFetchApp.fetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'post',muteHttpExceptions:true,
+  const tr = UF_.fetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'post',muteHttpExceptions:true,
     headers:{Authorization:'Bearer '+key},
     payload:{file:blob, model:'whisper-large-v3-turbo', language:'ko', response_format:'json', temperature:'0', prompt:hint}});
   const tc = tr.getResponseCode();
@@ -197,7 +221,7 @@ function voice_(req){
   const ask = '방 목록:\n' + rooms.map(function(r,i){ return (i+1)+'. '+r; }).join('\n') + '\n\n사용자가 한 말: ' + text;
   const models = [P_('GROQ_MODEL') || 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
   for(let i=0;i<models.length;i++){
-    const r = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions',{method:'post',contentType:'application/json',muteHttpExceptions:true,
+    const r = UF_.fetch('https://api.groq.com/openai/v1/chat/completions',{method:'post',contentType:'application/json',muteHttpExceptions:true,
       headers:{Authorization:'Bearer '+key},
       payload:JSON.stringify({model:models[i],temperature:0,max_tokens:400,response_format:{type:'json_object'},messages:[{role:'system',content:sys},{role:'user',content:ask}]})});
     if(r.getResponseCode() !== 200) continue;
@@ -354,7 +378,7 @@ function summary_(req){
   const models = [P_('GROQ_MODEL') || 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
   let last = '';
   for(let i=0;i<models.length;i++){
-    const r = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions',{method:'post',contentType:'application/json',muteHttpExceptions:true,
+    const r = UF_.fetch('https://api.groq.com/openai/v1/chat/completions',{method:'post',contentType:'application/json',muteHttpExceptions:true,
       headers:{Authorization:'Bearer '+key},
       payload:JSON.stringify({model:models[i],temperature:0.2,max_tokens:1200,messages:[{role:'system',content:sys},{role:'user',content:ask}]})});
     const c = r.getResponseCode(), body = r.getContentText();
@@ -369,7 +393,7 @@ function summary_(req){
 }
 function dbQuery_(path, query){
   query = String(query||'').replace(/"/g,'%22');   // 213: 따옴표를 그대로 넣으면 UrlFetchApp 이 「잘못된 인수」로 멈춤
-  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json?'+query,{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
+  const r = UF_.fetch(P_('DB_URL')+'/'+path+'.json?'+query,{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('DB 읽기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,200));
   return JSON.parse(r.getContentText());
 }
@@ -444,7 +468,7 @@ function send_(targets, title, body, link, tag, data, extra){
       webpush:{notification:Object.assign({title:t.title||title,body:body,icon:APP_URL+'icons/icon-192.png',tag:tag,renotify:true}, extra||{}),fcm_options:{link:link}}}})
   };});
   let sent = 0;
-  UrlFetchApp.fetchAll(reqs).forEach(function(r,i){
+  UF_.fetchAll(reqs).forEach(function(r,i){
     const c = r.getResponseCode();
     if(c===200){ sent++; return; }
     if(c===404 || /UNREGISTERED/.test(r.getContentText())) dbDelete_('talk/tokens/'+targets[i].uid+'/'+targets[i].key);
@@ -457,7 +481,7 @@ function doGet(){ return out_({ok:true,app:'FS Talk notify',ver:NOTIFY_VER}); }
 /** Firebase 로그인 토큰 확인 → uid */
 function verifyUser_(idToken){
   if(!idToken) return null;
-  const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+P_('API_KEY'),
+  const r = UF_.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+P_('API_KEY'),
     {method:'post',contentType:'application/json',payload:JSON.stringify({idToken:idToken}),muteHttpExceptions:true});
   if(r.getResponseCode()!==200) return null;
   const j = JSON.parse(r.getContentText());
@@ -476,7 +500,7 @@ function accessToken_(){
     scope:'https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
     aud:'https://oauth2.googleapis.com/token',iat:now,exp:now+3600});
   const sig = Utilities.base64EncodeWebSafe(Utilities.computeRsaSha256Signature(head+'.'+claim, sa.private_key)).replace(/=+$/,'');
-  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/token',{method:'post',
+  const r = UF_.fetch('https://oauth2.googleapis.com/token',{method:'post',
     payload:{grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:head+'.'+claim+'.'+sig}});
   const at = JSON.parse(r.getContentText()).access_token;
   cache.put('at',at,3000);
@@ -484,12 +508,12 @@ function accessToken_(){
 }
 
 function db_(path){
-  const r = UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
+  const r = UF_.fetch(P_('DB_URL')+'/'+path+'.json',{headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('DB 읽기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,200));
   return JSON.parse(r.getContentText());
 }
 function dbDelete_(path){
-  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'delete',headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
+  UF_.fetch(P_('DB_URL')+'/'+path+'.json',{method:'delete',headers:{Authorization:'Bearer '+accessToken_()},muteHttpExceptions:true});
 }
 
 /** 설치 확인용: 편집기에서 한 번 실행 → 권한 승인 + 설정 점검 (실행 로그 확인) */
@@ -508,7 +532,8 @@ function setupCheck(){
 const BACKUP_FOLDER = 'FS Talk 백업';
 const BACKUP_KEEP_DAYS = 30;
 
-function backupDaily(){
+function backupDaily(){ const t0 = Date.now(); try{ return backupDaily0_(); } finally { statAdd_(Date.now() - t0 || 1); } }
+function backupDaily0_(){
   const talk = db_('talk') || {};
   delete talk.tokens;
   const folder = backupFolder_();
@@ -564,10 +589,10 @@ function restoreMissing(){
   Logger.log('✅ 복구 완료: 없던 항목 ' + added + '개를 되살렸습니다. (기존 내용은 그대로)');
 }
 function dbPut_(path, val){
-  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'put',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
+  UF_.fetch(P_('DB_URL')+'/'+path+'.json',{method:'put',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
 }
 function dbPatch_(path, val){
-  UrlFetchApp.fetch(P_('DB_URL')+'/'+path+'.json',{method:'patch',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
+  UF_.fetch(P_('DB_URL')+'/'+path+'.json',{method:'patch',headers:{Authorization:'Bearer '+accessToken_()},contentType:'application/json',payload:JSON.stringify(val)});
 }
 
 /* ===== v17: 아침 근무 알림 — 설치·근무일정표(sysmex-system-schedule)를 「읽기만」 해서
@@ -581,12 +606,12 @@ const SCH_TEAMS = ['west','east','central','south','fss','fsom'];
 function schToken_(){
   const c = CacheService.getScriptCache(), t = c.get('schTok');
   if(t) return t;
-  const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+SCH_KEY,{method:'post',contentType:'application/json',payload:JSON.stringify({returnSecureToken:true}),muteHttpExceptions:true});
+  const r = UF_.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+SCH_KEY,{method:'post',contentType:'application/json',payload:JSON.stringify({returnSecureToken:true}),muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('일정표 인증 실패 '+r.getResponseCode());
   const id = JSON.parse(r.getContentText()).idToken; c.put('schTok', id, 3000); return id;
 }
 function schGet_(path){
-  const r = UrlFetchApp.fetch(SCH_DB+'/'+path+'.json?auth='+encodeURIComponent(schToken_()),{muteHttpExceptions:true});
+  const r = UF_.fetch(SCH_DB+'/'+path+'.json?auth='+encodeURIComponent(schToken_()),{muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('일정표 '+path+' '+r.getResponseCode());
   return JSON.parse(r.getContentText());
 }
@@ -621,7 +646,7 @@ const SCH_PAGE = 'https://balhm12.github.io/Sysmex-schedule/index.html';
 const SCH_CATK = {install:'설치', relocation:'이전', evaluation:'평가', demo:'데모', education:'교육'};
 function schEvents_(){
   let base = [];
-  try{ const h = UrlFetchApp.fetch(SCH_PAGE, {muteHttpExceptions:true}).getContentText();
+  try{ const h = UF_.fetch(SCH_PAGE, {muteHttpExceptions:true}).getContentText();
        const m = /const\s+BASE_EVENTS\s*=\s*(\[[\s\S]*?\]);\s*\n/.exec(h); if(m) base = JSON.parse(m[1]); }catch(e){ console.error('BASE_EVENTS', e); }
   const vals = function(o){ return Array.isArray(o) ? o.filter(Boolean) : Object.keys(o||{}).map(function(k){ return o[k]; }).filter(Boolean); };
   let custom = {}, edited = {}, deleted = {};
@@ -633,7 +658,8 @@ function schEvents_(){
     .concat(vals(custom).filter(function(e){ return !del[e.id]; }));
 }
 function evOn_(e, day){ const s = String(e.start||''), en = String(e.end||e.start||''); return s && s <= day && day <= en; }
-function morningDigest(){
+function morningDigest(){ const t0 = Date.now(); try{ return morningDigest0_(); } finally { statAdd_(Date.now() - t0 || 1); } }
+function morningDigest0_(){
   const tz = 'Asia/Seoul', now = new Date();
   const fmt = function(d, p){ return Utilities.formatDate(d, tz, p); };
   const today = fmt(now, 'yyyy-MM-dd'), tmd = new Date(now.getTime()+864e5), tom = fmt(tmd, 'yyyy-MM-dd');
@@ -715,11 +741,11 @@ function slackApi_(method, params, post){
   let r, j;
   for(let tr = 0; tr < 2; tr++){   // 259: 한꺼번에 많이 부르면 Slack 이 429(ratelimited) — 알려 준 시간(최대 8초)만큼 쉬고 한 번 더
     if(post){
-      r = UrlFetchApp.fetch('https://slack.com/api/'+method,{method:'post',contentType:'application/json; charset=utf-8',
+      r = UF_.fetch('https://slack.com/api/'+method,{method:'post',contentType:'application/json; charset=utf-8',
         headers:{Authorization:'Bearer '+tok},payload:JSON.stringify(params||{}),muteHttpExceptions:true});
     }else{
       const q = Object.keys(params||{}).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]); }).join('&');
-      r = UrlFetchApp.fetch('https://slack.com/api/'+method+(q?'?'+q:''),{headers:{Authorization:'Bearer '+tok},muteHttpExceptions:true});
+      r = UF_.fetch('https://slack.com/api/'+method+(q?'?'+q:''),{headers:{Authorization:'Bearer '+tok},muteHttpExceptions:true});
     }
     if(r.getResponseCode() === 429 && tr === 0){ let ra = 2; try{ ra = +(r.getHeaders()['Retry-After'] || r.getHeaders()['retry-after']) || 2; }catch(e){} Utilities.sleep(Math.min(8, Math.max(1, ra)) * 1000); continue; }
     break;
@@ -801,6 +827,8 @@ function slackPull(force, opt){
   //      이벤트가 끊기면 12시간 뒤 자동으로 1분 확인으로 돌아감. 외부 호출(하루 2만)·트리거 실행 시간(하루 90분) 절약
   const evOn = now - (+PR.SLK_EV_AT || 0) < 12*3600e3;
   if(!force && !opt.ev && !opt.newOnly && evOn && min % 5 !== 0 && !cch.get('slkSyncPend')) return;
+  const trig = !force && !opt.ev && !opt.newOnly;   // 261: 시간 트리거로 돈 실행(자동 실행 시간 한도에 들어감)
+  let statDone = false;
   const lock = LockService.getScriptLock(); if(!lock.tryLock(opt.wait || 1000)) return;
   try{
     const names = {};
@@ -912,13 +940,15 @@ function slackPull(force, opt){
     if(force || opt.ev || added || meta.push || meta.err || hadErr || meta.team || min % 5 === 0 || !cch.get('slkMetaW')){
       meta.at = now; meta.ok = true; meta.err = meta.err || null; meta.chans = {}; Object.keys(SLACK_CH).forEach(function(c){ meta.chans[c] = SLACK_CH[c].name; });
       meta.added = added; meta.evOn = evOn || null;
+      const st = statAdd_(trig ? (Date.now() - now || 1) : 0); statDone = true;   // 261: 이번 실행까지 더한 오늘 사용량
+      if(st){ meta.stat = {day:st.day, f:st.f, tms:st.tms, runs:st.runs, ex:st.ex, at:Date.now()}; props.setProperty('SLK_STAT', JSON.stringify(st)); }
       dbPatch_('talk/slack/meta', meta);
       cch.put('slkMetaW', '1', 21600); if(meta.err) cch.put('slkErr', '1', 21600); else if(hadErr) cch.remove('slkErr');
     }
   }catch(e){
     console.error(e);
     try{ dbPatch_('talk/slack/meta',{ok:false, err:String(e.message||e).slice(0,200), at:Date.now()}); }catch(e2){}
-  }finally{ try{lock.releaseLock();}catch(e){} }
+  }finally{ try{lock.releaseLock();}catch(e){} if(!statDone) statAdd_(trig ? (Date.now() - now || 1) : 0); }
 }
 /* 열린 요청(7일 안)의 스레드 답글·반응을 읽어 상태를 맞춤 — Slack 에서 👀/답글 = 처리 중, ✅ = 완료 */
 function slkSync_(names){

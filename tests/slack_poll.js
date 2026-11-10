@@ -19,4 +19,11 @@ assert(run(1)>0,'이벤트가 끊기면 1분 확인으로 돌아감');
 const m=t.db.talk.slack.meta;assert(m.ok&&!m.err&&m.chans,'상태 기록 정상');
 const day=idle1*1440, dayEv=ev5*288;
 console.log('하루 예상(새 글 없을 때): 이벤트 없음 약',day,'회 · 이벤트 사용 약',dayEv,'회 (예전 11,520)');
-console.log('slack_poll 258: 통과');
+// 261: 시스템 상태 — 오늘 외부 호출 수·자동 실행 횟수를 meta.stat 에
+t.calls.length=0;delete t.props.SLK_EV_AT;for(const k of Object.keys(t.cache))if(k.startsWith('st:'))delete t.cache[k];delete t.props.SLK_STAT;
+run(1);run(2);const n2=0;at(5);t.calls.length=0;t.g.slackPull();global.Date=RD;
+const st=t.db.talk.slack.meta.stat;
+assert(st&&st.runs===3&&st.f>=12&&st.ex===3,'meta.stat 에 오늘 실행 3번·외부 호출 수: '+JSON.stringify(st));
+assert(JSON.parse(t.props.SLK_STAT).f===st.f,'스크립트 속성에도 저장(캐시가 지워져도 이어서 셈)');
+console.log('오늘 사용량 기록:',JSON.stringify(st));
+console.log('slack_poll 258·261: 통과');

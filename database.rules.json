@@ -525,6 +525,15 @@
           ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')"
         }
       },
+      "online": {
+        ".read": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')",
+        "$uid": {
+          "$c": {
+            ".write": "auth != null && auth.uid === $uid && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+            ".validate": "newData.isNumber()"
+          }
+        }
+      },
       "usage": {
         ".read": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')",
         "$day": {
