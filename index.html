@@ -1729,6 +1729,11 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 .schnxg{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 10px;border-radius:10px;color:var(--blue);font-size:13px;font-weight:700}
 .schnxr{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;border:0;border-top:1px solid var(--line);background:#FFF6E5;color:#7A4E00;text-align:left;font:inherit;font-size:13px;cursor:pointer}.schnxr b{flex:0 0 auto}.schnxr span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html[data-theme=dark] .schnxg{color:#8CC4F5}html[data-theme=dark] .schnxd{background:#16273A;color:#8CC4F5}html[data-theme=dark] .schnx.hot .schnxd{background:var(--blue);color:#fff}html[data-theme=dark] .schnxr{background:#3A2E14;color:#F5D58A}
+.silckh{display:flex;align-items:center;gap:8px;margin-top:4px}.silckh .spt{margin:0}.silckn{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}.silckr{margin-left:auto;min-height:44px;padding:0 10px;background:none;border:0;color:var(--blue,#005BAC);font:inherit;font-size:12.5px;cursor:pointer}
+.silcks{display:flex;flex-direction:column}.silck{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 2px;background:none;border:0;border-top:1px solid var(--line);text-align:left;font:inherit;font-size:13px;line-height:1.5;color:var(--text);cursor:pointer;width:100%}.silck:first-child{border-top:0}
+.silckb{flex:0 0 20px;height:20px;margin-top:1px;border:2px solid var(--sub);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+.silck.on .silckb{background:#3FBA46;border-color:#3FBA46}.silck.on .silckb::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.silck.on .silckt{color:var(--sub);text-decoration:line-through}.silck:focus-visible,.silckr:focus-visible{outline:2px solid #00B8EE;outline-offset:1px}
 </style>
 
 </head>
@@ -1963,7 +1968,7 @@ html[data-theme=dark] .schnxg{color:#8CC4F5}html[data-theme=dark] .schnxd{backgr
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.252";
+const APP_VERSION="2026-11-10.253";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2825,6 +2830,27 @@ async function silDetail(r){track("sil");
     const raw=await silOpen(silKey,await res.arrayBuffer());silDevJ[r.d]=a.gz?await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).json():JSON.parse(new TextDecoder().decode(raw));}
   const det=(silDevJ[r.d].detail||{})[(String(r.p)==="2")?"p2":"p1"]||{};return det[r.i]||null;
 }
+/* 실마리 조치 체크리스트(253): 조치 단계를 눌러 표시, 이 기기에만 저장(fstalk-silck), 자료는 건드리지 않음 */
+function silChecklist(box,r,codes,acts){
+  const seen={},items=(acts||[]).map(x=>String(x||"").replace(/<[^>]+>/g,"").replace(/\s+—\s+.*/,"").trim().slice(0,160)).filter(x=>x&&!seen[x]&&(seen[x]=1)).slice(0,12);
+  if(!items.length)return;
+  const key=[r.d,codes[0]||""].join("|");let all={};try{all=JSON.parse(localStorage.getItem("fstalk-silck")||"{}")||{};}catch(e){all={};}
+  const done=new Set((all[key]||[]).filter(i=>i<items.length));
+  const save=()=>{try{const a=JSON.parse(localStorage.getItem("fstalk-silck")||"{}")||{};if(done.size)a[key]=Array.from(done);else delete a[key];const ks=Object.keys(a);if(ks.length>60)delete a[ks[0]];localStorage.setItem("fstalk-silck",JSON.stringify(a));}catch(e){}};
+  const head=el("div","silckh"),t=el("b","spt","조치"),cnt=el("span","silckn"),rs=el("button","silckr","처음부터");rs.type="button";
+  head.appendChild(t);head.appendChild(cnt);head.appendChild(rs);box.appendChild(head);
+  const ul=el("div","silcks");ul.setAttribute("role","group");ul.setAttribute("aria-label","조치 체크리스트");box.appendChild(ul);
+  const upd=()=>{cnt.textContent=done.size+"/"+items.length+(done.size===items.length?" 완료":"");rs.hidden=!done.size;};
+  items.forEach((x,i)=>{
+    const b=el("button","silck");b.type="button";b.setAttribute("role","checkbox");
+    const mk=el("span","silckb"),tx=el("span","silckt",x);b.appendChild(mk);b.appendChild(tx);
+    const paint=()=>{const on=done.has(i);b.setAttribute("aria-checked",String(on));b.classList.toggle("on",on);};
+    b.onclick=()=>{if(done.has(i))done.delete(i);else done.add(i);paint();upd();save();};
+    paint();ul.appendChild(b);
+  });
+  rs.onclick=()=>{done.clear();ul.querySelectorAll(".silck").forEach(b=>{b.classList.remove("on");b.setAttribute("aria-checked","false");});upd();save();};
+  upd();
+}
 function silPreview(r,box){
   box.textContent="";box.appendChild(el("div","hsoon","원인·조치 불러오는 중…"));
   silDetail(r).then(e=>{box.textContent="";if(!e){box.appendChild(el("div","hsoon","상세가 없습니다 — 실마리에서 보기"));return;}
@@ -2832,7 +2858,7 @@ function silPreview(r,box){
     const codes=(e.codes&&e.codes.length)?e.codes:(e.code?[e.code]:[]);
     box.appendChild(el("div","spm",[r.d,codes.slice(0,3).join(" / ")].filter(Boolean).join(" · ")));
     sec("원인",[e.cause].concat(m.causes||[]));
-    const acts=(m.actions||[]).concat(...(e.steps||[]).map(s=>s.items||[]));sec("조치",acts);
+    const acts=(m.actions||[]).concat(...(e.steps||[]).map(s=>s.items||[]));silChecklist(box,r,codes,acts);
     const pn=((e.crm||{}).pn||e.pn||[]).filter(x=>x&&x.pn).slice(0,5);
     if(pn.length){box.appendChild(el("b","spt","관련 부품"));const u=el("div","sppn");pn.forEach(x=>{const c=el("span","hchip sm",String(x.pn).toUpperCase()+(x.name?" "+String(x.name).slice(0,20):""));u.appendChild(c);});box.appendChild(u);}
     const rel=boardList("tech").concat(boardList("video")).filter(x=>x.d&&(x.d===r.d||String(r.d).indexOf(x.d)===0)).slice(0,3);
