@@ -1770,6 +1770,7 @@ html[data-theme=dark] .schnone .schgo{color:#8CC4F5}
   .hv5 .hht h1{font-size:18px}
 }
 .avzbtn{cursor:zoom-in}.avzoom{position:fixed;inset:0;z-index:400;background:rgba(10,14,20,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;cursor:zoom-out}.avzoom img{width:min(80vw,320px);height:min(80vw,320px);object-fit:cover;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.4);background:#fff}.avzoom .avzn{color:#fff;font-size:17px;font-weight:700}.avzoom .avzx{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border:0;border-radius:22px;background:rgba(255,255,255,.16);color:#fff;font-size:26px;line-height:1;cursor:pointer}html.ios-sa .avzoom .avzx{top:calc(34px + env(safe-area-inset-top))}
+.sysbox{display:flex;flex-direction:column;gap:10px;margin-bottom:8px}.sysst{border:1px solid var(--line,#DDDDDD);border-radius:10px;padding:10px 12px}.sysst.warn{border-color:#E7413E;background:rgba(231,65,62,.06)}.sysl{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between;font-size:14px}.sysl span{font-size:13px;color:var(--sub,#5E6977);font-variant-numeric:tabular-nums}.sysbar{height:6px;border-radius:3px;background:rgba(127,127,127,.18);margin-top:8px;overflow:hidden}.sysbar i{display:block;height:100%;border-radius:3px}.sysft{font-size:12px;color:var(--sub,#5E6977);display:flex;flex-wrap:wrap;align-items:center;gap:6px}.sysft a{color:#005BAC;font-weight:600;text-decoration:none}html[data-theme=dark] .sysft a{color:#8CC4F5}.sysft .btn{margin-left:auto}
 </style>
 
 </head>
@@ -2004,7 +2005,7 @@ html[data-theme=dark] .schnone .schgo{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-11.260";
+const APP_VERSION="2026-11-11.261";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2351,7 +2352,7 @@ function start(){
   started=true;setTimeout(()=>{try{window.openNoteRoom&&window.openNoteRoom();}catch(e){}},600);setTimeout(posterAuto,3000);setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();renderNav();syncMuteBtn();syncAlarmMarks();},()=>{});
   myKey=personKey(me.team,me.name);
-  R("joined/"+myKey).set(true).catch(()=>{});
+  watchPresence();R("joined/"+myKey).set(true).catch(()=>{});
   R("joined").on("value",s=>{joined=s.val()||{};schedule();},()=>{});
   R("profiles").on("value",s=>{profiles=s.val()||{};profilesLoaded=true;setTimeout(profileAuto,2500);if(listTab==="org")renderNav();if(view==="org")renderOrgBoard();if(view==="settings")renderSettings();try{renderStart();}catch(e){}},()=>{});
   watchAvatars();   // 259: 기기에 저장해 두고 바뀐 사진만
@@ -4131,7 +4132,7 @@ const SLK_ST={new:"새 요청",doing:"처리 중",done:"완료"};
 function slkAckOf(m){if(!m||!m.slk||!m.slk.ts)return null;const ts=String(m.slk.ts);let hit=null;for(const k in slkReq){const r=slkReq[k];if(r&&r.ack&&String(r.ts)===ts&&(!r.ch||!m.slk.ch||r.ch===m.slk.ch)){if(!hit||(r.ack.at||0)<(hit.at||0))hit=r.ack;}}return hit;}
 function slkWatch(){if(slkOn||!me)return;slkOn=true;
   R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(started)try{renderNav();}catch(e){}if(view==="chat"&&room&&started)try{renderMsgs(false);}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();renderHomeReq();if(schData)renderSch();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
-  R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});
+  R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(sysBoxEl&&document.body.contains(sysBoxEl))try{renderSysStatus(sysBoxEl);}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});
   if(myKey)R("prefs/"+myKey+"/slkchk").on("value",s=>{slkChk=s.val()||{};if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});}   // 208: 내가 확인한 요청(사람마다)
 function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
 function slkSrc(r){return r.kind==="paste"?(r.src||"etc"):r.kind;}
@@ -4671,6 +4672,32 @@ async function adminConvView(r){
       const t=el("div",null,String(m.text||"")+(m.file&&m.file.name?" [첨부: "+m.file.name+"]":""));t.style.cssText="white-space:pre-wrap;word-break:break-word";row.appendChild(t);box.appendChild(row);});
     box.scrollTop=box.scrollHeight;track("adm_conv");
   }catch(e){box.textContent="불러오기 실패: "+(e.code||e.message);}
+}
+/* 261: 시스템 상태(관리자) — 지금 연결된 창 수(talk/online/{uid}/{창} = 연결 시각, 끊기면 서버가 지움), 서버 오늘 사용량(meta.stat), Slack 가져오기 */
+let presRef=null;
+function watchPresence(){if(presRef||!uid)return;presRef=R("online/"+uid).push();
+  db.ref(".info/connected").on("value",s=>{if(s.val()!==true)return;try{presRef.onDisconnect().remove().then(()=>presRef.set(SV)).catch(()=>{});}catch(e){}});}
+function sysBar(v,max){const pc=max?Math.min(100,Math.round(v/max*100)):0;const b=el("div","sysbar");const f=el("i");f.style.width=pc+"%";f.style.background=pc>=90?"#E7413E":pc>=70?"#E69E0B":"#3FBA46";b.appendChild(f);b.setAttribute("role","img");b.setAttribute("aria-label",pc+"%");return b;}
+let sysBoxEl=null;
+function renderSysStatus(box){
+  sysBoxEl=box;slkWatch();box.textContent="";
+  const today=new Date(Date.now()+9*36e5).toISOString().slice(0,10).replace(/-/g,""),m=slkMeta||{},st=m.stat&&m.stat.day===today?m.stat:null;
+  const row=(label,val,bar,warn)=>{const r=el("div","sysst"+(warn?" warn":""));const h=el("div","sysl");h.appendChild(el("b",null,label));h.appendChild(el("span",null,val));r.appendChild(h);if(bar)r.appendChild(bar);box.appendChild(r);return r;};
+  const conn=row("지금 연결된 창·기기","세는 중…",null);
+  R("online").once("value",s=>{const v=s.val()||{};let n=0;for(const u in v)n+=Object.keys(v[u]||{}).length;conn.querySelector(".sysl span").textContent=n+"개 / 100 (Firebase 무료 요금제 한도)";conn.appendChild(sysBar(n,100));if(n>=70)conn.classList.add("warn");},()=>{conn.querySelector(".sysl span").textContent="– (읽기 권한 없음 · DB 규칙 배포 확인)";});
+  if(st){const f=st.f||0,mn=Math.round((st.tms||0)/6e4);
+    row("서버 외부 호출 (오늘)","약 "+f.toLocaleString()+" / 20,000",sysBar(f,20000),f>=14000);
+    row("서버 자동 실행 시간 (오늘)","약 "+mn+"분 / 90분 · "+(st.runs||0).toLocaleString()+"번",sysBar(st.tms||0,90*6e4),mn>=63);}
+  else row("서버 사용량 (오늘)","– 아직 기록이 없습니다(서버 v45 배포 뒤 5분 안에 채워짐)",null);
+  const ago=m.at?Math.round((Date.now()-m.at)/6e4):null;
+  row("Slack 가져오기",m.at?("마지막 "+new Date(m.at).toTimeString().slice(0,5)+" ("+(ago<1?"방금":ago+"분 전")+")"+(m.ms?" · 한 번에 "+(m.ms/1000).toFixed(1)+"초":"")+" · 바로 받기 "+(m.evOn?"켜짐(5분마다 확인)":"꺼짐(1분마다 확인)")):"– 연결 전",null,!m.at||ago>15||!!m.err);
+  if(m.err)row("Slack 오류",String(m.err).slice(0,160),null,true);
+  const pu=m.push;if(pu&&pu.at&&new Date(pu.at+9*36e5).toISOString().slice(0,10).replace(/-/g,"")===today)row("Slack 글 알림 (오늘)",(pu.day||0).toLocaleString()+"건 · 6,000건 넘으면 채널 방 알림은 건너뜀",sysBar(pu.day||0,6000),(pu.day||0)>=4200);
+  const ft=el("div","sysft");ft.appendChild(document.createTextNode("대략값입니다. 정확한 값: "));
+  const a1=el("a",null,"Firebase 사용량 ›");a1.href="https://console.firebase.google.com/project/fs-talk-fa383/usage";a1.target="_blank";a1.rel="noopener";
+  const a2=el("a",null,"Apps Script 실행 기록 ›");a2.href="https://script.google.com/home/executions";a2.target="_blank";a2.rel="noopener";
+  ft.appendChild(a1);ft.appendChild(document.createTextNode(" · "));ft.appendChild(a2);
+  const rb=el("button","btn","새로고침");rb.onclick=()=>renderSysStatus(box);ft.appendChild(rb);box.appendChild(ft);
 }
 async function renderUsage(box){
   box.textContent="";box.appendChild(el("div","nthint","기기마다 기능별로 하루 한 번만 셉니다(이름·시각 같은 개인 기록 없음). 숫자 = 그날 그 기능을 쓴 기기 수."));
@@ -6447,6 +6474,7 @@ function renderAdmin(){
   body.appendChild(el("div","sec","1:1·그룹 대화 열람 (관리자)"));
   body.appendChild(el("div","nthint","팀방·1:1·그룹 대화는 해당 인원만 봅니다. 관리자는 여기서 모든 1:1·그룹 대화를 읽기 전용으로 볼 수 있습니다(팀방은 대화 목록에 모두 보임)."));
   const cvb=el("button","btn","대화 목록 불러오기");const cvl=el("div");cvl.style.margin="8px 0 24px";cvb.onclick=()=>adminConvList(cvl);body.appendChild(cvb);body.appendChild(cvl);
+  body.appendChild(el("div","sec","시스템 상태"));const sb=el("div","sysbox");body.appendChild(sb);renderSysStatus(sb);
   body.appendChild(el("div","sec","사용 현황 (최근 14일)"));const ub=el("div");body.appendChild(ub);renderUsage(ub);
 }
 
@@ -6938,7 +6966,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/11","프로필 창에서 사진을 누르면 크게 보기"],["11/11","안정성 — 앱을 열 때 받는 양 줄이기: 프로필 사진은 기기에 저장해 바뀐 것만, Slack 채널 방은 최근 150개·다른 방 300개(위로 올리면 더), 반응·읽음은 내 방 것만"],["11/11","안정성 — Slack 바로 받기(이벤트)가 켜져 있으면 서버의 매분 확인을 5분마다로 줄여 하루 사용 한도 절약"],["11/11","안정성 — 화면에 안 보이는 창은 5분 뒤 연결을 쉬었다가 다시 열면 바로 이어짐(동시 접속 수 절약), Sysmex Talk 검색은 자료를 다 받으면 연결을 닫음"],["11/11","Slack 채널 방에서 보낸 글 아래 「✓ Slack … 채널로 보냄 · Slack에서 보기」 표시, 보낸 뒤 어느 방에 같이 표시됐는지 알림"],["11/11","홈 첫 화면 다듬기 — 작은 휴대폰에서 프로필 잘림 수정, Slack 요청 줄에 요청 내용, 검색 안내 글자 잘림 수정, 더 보기 2열"],["11/10","아이폰 홈 화면 앱 — 대화방·Sysmex Talk 검색·설정 등 맨 위 줄도 아래로(상단 흐림 피하기)"],["11/10","설치일정·근무일정 바로 열기 — 홈 「오늘의 업무」 위 버튼 두 개, PC 왼쪽 「설치」「근무」"],["11/10","로딩 화면 물결 막대, 화면 문구의 「포털」도 「FS Portal」로"],["11/10","이름 「FS Portal」·새 아이콘 — 홈 화면에 추가해 둔 앱은 지우고 다시 추가하면 새 아이콘으로"],["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 FS Portal 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 FS Portal 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/11","관리 화면에 「시스템 상태」 — 지금 연결 수·서버 오늘 사용량·Slack 가져오기 상태를 한도와 함께"],["11/11","프로필 창에서 사진을 누르면 크게 보기"],["11/11","안정성 — 앱을 열 때 받는 양 줄이기: 프로필 사진은 기기에 저장해 바뀐 것만, Slack 채널 방은 최근 150개·다른 방 300개(위로 올리면 더), 반응·읽음은 내 방 것만"],["11/11","안정성 — Slack 바로 받기(이벤트)가 켜져 있으면 서버의 매분 확인을 5분마다로 줄여 하루 사용 한도 절약"],["11/11","안정성 — 화면에 안 보이는 창은 5분 뒤 연결을 쉬었다가 다시 열면 바로 이어짐(동시 접속 수 절약), Sysmex Talk 검색은 자료를 다 받으면 연결을 닫음"],["11/11","Slack 채널 방에서 보낸 글 아래 「✓ Slack … 채널로 보냄 · Slack에서 보기」 표시, 보낸 뒤 어느 방에 같이 표시됐는지 알림"],["11/11","홈 첫 화면 다듬기 — 작은 휴대폰에서 프로필 잘림 수정, Slack 요청 줄에 요청 내용, 검색 안내 글자 잘림 수정, 더 보기 2열"],["11/10","아이폰 홈 화면 앱 — 대화방·Sysmex Talk 검색·설정 등 맨 위 줄도 아래로(상단 흐림 피하기)"],["11/10","설치일정·근무일정 바로 열기 — 홈 「오늘의 업무」 위 버튼 두 개, PC 왼쪽 「설치」「근무」"],["11/10","로딩 화면 물결 막대, 화면 문구의 「포털」도 「FS Portal」로"],["11/10","이름 「FS Portal」·새 아이콘 — 홈 화면에 추가해 둔 앱은 지우고 다시 추가하면 새 아이콘으로"],["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 FS Portal 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 FS Portal 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
