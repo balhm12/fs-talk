@@ -1721,6 +1721,14 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 /* 251: Slack 요청 상세 — 담당·회신·완료 버튼 줄을 창 아래에 고정(길게 스크롤해도 엄지 닿는 곳, 44px) */
 .pcard.wide .slkbt{position:sticky;bottom:-18px;z-index:2;margin:12px -20px -18px;padding:10px 20px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);flex-shrink:0}
 .pcard.wide .slkbt .btn{min-height:44px}
+/* 252: 홈 「다음 내 일정」 */
+.schnx{flex-basis:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}.schnx.hot{border-color:var(--blue)}
+.schnxm{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border:0;background:none;color:var(--text);text-align:left;font:inherit;cursor:pointer}
+.schnxd{flex:0 0 auto;min-width:54px;text-align:center;padding:6px 8px;border-radius:8px;background:#EAF2FB;color:var(--blue);font-weight:800;font-size:14px}.schnx.hot .schnxd{background:var(--blue);color:#fff}
+.schnxt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}.schnxt b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.schnxt small{color:var(--sub);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.schnxt .schnxk{font-size:11px}
+.schnxg{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 10px;border-radius:10px;color:var(--blue);font-size:13px;font-weight:700}
+.schnxr{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;border:0;border-top:1px solid var(--line);background:#FFF6E5;color:#7A4E00;text-align:left;font:inherit;font-size:13px;cursor:pointer}.schnxr b{flex:0 0 auto}.schnxr span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-theme=dark] .schnxg{color:#8CC4F5}html[data-theme=dark] .schnxd{background:#16273A;color:#8CC4F5}html[data-theme=dark] .schnx.hot .schnxd{background:var(--blue);color:#fff}html[data-theme=dark] .schnxr{background:#3A2E14;color:#F5D58A}
 </style>
 
 </head>
@@ -1955,7 +1963,7 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.251";
+const APP_VERSION="2026-11-10.252";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2714,6 +2722,25 @@ function schDateLbl(e,today){
   return {lb,now:e.start<=today};
 }
 function skel(rows,cls){const w=el("div","skel"+(cls?" "+cls:""));w.setAttribute("aria-label","불러오는 중");for(let i=0;i<rows;i++)w.appendChild(el("i"));return w;}   // 불러오는 동안 회색 막대
+/* 252: 홈 「다음 내 일정」 — 내 일정 중 가장 가까운 한 건(설치·이전·평가는 병원·장비·길찾기, 같은 병원의 열린 Slack 요청이 있으면 첫 줄). 일정표·요청함에 실제로 있는 값만 */
+function schNextMine(){if(!me||!schData)return null;const today=schData.today,list=[];
+  (schData.week||[]).forEach(({d,o})=>["night","duty","leave","edu","plan"].forEach(k=>(o[k]||[]).filter(x=>x.nm===me.name).forEach(x=>list.push({d,w:x.k}))));
+  schData.ev.filter(schMineEv).filter(e=>String(e.end||e.start)>=today).forEach(e=>list.push({d:e.start<today?today:e.start,e}));
+  list.sort((a,b)=>a.d.localeCompare(b.d)||(a.e?0:1)-(b.e?0:1));const nx=list[0];if(!nx)return null;
+  const dd=Math.round((new Date(nx.d+"T00:00:00")-new Date(today+"T00:00:00"))/864e5),dt=new Date(nx.d+"T00:00:00"),
+    lb=dd===0?"오늘":dd===1?"내일":(dt.getMonth()+1)+"/"+dt.getDate()+"("+"일월화수목금토"[dt.getDay()]+")";
+  const box=el("div","schnx"+(dd<=1?" hot":"")),m=el("button","schnxm");m.type="button";m.appendChild(el("span","schnxd",lb));
+  const tx=el("span","schnxt");tx.appendChild(el("small","schnxk","다음 내 일정"));
+  if(nx.e){const e=nx.e,c=SCH_CAT[e.category]||[e.category||"일정"],hosp=String(e.title||"").replace(/\(.*?\)/g,"").trim();
+    tx.appendChild(el("b",null,String(e.title||"일정")));const sub=[c[0],e.device].filter(Boolean).join(" · ");if(sub)tx.appendChild(el("small",null,sub));m.appendChild(tx);
+    m.onclick=()=>{if(!hosp)return;$("q").value=hosp;go("search");};
+    const mp=el("span","schnxg");mp.setAttribute("role","button");mp.tabIndex=0;mp.setAttribute("aria-label",String(e.title||"")+" 길찾기");mp.appendChild(icEl("globe","",16));mp.appendChild(el("span",null,"길찾기"));
+    const go2=ev=>{ev.stopPropagation();openMap(e.title);};mp.onclick=go2;mp.onkeydown=ev=>{if(ev.key==="Enter")go2(ev);};m.appendChild(mp);box.appendChild(m);
+    const key=x=>String(x||"").replace(/\(.*?\)/g,"").replace(/[\s·.,\-]/g,""),hk=key(e.title);
+    if(hk.length>=3){const q=slkList().filter(r=>r.st!=="done"&&key((r.f||{}).hosp).length>=3&&(hk.includes(key(r.f.hosp))||key(r.f.hosp).includes(hk))).sort((a,b)=>slkAtE(b)-slkAtE(a))[0];
+      if(q){const f=q.f||{},r2=el("button","schnxr");r2.type="button";r2.appendChild(el("b",null,"Slack 요청"));r2.appendChild(el("span",null,slkFirst([f.eq,f.req||f.sym].filter(Boolean).join(" · "),70)||"내용 보기"));r2.onclick=()=>{go("req");setTimeout(()=>openSlkReq(q.id),60);};box.appendChild(r2);}}}
+  else{tx.appendChild(el("b",null,nx.w));m.appendChild(tx);m.onclick=()=>openSchWeek();box.appendChild(m);}
+  return box;}
 function renderSch(){
   const box=document.getElementById("hsch");if(!box)return;box.textContent="";
   if(!schData){
@@ -2729,6 +2756,7 @@ function renderSch(){
   const D=Object.assign({},schData,{ev:schData.ev.filter(evIn),w:fo(schData.w),w2:fo(schData.w2)}),mine=x=>me&&x.nm===me.name;
   {const host=document.getElementById("hschScope");if(host)host.textContent="";
    if(myTk){const sw=el("div",host?"hsp-seg hschseg":"schscope");sw.setAttribute("role","group");sw.setAttribute("aria-label","보는 범위");[["me","나"],["team",host?"우리 팀":"우리 팀 ("+tlOf(myTk)+")"],["all","전체"]].forEach(([k,l])=>{const on=(meMode?"me":scoped?"team":"all")===k;const b=el("button",host?(on?"on":null):"hchip"+(on?" on":""),l);b.type="button";b.setAttribute("aria-pressed",on?"true":"false");if(k==="team")b.title=tlOf(myTk);b.onclick=()=>{schScope=k;try{}catch(e){}renderSch();renderStats();};sw.appendChild(b);});(host||box).appendChild(sw);}}   // 217: 홈에서는 카드 제목 줄에
+  try{const nxc=schNextMine();if(nxc)box.appendChild(nxc);}catch(e){}   // 252
   // 내 일정 한 줄
   const my=[];(D.week||[]).forEach(({d,o},i)=>{const w=i===0?"오늘":i===1?"내일":(+d.slice(5,7))+"/"+(+d.slice(8,10))+"("+"일월화수목금토"[new Date(d+"T00:00:00").getDay()]+")";
     ["night","duty","leave","edu","plan"].forEach(k=>(o[k]||[]).filter(mine).forEach(x=>my.push({w,k:x.k,t:i===0})));});
@@ -4017,7 +4045,7 @@ const SLK_ST={new:"새 요청",doing:"처리 중",done:"완료"};
 // 242: 채널 방(CSO·CS쉐어링)·팀 방 복사본 글에 「✅ 확인」 — 요청의 ack(포털 확인 버튼·Slack ✅ 모두 req.ack)를 같은 Slack 글(ch·ts)로 찾아 표시(확인만, 방문·완료는 표시 안 함 — 전화 처리도 있음)
 function slkAckOf(m){if(!m||!m.slk||!m.slk.ts)return null;const ts=String(m.slk.ts);let hit=null;for(const k in slkReq){const r=slkReq[k];if(r&&r.ack&&String(r.ts)===ts&&(!r.ch||!m.slk.ch||r.ch===m.slk.ch)){if(!hit||(r.ack.at||0)<(hit.at||0))hit=r.ack;}}return hit;}
 function slkWatch(){if(slkOn||!me)return;slkOn=true;
-  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(started)try{renderNav();}catch(e){}if(view==="chat"&&room&&started)try{renderMsgs(false);}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();renderHomeReq();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
+  R("slack/req").orderByChild("at").startAt(Date.now()-21*864e5).on("value",s=>{slkReq=s.val()||{};if(started)try{renderNav();}catch(e){}if(view==="chat"&&room&&started)try{renderMsgs(false);}catch(e){}if(view==="req")renderReqPage();else if(view==="home")try{renderBrief();renderHomeReq();if(schData)renderSch();}catch(e){}if(view==="menu")renderMenuPage();},()=>{});
   R("slack/meta").on("value",s=>{slkMeta=s.val()||null;if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});
   if(myKey)R("prefs/"+myKey+"/slkchk").on("value",s=>{slkChk=s.val()||{};if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});}   // 208: 내가 확인한 요청(사람마다)
 function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
