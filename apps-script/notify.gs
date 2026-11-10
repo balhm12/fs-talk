@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v44';
+const NOTIFY_VER = 'v45';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -712,15 +712,20 @@ const SLK_FEED_KEEP_DAYS = 30;
 
 function slackApi_(method, params, post){
   const tok = P_('SLACK_BOT_TOKEN'); if(!tok) throw new Error('SLACK_BOT_TOKEN 없음');
-  let r;
-  if(post){
-    r = UrlFetchApp.fetch('https://slack.com/api/'+method,{method:'post',contentType:'application/json; charset=utf-8',
-      headers:{Authorization:'Bearer '+tok},payload:JSON.stringify(params||{}),muteHttpExceptions:true});
-  }else{
-    const q = Object.keys(params||{}).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]); }).join('&');
-    r = UrlFetchApp.fetch('https://slack.com/api/'+method+(q?'?'+q:''),{headers:{Authorization:'Bearer '+tok},muteHttpExceptions:true});
+  let r, j;
+  for(let tr = 0; tr < 2; tr++){   // 259: 한꺼번에 많이 부르면 Slack 이 429(ratelimited) — 알려 준 시간(최대 8초)만큼 쉬고 한 번 더
+    if(post){
+      r = UrlFetchApp.fetch('https://slack.com/api/'+method,{method:'post',contentType:'application/json; charset=utf-8',
+        headers:{Authorization:'Bearer '+tok},payload:JSON.stringify(params||{}),muteHttpExceptions:true});
+    }else{
+      const q = Object.keys(params||{}).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]); }).join('&');
+      r = UrlFetchApp.fetch('https://slack.com/api/'+method+(q?'?'+q:''),{headers:{Authorization:'Bearer '+tok},muteHttpExceptions:true});
+    }
+    if(r.getResponseCode() === 429 && tr === 0){ let ra = 2; try{ ra = +(r.getHeaders()['Retry-After'] || r.getHeaders()['retry-after']) || 2; }catch(e){} Utilities.sleep(Math.min(8, Math.max(1, ra)) * 1000); continue; }
+    break;
   }
-  const j = JSON.parse(r.getContentText()||'{}');
+  try{ j = JSON.parse(r.getContentText()||'{}'); }catch(e){ throw new Error('Slack '+method+': 응답 오류 '+r.getResponseCode()); }
+  if(r.getResponseCode() === 429) throw new Error('Slack '+method+': ratelimited');
   if(!j.ok && ['already_reacted','no_reaction'].indexOf(j.error) < 0) throw new Error('Slack '+method+': '+(j.error||r.getResponseCode()));
   return j;
 }
@@ -754,8 +759,9 @@ function slkUser_(uid, cacheObj){
   if(cacheObj[uid] !== undefined) return cacheObj[uid];
   const c = CacheService.getScriptCache(), hit = c.get('slu:'+uid);
   if(hit !== null){ cacheObj[uid] = hit; return hit; }
-  let n = '';
-  try{ const j = slackApi_('users.info',{user:uid}); const u = j.user||{}; n = (u.profile && (u.profile.real_name || u.profile.display_name)) || u.real_name || u.name || ''; }catch(e){}
+  let n = '', failed = false;
+  try{ const j = slackApi_('users.info',{user:uid}); const u = j.user||{}; n = (u.profile && (u.profile.real_name || u.profile.display_name)) || u.real_name || u.name || ''; }catch(e){ failed = true; }
+  if(failed){ cacheObj[uid] = n; return n; }   // 259: 조회 실패(많이 부르면 ratelimited)를 6시간 저장하면 그 사람 글이 이름 없이 들어감 → 이번 실행에서만 비워 두고 다음에 다시 조회
   c.put('slu:'+uid, n, 21600); cacheObj[uid] = n; return n;
 }
 /* 양식 글(CSO 기술요청·CS쉐어링 접수)을 칸으로 나눔 — 칸이 없으면 null */
@@ -784,6 +790,8 @@ function slkParse_(text){
 function slkHash_(s){ return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)).replace(/[=_-]/g,'').slice(0,14); }
 
 /* 1분마다: 새 글 가져오기. 5분마다(또는 force): 열린 요청의 스레드·반응 맞추기 */
+const SLK_PULL_PAGES = 30;        // 259: 한 번에 받는 쪽 수(200건씩 = 6000건)
+const SLK_PULL_BUDGET = 200000;   // 259: 글 처리에 쓰는 시간(ms) — Apps Script 한 번 6분 한도 안에서 확인 맞추기·알림 시간을 남김
 function slackPull(force, opt){
   opt = opt || {}; if(typeof force === 'object' && force) force = false;   // 시간 트리거는 이벤트 객체를 넘김
   if(!P_('SLACK_BOT_TOKEN')) return;
@@ -803,11 +811,7 @@ function slackPull(force, opt){
       const rescan = !props.getProperty('SLK_RESCAN_227');
       const last = rescan ? String(Math.min(+oldLast, (now - 3*864e5)/1000)) : oldLast;
       let cursor = '', maxTs = oldLast, page = 0;
-      do{
-        const prm = {channel:ch, oldest:last, limit:200}; if(cursor) prm.cursor = cursor;
-        let j; try{ j = slackApi_('conversations.history', prm); }catch(e){ meta.err = String(e.message||e).slice(0,200); break; }
-        (j.messages||[]).forEach(function(m){ try{ slkOne_(m); }catch(e){ meta.err = '글 '+m.ts+': '+String(e.message||e).slice(0,160); console.error(e); } });
-        function slkOne_(m){
+      function slkOne_(m){
           if(+m.ts <= +last) return;
           if(+m.ts > +maxTs) maxTs = m.ts;
           if(m.subtype && ['bot_message','thread_broadcast'].concat(C.type === 'feed' ? ['file_share'] : []).indexOf(m.subtype) < 0) return;   // 들어옴·나감 등
@@ -866,9 +870,24 @@ function slackPull(force, opt){
             dbPatch_('talk/slack/req/'+id, base);
           });
         }
+      // 259: 한꺼번에 많이 올라온 경우 — 끝까지 모두 받은 뒤 오래된 글부터 처리하고, 시간이 모자라면 처리한 데까지만 읽은 시각을 넘김
+      //   (예전: 최대 3쪽(600건)만 받고 가장 새 글 시각으로 넘겨 그 사이 글이 영영 빠졌고, 글이 많아 6분 한도에 걸리면 같은 글에서 계속 멈춤)
+      const msgs = []; let fetchOk = true;
+      do{
+        const prm = {channel:ch, oldest:last, limit:200}; if(cursor) prm.cursor = cursor;
+        let j; try{ j = slackApi_('conversations.history', prm); }catch(e){ meta.err = String(e.message||e).slice(0,200); fetchOk = false; break; }
+        (j.messages||[]).forEach(function(m){ msgs.push(m); });
         cursor = j.response_metadata && j.response_metadata.next_cursor || '';
-      }while(cursor && ++page < 3);
-      props.setProperty('SLK_TS_'+ch, String(maxTs));   // maxTs 는 oldLast 에서 시작해 커지기만 함
+      }while(cursor && ++page < SLK_PULL_PAGES);
+      if(fetchOk && cursor) meta.err = '#'+C.name+' 새 글이 '+(SLK_PULL_PAGES*200)+'건을 넘어 가장 오래된 글 일부는 건너뜀';   // 멈춰 서 있는 것보다 최근 글부터 따라잡는 쪽을 택함
+      if(fetchOk){   // 받기가 중간에 실패하면 새 쪽 글만 받은 것이라 처리하지 않음(읽은 시각을 앞으로 넘기면 사이 글이 빠짐)
+        msgs.sort(function(x, y){ return +x.ts - +y.ts; });
+        for(let k = 0; k < msgs.length; k++){
+          if(Date.now() - now > SLK_PULL_BUDGET){ meta.err = '#'+C.name+' 글이 많아 '+k+'/'+msgs.length+'건까지 처리 — 나머지는 다음 분에'; break; }
+          try{ slkOne_(msgs[k]); }catch(e){ meta.err = '글 '+msgs[k].ts+': '+String(e.message||e).slice(0,160); console.error(e); }
+        }
+      }
+      if(fetchOk) props.setProperty('SLK_TS_'+ch, String(maxTs));   // maxTs 는 oldLast 에서 시작해 처리한 글까지 커짐(오래된 글부터 처리)
     });
     if(!props.getProperty('SLK_RESCAN_227')) props.setProperty('SLK_RESCAN_227','1');
     if(!props.getProperty('SLK_DEDUP_232')){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
