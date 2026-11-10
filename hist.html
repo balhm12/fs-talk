@@ -292,6 +292,7 @@ async function loadAll(){
     }
   }
   await Promise.all([worker(),worker(),worker()]);
+  if(db&&!E){try{db.goOffline();}catch(e){}}   // 257: 자료는 기기에 저장됐으니 DB 연결을 닫아 동시 접속 수를 아낌(다시 열면 새로 연결)
   setTimeout(()=>$("#prog").style.display="none",400);
 }
 function loadedSearchable(){let n=0;for(const c of CH)for(let i=0;i<c.n;i++)if(c.ty[i]!==NZ)n++;return n;}
