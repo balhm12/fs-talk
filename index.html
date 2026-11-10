@@ -1717,7 +1717,7 @@ img.locklogo,.ghead img.gapp{display:block;background:none;object-fit:contain}  
 html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 @media (max-width:380px){.hschqb small{display:none}.hschqb{grid-template-rows:auto}.hschqb .ico{grid-row:auto}}
 /* 249: 아이폰 홈 화면 앱 — iOS 26 이 화면 맨 위(상태바 아래까지)를 시스템 블러로 덮어 인사말이 흐려 보임. 홈 맨 위 여백을 더 줘서 블러 영역 밖으로 */
-@media (max-width:820px){html.ios-sa .home{padding-top:calc(38px + env(safe-area-inset-top))}}
+@media (max-width:820px){html.ios-sa .home{padding-top:calc(38px + env(safe-area-inset-top))}html.ios-sa .app.m-list .list{padding-top:calc(24px + env(safe-area-inset-top))}}   /* 250: 대화 목록도 같게 */
 </style>
 
 </head>
@@ -1952,7 +1952,7 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.249";
+const APP_VERSION="2026-11-10.250";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
