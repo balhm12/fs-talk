@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v46';
+const NOTIFY_VER = 'v47';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -794,21 +794,27 @@ const SLK_PULL_PAGES = 30;        // 259: 한 번에 받는 쪽 수(200건씩 = 
 const SLK_PULL_BUDGET = 200000;   // 259: 글 처리에 쓰는 시간(ms) — Apps Script 한 번 6분 한도 안에서 확인 맞추기·알림 시간을 남김
 function slackPull(force, opt){
   opt = opt || {}; if(typeof force === 'object' && force) force = false;   // 시간 트리거는 이벤트 객체를 넘김
-  if(!P_('SLACK_BOT_TOKEN')) return;
+  const props = PropertiesService.getScriptProperties(), PR = props.getProperties();   // 258: 스크립트 속성은 한 번에 읽음(하루 읽기 한도)
+  if(!PR.SLACK_BOT_TOKEN) return;
+  const now = Date.now(), cch = CacheService.getScriptCache(), min = new Date().getMinutes();
+  // 258: Slack 이벤트(새 글·반응을 Slack 이 바로 알려 줌)가 12시간 안에 한 번이라도 왔으면 시간 트리거는 5분마다만 확인(빠진 것 줍기).
+  //      이벤트가 끊기면 12시간 뒤 자동으로 1분 확인으로 돌아감. 외부 호출(하루 2만)·트리거 실행 시간(하루 90분) 절약
+  const evOn = now - (+PR.SLK_EV_AT || 0) < 12*3600e3;
+  if(!force && !opt.ev && !opt.newOnly && evOn && min % 5 !== 0 && !cch.get('slkSyncPend')) return;
   const lock = LockService.getScriptLock(); if(!lock.tryLock(opt.wait || 1000)) return;
   try{
-    const props = PropertiesService.getScriptProperties(), names = {}, now = Date.now();
-    const meta = db_('talk/slack/meta') || {}; delete meta.err;   // 213: 지난 오류는 이번에 다시 나면 다시 적힘
-    if(!meta.team){ try{ const a = slackApi_('auth.test',{}); meta.team = a.team_id; meta.teamName = a.team; meta.url = a.url; }catch(e){} }
+    const names = {};
+    const meta = {};   // 258: 지난 meta 를 읽지 않고 바뀐 칸만 덮어씀(읽기 1번 절약)
+    if(!PR.SLK_TEAM){ try{ const a = slackApi_('auth.test',{}); meta.team = a.team_id; meta.teamName = a.team; meta.url = a.url; props.setProperty('SLK_TEAM', a.team_id||'1'); }catch(e){} }
     let added = 0;
     Object.keys(SLACK_CH).forEach(function(ch){
       const C = SLACK_CH[ch];
-      if(!props.getProperty('SLK_CHAN_BF_'+ch)){   // 224: 처음 한 번 — 최근 7일 채널 글을 채널 방에(팀 방에는 새 글부터)
+      if(!PR['SLK_CHAN_BF_'+ch]){   // 224: 처음 한 번 — 최근 7일 채널 글을 채널 방에(팀 방에는 새 글부터)
         try{ slkChanBackfill_(ch, C, names, now - 7*864e5); props.setProperty('SLK_CHAN_BF_'+ch, '1'); }catch(e){ meta.err = '채널 방 채우기: '+String(e.message||e).slice(0,160); console.error(e); }
       }
-      const oldLast = props.getProperty('SLK_TS_'+ch) || String((now - 3*864e5)/1000);
+      const oldLast = PR['SLK_TS_'+ch] || String((now - 3*864e5)/1000);
       // 227: 한 번 — 최근 3일 요청을 새 규칙(머리말 인계 팀·재요청)으로 다시 봄. 이미 읽은 글은 요청함만 맞추고 채널 방·현장 반영은 다시 안 함
-      const rescan = !props.getProperty('SLK_RESCAN_227');
+      const rescan = !PR.SLK_RESCAN_227;
       const last = rescan ? String(Math.min(+oldLast, (now - 3*864e5)/1000)) : oldLast;
       let cursor = '', maxTs = oldLast, page = 0;
       function slkOne_(m){
@@ -887,25 +893,28 @@ function slackPull(force, opt){
           try{ slkOne_(msgs[k]); }catch(e){ meta.err = '글 '+msgs[k].ts+': '+String(e.message||e).slice(0,160); console.error(e); }
         }
       }
-      if(fetchOk) props.setProperty('SLK_TS_'+ch, String(maxTs));   // maxTs 는 oldLast 에서 시작해 처리한 글까지 커짐(오래된 글부터 처리)
+      if(fetchOk && String(maxTs) !== String(PR['SLK_TS_'+ch])) props.setProperty('SLK_TS_'+ch, String(maxTs));   // 262: 바뀔 때만 씀   // maxTs 는 oldLast 에서 시작해 처리한 글까지 커짐(오래된 글부터 처리)
     });
-    if(!props.getProperty('SLK_RESCAN_227')) props.setProperty('SLK_RESCAN_227','1');
-    if(!props.getProperty('SLK_DEDUP_232')){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
-    if(!props.getProperty('SLK_REQDUP_233')){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
-    if(!props.getProperty('SLK_LINK_229')){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
-    if(!props.getProperty('SLK_MIG_224')){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
-    const min = new Date().getMinutes();
+    if(!PR.SLK_RESCAN_227) props.setProperty('SLK_RESCAN_227','1');
+    if(!PR.SLK_DEDUP_232){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
+    if(!PR.SLK_REQDUP_233){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
+    if(!PR.SLK_LINK_229){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
+    if(!PR.SLK_MIG_224){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
-    const evLive = meta.ev && now - meta.ev < 10*60*1000, cch = CacheService.getScriptCache();
     // 214: 이벤트가 잠금에 막혀 못 한 확인 맞추기(slkSyncPend)는 다음 1분 트리거가 바로 함
-    if(!opt.newOnly && (force || !evLive || min % 5 === 0 || cch.get('slkSyncPend'))){ cch.remove('slkSyncPend'); try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
+    if(!opt.newOnly && (force || !evOn || min % 5 === 0 || cch.get('slkSyncPend'))){ cch.remove('slkSyncPend'); try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!opt.newOnly && min % 30 === 0){ try{ slkTrimFeed_(); }catch(e){ console.error(e); } }
     try{ const pr = slkPushFlush_(SLK_PUSHQ.splice(0)); if(pr) meta.push = pr; }catch(e){ console.error(e); }   // 235: 새 Slack 글 알림
     meta.ms = Date.now() - now;
     if(opt.ev) meta.ev = now;
-    meta.at = now; meta.ok = true; if(!meta.err) delete meta.err; meta.chans = {}; Object.keys(SLACK_CH).forEach(function(c){ meta.chans[c] = SLACK_CH[c].name; });
-    meta.added = added;
-    dbPut_('talk/slack/meta', meta);
+    // 258: 상태 기록은 바뀐 게 있을 때·오류가 났거나 풀렸을 때·5분마다(화면은 15분 넘게 멈추면 경고)만 — 매분 쓰기 절약
+    const hadErr = cch.get('slkErr') === '1';
+    if(force || opt.ev || added || meta.push || meta.err || hadErr || meta.team || min % 5 === 0 || !cch.get('slkMetaW')){
+      meta.at = now; meta.ok = true; meta.err = meta.err || null; meta.chans = {}; Object.keys(SLACK_CH).forEach(function(c){ meta.chans[c] = SLACK_CH[c].name; });
+      meta.added = added; meta.evOn = evOn || null;
+      dbPatch_('talk/slack/meta', meta);
+      cch.put('slkMetaW', '1', 21600); if(meta.err) cch.put('slkErr', '1', 21600); else if(hadErr) cch.remove('slkErr');
+    }
   }catch(e){
     console.error(e);
     try{ dbPatch_('talk/slack/meta',{ok:false, err:String(e.message||e).slice(0,200), at:Date.now()}); }catch(e2){}
@@ -914,6 +923,7 @@ function slackPull(force, opt){
 /* 열린 요청(7일 안)의 스레드 답글·반응을 읽어 상태를 맞춤 — Slack 에서 👀/답글 = 처리 중, ✅ = 완료 */
 function slkSync_(names){
   const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-7*864e5)) || {};
+  if(!Object.keys(all).some(function(k){ const r = all[k]; return r && (r.st !== 'done' || !r.doneBy); })) return;   // 258: 열린 요청이 없으면 Slack 기록을 읽지 않음
   // 213: 요청마다 스레드를 읽던 것 → 채널 기록(7일)을 채널마다 한 번 읽어 반응·답글 수를 보고, 답글이 바뀐 요청만 스레드를 읽음
   const hist = {}, oldest = String((Date.now() - 8*864e5)/1000);
   Object.keys(SLACK_CH).forEach(function(ch){
@@ -991,6 +1001,7 @@ function slackEvent_(req){
   if(kind === 'sync' && SLACK_CH[ch].type !== 'req') return {ok:true, skip:1};   // 대화 채널의 반응·답글은 옮기지 않음
   const c = CacheService.getScriptCache();
   if(kind === 'sync') c.put('slkSyncPend', '1', 600);   // 214: 이번에 못 하더라도 다음 1분 트리거가 반드시 맞춤
+  if(!c.get('slkEvMark')){ c.put('slkEvMark', '1', 600); PropertiesService.getScriptProperties().setProperty('SLK_EV_AT', String(Date.now())); }   // 258: 이벤트가 오고 있음 → 시간 트리거는 5분마다만
   if(c.get('slkev:'+kind)) return {ok:true, dup:1};
   c.put('slkev:'+kind, '1', 5);
   if(kind === 'new') slackPull(false, {newOnly:true, wait:4000, ev:true});
