@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v45';
+const NOTIFY_VER = 'v46';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1167,22 +1167,31 @@ function slkPushFlush_(q){
   props.setProperty('SLK_PUSH_DAY', day + '|' + (used + targets.length));
   return {at:Date.now(), posts:q.length, devices:targets.length, sent:sent, skipped:skipped, day:used + targets.length};
 }
+/* 260-B: 여러 방에 같은 글을 쓸 때 요청 한 번으로(Firebase 멀티패스 PATCH — 전부 쓰이거나 전부 안 쓰임). 실패하면 경로별로 다시 씀
+ * updates 키 = 'talk/msgs' 아래 상대 경로('방/글키') */
+function dbMsgs_(updates){
+  const ks = Object.keys(updates); if(!ks.length) return;
+  if(ks.length === 1){ dbPut_('talk/msgs/'+ks[0], updates[ks[0]]); return; }
+  try{ dbPatch_('talk/msgs', updates); }
+  catch(e){ console.error('멀티패스 실패 — 경로별로 다시 씀: '+String(e.message||e).slice(0,120)); ks.forEach(function(k){ dbPut_('talk/msgs/'+k, updates[k]); }); }
+}
 function slkToChan_(m, raw, text, name, at, ch, C, opt){
   if(!C.pr) return;
   text = slkExpandLink_(m, text);
   const files = (m.files||[]).length, t = (text + (files ? (text ? '\n' : '') + '(첨부 ' + files + '개 — Slack 에서 보기)' : '')).trim();
   if(!t) return;
   const key = 's'+slkKey_(m.ts), v = {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}};
-  dbPut_('talk/msgs/'+C.pr+'/'+key, v);
+  const upd = {}; upd[C.pr+'/'+key] = v;
   const pq = (opt && opt.noTeam) ? null : {rooms:[C.pr], name:v.name, text:t, at:at};
-  if(pq) SLK_PUSHQ.push(pq);
-  if(opt && opt.noTeam) return;
+  if(opt && opt.noTeam){ dbMsgs_(upd); return; }
+  SLK_PUSHQ.push(pq);
   // 232: CSO 가 같은 글을 handover 와 group-sysmex-talk 에 같이 올리면 팀 방에 두 번 들어가던 것 → 같은 사람·같은 내용은 15분 안에 한 번만
   const cache = CacheService.getScriptCache(), hsh = slkHash_((name||'')+'|'+String(text||'').replace(/\s+/g,''));
   slkTeamRooms_(raw, text, name, C).forEach(function(r){
     const ck = 'slkdup:'+r+':'+hsh; if(cache.get(ck)) return; cache.put(ck, '1', 900);
-    dbPut_('talk/msgs/'+r+'/'+key+'t', v); pq.rooms.push(r);
-  });   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
+    upd[r+'/'+key+'t'] = v; pq.rooms.push(r);
+  });
+  dbMsgs_(upd);   // 채널 방 + 팀 방 복사본을 한 번에   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
 }
 /* 포털 채널 방에서 쓴 글 → Slack 채널(「이름 (FS Portal)」) + 포털 채널 방·팀 방에 저장. 승인된 직원 누구나(사용자 결정) */
 function slackSend_(req){
@@ -1202,9 +1211,10 @@ function slackSend_(req){
   if(!j || !j.ts) return {ok:false,err:'Slack 전송 실패',ver:NOTIFY_VER};
   const now = Date.now(), key = 's'+slkKey_(j.ts);
   const v = {uid:uid, name:name, text:text.slice(0,4000), ts:now, slk:{ch:ch, ts:j.ts, cn:C.name, out:true}};
-  dbPut_('talk/msgs/'+room+'/'+key, v);
+  const upd = {}; upd[room+'/'+key] = v;
   const rooms = [room];
-  slkTeamRooms_(text, text, name, C).forEach(function(r){ dbPut_('talk/msgs/'+r+'/'+key+'t', v); rooms.push(r); });
+  slkTeamRooms_(text, text, name, C).forEach(function(r){ upd[r+'/'+key+'t'] = v; rooms.push(r); });
+  dbMsgs_(upd);
   if(C.type === 'feed'){ try{ slkFieldHint_(text, name, now); }catch(e){ console.error(e); } }
   try{ slkPushFlush_([{rooms:rooms, name:name, text:text, at:now, by:me.team+'_'+me.name}]); }catch(e){ console.error(e); }   // 235
   return {ok:true, ts:j.ts, rooms:rooms, ver:NOTIFY_VER};   // 256: 복사된 방도 알려 줌
