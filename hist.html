@@ -134,6 +134,7 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
 .ctx.sys{opacity:.7;font-size:12.5px;padding:3px 10px;border-style:dotted}
 .ctx .tx{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .ctx .tx.open{display:block}
+.srcnote{margin:4px 0 8px;font-size:12px;color:var(--sub)}
 .ctx .fu{display:inline-block;margin-left:6px;font-size:11px;color:var(--ok);font-weight:700}
 .relbox{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
 .relbox .note{margin:0 0 4px}
@@ -187,6 +188,7 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
       <div class="status" id="st"></div>
       <div class="yrs" id="yrs"></div>
       <div id="tip" class="tip">띄어쓰기로 여러 단어를 넣으면 모두 들어간 글만 나옵니다. <b>-단어</b>는 제외, <b>"water leak"</b>처럼 따옴표는 문구 그대로 찾습니다. 단어 일부만 넣어도 찾고, 대소문자·하이픈·띄어쓰기(XN-550 / xn550)는 구분하지 않아요.</div>
+      <p class="srcnote" id="srcnote">모든 글은 Sysmex Talk 현장 대화 기록입니다(검증 전) — 조치 절차는 서비스 매뉴얼·SOP로 확인하세요.</p>
       <div id="res"></div>
       <div id="sent"></div>
       <div class="more2"><button class="btn" id="more" style="display:none">더 보기</button></div>
@@ -431,7 +433,7 @@ function card(c,i,hl){
   const d=document.createElement("div");d.className="card";
   const body=hlHtml(t.replace(/ \/ /g,"\n").replace(/\n{3,}/g,"\n\n"),hl);
   const rn=((META.rooms||[])[c.rm[i]]||{}).name;
-  d.innerHTML='<div class="meta"><span class="dt">'+fmtDate(c.ts[i])+'</span><span>'+esc(META.senders[c.sd[i]]||"")+'</span><span class="tag src" title="Sysmex Talk 대화에서 가져온 기록입니다. 승인된 서비스 매뉴얼·SOP가 아닙니다. 원문과 매뉴얼로 확인한 뒤 쓰세요">대화 기록 · 미검증</span>'+tagsHtml(c,i,t)+
+  d.innerHTML='<div class="meta"><span class="dt">'+fmtDate(c.ts[i])+'</span><span>'+esc(META.senders[c.sd[i]]||"")+'</span>'+tagsHtml(c,i,t)+
     (c.att.has(i)?'<span class="tag at">첨부 있음</span>':'')+(rn&&META.rooms.length>1?'<span class="note" style="margin:0">'+esc(rn.replace(/^방 \d+ · /,""))+'</span>':'')+'</div>'+
     '<h3>'+hlHtml(titleOf(t),hl)+'</h3><div class="txt">'+body+'</div><div class="acts"><button class="btn" data-a="ctx">대화 흐름 보기</button><button class="btn" data-a="rel">연관 대화</button><button class="btn" data-a="cp">복사</button></div>';
   d.querySelector('[data-a="ctx"]').onclick=()=>{saveRecent(state.q);openDetail(c,i);};
@@ -477,7 +479,7 @@ function ctxList(list,marks,hl){   // marks: key(청크:인덱스) → "me" | "h
     const mk=marks.get(cc.k+":"+ii),sys=cc.ty[ii]===NZ;
     const d=document.createElement("div");d.className="ctx "+(mk==="me"?"me":mk==="hit"?"hit":sys?"sys":"rel");
     const t=txtAt(cc,ii);
-    const fu=anchorTs!==null&&cc.ts[ii]>anchorTs&&!mk&&!sys&&RESULT_RE.test(t)?'<span class="fu" title="규칙 기반 표시입니다. 실제 조치 결과는 원문으로 확인하세요">조치·결과 표현 포함 · 원문 확인 전까지 절차 아님</span>':"";
+    const fu=anchorTs!==null&&cc.ts[ii]>anchorTs&&!mk&&!sys&&RESULT_RE.test(t)?'<span class="fu" title="규칙 기반 표시입니다. 실제 조치 결과는 원문으로 확인하세요">조치·결과 표현 포함</span>':"";
     d.innerHTML='<div class="who">'+fmtDate(cc.ts[ii])+' · '+esc(META.senders[cc.sd[ii]]||"")+(cc.id[ii]?' · ID '+cc.id[ii]:'')+(sys?' · 시스템 알림(검색 제외)':'')+(mk==="me"?' · 기준 메시지':'')+fu+'</div><div class="tx">'+hlHtml(t.replace(/ \/ /g,"\n"),mk?hl:null)+'</div>'+(cc.att.has(ii)?'<div class="att">첨부: '+esc(cc.att.get(ii))+' (파일 미확보)</div>':'');
     d.querySelector(".tx").onclick=e=>e.currentTarget.classList.toggle("open");
     wrap.appendChild(d);
@@ -717,7 +719,7 @@ function openDetail(c,i,before,after){
   const rowsAll=prev.concat([[c,i]],next);
   const t=txtAt(c,i),mods=modelsOf(t),codes=codesOf(t),syms=symsOf(t);
   const who=META.senders[c.sd[i]]||"";
-  let h='<dl class="kv"><dt>출처 등급</dt><dd>대화 기록 · 미검증 <span class="note">— 현장 대화에서 가져온 기록이며 승인된 매뉴얼·SOP가 아닙니다. 조치 절차는 서비스 매뉴얼로 확인하세요</span></dd><dt>메시지 ID</dt><dd>'+(c.id[i]||"–")+'</dd><dt>작성자</dt><dd>'+esc(who)+'</dd><dt>작성일시</dt><dd>'+fmtDate(c.ts[i])+'</dd>'+
+  let h='<dl class="kv"><dt>메시지 ID</dt><dd>'+(c.id[i]||"–")+'</dd><dt>작성자</dt><dd>'+esc(who)+'</dd><dt>작성일시</dt><dd>'+fmtDate(c.ts[i])+'</dd>'+
     '<dt>대화방</dt><dd>'+esc(((META.rooms||[])[c.rm[i]]||{}).name||("방 "+c.rm[i]))+'</dd>'+
     '<dt>제품·장비</dt><dd>'+(mods.length?mods.map(esc).join(", "):"–")+'</dd>'+
     '<dt>에러코드</dt><dd>'+(codes.length?codes.map(esc).join(", ")+' <span class="note">(추정)</span>':"–")+'</dd>'+

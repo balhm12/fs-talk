@@ -13,9 +13,9 @@ ok(/html\[data-theme=dark\] \.tabbar button\.on\{color:#8CC4F5\}/.test(idx), '�
 ok(/card\.setAttribute\("role","dialog"\);card\.setAttribute\("aria-modal","true"\)/.test(idx), '모달 role=dialog·aria-modal 설정이 없음');
 ok(/key!=="Tab"\|\|ov\.hidden/.test(idx) || /e\.key!=="Tab"\|\|ov\.hidden/.test(idx), '모달 Tab 순환 처리가 없음');
 ok(/l\.htmlFor=node\.id/.test(idx) && /fl\.htmlFor="bffile"/.test(idx), '기술정보 등록 창 라벨 연결이 없음');
-ok(/class="tag src"[^>]*>대화 기록 · 미검증</.test(hist), 'hist.html 결과 카드에 출처 등급 배지가 없음');
-ok(/<dt>출처 등급<\/dt><dd>대화 기록 · 미검증/.test(hist), 'hist.html 상세에 출처 등급 행이 없음');
-ok(/조치·결과 표현 포함 · 원문 확인 전까지 절차 아님/.test(hist), '조치·결과 표현 배지에 「절차 아님」 문구가 없음');
+// 248: 카드마다 붙던 「대화 기록 · 미검증」 배지(모든 글이 같아 의미가 없음 — 사용자 지적) 대신 결과 위 안내 한 줄
+ok(/id="srcnote"[^>]*>모든 글은 Sysmex Talk 현장 대화 기록입니다\(검증 전\)[^<]*서비스 매뉴얼/.test(hist), 'hist.html 결과 위 출처 안내 한 줄이 없음');
+ok(!/class="tag src"/.test(hist), 'hist.html 카드마다 출처 배지가 다시 생김');
 const av = /const APP_VERSION="([^"]+)"/.exec(idx), cl = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
 ok(av && cl.indexOf(av[1]) >= 0, 'APP_VERSION(' + (av && av[1]) + ')이 CLAUDE.md 에 기록돼 있지 않음');
 console.log((fail ? 'FAIL' : 'OK') + ' — 통과 ' + pass + ' / 실패 ' + fail);
