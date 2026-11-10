@@ -304,3 +304,23 @@ if(require.main===module){
   assert(db.talk.slack.meta.push && db.talk.slack.meta.push.posts===2,'보낸 기록 meta.push');
   console.log('slack_pull 235: 통과');
 }
+// 270: CSO 가 처리하고 #group-sysmex-talk 에 올린 「<기술요청><완료 : 이름>」 = 요청(사용자 확인), 학술요청은 그대로 건너뜀, 같은 요청의 완료 글은 재요청 아님
+if(require.main===module){
+  const assert=require('assert');const RQ=()=>Object.values(db.talk.slack.req||{}).filter(Boolean);
+  const t3=Date.now()/1000-100;
+  const done=(h,r)=>`&lt; 기술요청 &gt;&lt; 완료 : 테스트9 &gt;\n1) 기 관 명 : ${h}\n2) 장 비 명 : XN-10\n3) 요청사항 : ${r}\n4) 확인/조치 : 키 누르고 인식`;
+  hist.C0AT8RP3QDN=[];hist.C0AHFJGKMTL=[];
+  hist.C0C6U7RQ44D=[{ts:t3.toFixed(6),user:'U3',text:done('테스트구병원','소모품 인식')},
+    {ts:(t3+5).toFixed(6),user:'U3',text:'&lt;학술요청&gt;&lt;완료 : 테스트9 &gt;\n1) 기 관 명 : 테스트십병원\n2) 장 비 명 : XN-10\n3) 요청사항 : 문의'}];
+  for(const k in props) if(k.startsWith('SLK_TS_')) props[k]=String(t3-1);
+  g.slackPull(true);
+  const a=RQ().find(r=>r.f&&r.f.hosp==='테스트구병원');
+  assert(a&&a.st&&a.f.cso==='테스트9'&&a.kind==='cso','완료 양식 기술요청 → 새 요청(CSO 완료 이름)');
+  assert(!RQ().some(r=>r.f&&r.f.hosp==='테스트십병원'),'학술요청은 건너뜀');
+  // 같은 날 같은 기관·장비·요청으로 요청 채널에 먼저 온 요청이 있으면 완료 글은 재요청으로 붙지 않음
+  hist.C0C6U7RQ44D=[{ts:(t3+90).toFixed(6),user:'U3',text:done('테스트구병원','소모품 인식')+'\n추가 메모'}];
+  g.slackPull(true);
+  const b=RQ().find(r=>r.f&&r.f.hosp==='테스트구병원');assert(!b.rr,'완료 글은 재요청 아님');
+  delete props.SLK_RESCAN_270;g.slackPull(true);assert(props.SLK_RESCAN_270,'다시 보기 한 번 표시');
+  console.log('slack_pull 270: 통과');
+}
