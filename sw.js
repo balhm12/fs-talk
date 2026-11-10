@@ -1,4 +1,4 @@
-/* FS 포털 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면) + 푸시 알림 수신. 메시지 데이터는 캐시하지 않음 */
+/* FS Portal 서비스 워커 — 앱 화면 캐시(오프라인 첫 화면) + 푸시 알림 수신. 메시지 데이터는 캐시하지 않음 */
 /* 238: 알림을 누르면 그 방으로 — Firebase 의 클릭 처리는 이미 열린 창을 앞으로 가져오기만 하고(주소 #room-… 를 못 씀, 아이폰 홈 화면 앱은 처음 열 때도 주소 끝을 버림),
  *  이 처리기는 Firebase 보다 먼저 등록해야 먼저 불림. 누른 방을 기록(앱이 새로 열릴 때 읽음)하고 열려 있는 창에도 알림 */
 self.addEventListener("notificationclick", e => {
@@ -24,7 +24,8 @@ firebase.initializeApp({
 });
 firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
 
-const CACHE = "fstalk-v6";   // v6: 현장 오프라인(실마리 데이터·웹폰트 저장)
+const CACHE = "fstalk-v7";   // v7: 아이콘 F·이름 FS Portal (245)
+//   // v6: 현장 오프라인(실마리 데이터·웹폰트 저장)
 const DATA = "fstalk-data";   // 실마리 암호화 데이터(열어 본 것만) — 버전이 바뀌어도 유지
 const META = "fstalk-meta";   // 앱 아이콘 숫자(안 읽은 수) 보관 — 캐시 정리 때 지우지 않음
 

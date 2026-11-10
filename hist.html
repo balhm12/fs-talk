@@ -832,8 +832,8 @@ function gate(h){$("#gate").style.display="block";$("#gate").innerHTML=h;$("#sub
     applyHash();
   }catch(e){
     console.error(e);
-    if(e.code==="noauth")gate("<h2>로그인이 필요해요</h2><p>FS 포털에서 로그인(승인)한 뒤 다시 열어 주세요.</p>");
-    else if(/permission/i.test(e.message||e.code))gate("<h2>승인된 직원만 볼 수 있어요</h2><p>FS 포털 가입 승인 후 이용할 수 있습니다.</p>");
+    if(e.code==="noauth")gate("<h2>로그인이 필요해요</h2><p>FS Portal에서 로그인(승인)한 뒤 다시 열어 주세요.</p>");
+    else if(/permission/i.test(e.message||e.code))gate("<h2>승인된 직원만 볼 수 있어요</h2><p>FS Portal 가입 승인 후 이용할 수 있습니다.</p>");
     else gate("<h2>불러오지 못했습니다</h2><p>"+esc(e.message||String(e))+"</p>");
   }
 })();

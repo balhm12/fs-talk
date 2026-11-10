@@ -10,9 +10,9 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="FS 포털">
+<meta name="apple-mobile-web-app-title" content="FS Portal">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>FS 포털</title>
+<title>FS Portal</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'"><!-- 글꼴 CSS가 첫 화면을 막지 않게(받기 전엔 기기 글꼴) -->
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
@@ -193,7 +193,7 @@ html[data-theme=dark] .bcard.miss{background:#2E2617}
 .bcard small{font-size:11px;color:var(--sub);text-align:center;word-break:break-all}
 .btools{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
 .bchk{display:flex;align-items:center;gap:3px;font-size:12px}
-/* FS 포털 홈 */
+/* FS Portal 홈 */
 .rail a.rlink.long{font-size:9.5px;letter-spacing:-.04em;white-space:nowrap}
 .home{flex:1;min-height:0;overflow:auto;padding:22px 26px 30px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box}
 .app.v-home .top{display:none}
@@ -1701,20 +1701,21 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 .splskh{display:flex;align-items:center;gap:10px}.splskh .c{width:36px;height:36px;border-radius:50%;flex:none;background:linear-gradient(90deg,var(--soft) 25%,var(--line2) 37%,var(--soft) 63%);background-size:400% 100%;animation:skel 1.3s ease infinite}
 .splsk .skel{flex:1 1 auto;gap:8px}.splsk .skel i{height:11px}.splskh .skel i:first-child{width:60%}.splskh .skel i:last-child{width:85%}
 @media (prefers-reduced-motion:reduce){.splskh .c{animation:none}}
+img.spllogo{display:block;background:none;object-fit:contain}
 </style>
 
 </head>
 <body>
 <!-- 로딩·등록·대기 화면 -->
 <div class="gate splash" id="gLoad"><div class="splbox">
-  <div class="spllogo">FS</div><div class="splname">FS 포털</div>
+  <img class="spllogo" src="icons/icon-192.png" alt="" width="72" height="72"><div class="splname">FS Portal</div>
   <div class="splsk" aria-hidden="true"><div class="splskh"><i class="c"></i><div class="skel"><i></i><i></i></div></div><div class="skel"><i></i><i></i><i></i></div></div><p id="loadMsg" role="status" aria-live="polite">연결 중…</p>
   <img class="splsys" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="118" height="36">
 </div></div>
 <div class="gate" id="gInApp" hidden>
   <div class="card">
     <h1>다른 브라우저로 열어 주세요</h1>
-    <p id="inAppMsg">카카오톡·네이버 같은 앱 안의 브라우저에서는 FS 포털이 새 기기로 인식되어 다시 등록해야 합니다.</p>
+    <p id="inAppMsg">카카오톡·네이버 같은 앱 안의 브라우저에서는 FS Portal이 새 기기로 인식되어 다시 등록해야 합니다.</p>
     <button class="btn pri" type="button" id="inAppOpen">브라우저로 열기</button>
     <button class="btn" type="button" id="inAppCopy">주소 복사</button>
     <p class="hint" id="inAppHint" style="margin-top:12px"></p>
@@ -1723,7 +1724,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 </div>
 <div class="gate" id="gReg" hidden>
   <form class="card gcard" id="regForm" autocomplete="off">
-    <div class="ghead"><img class="gsys brandlogo" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="92" height="28"><div class="gapp">FS</div><h1>FS 포털</h1><p>FSG 업무 포털 · 대화·일정·기술정보를 한 곳에서</p></div>
+    <div class="ghead"><img class="gsys brandlogo" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="92" height="28"><div class="gapp">FS</div><h1>FS Portal</h1><p>FSG 업무 포털 · 대화·일정·기술정보를 한 곳에서</p></div>
     <div class="gseg" role="tablist" aria-label="시작 방법">
       <button type="button" role="tab" id="gsNew" aria-selected="true">처음 사용해요</button>
       <button type="button" role="tab" id="gsOld" aria-selected="false">쓰던 기기가 있어요</button>
@@ -1755,11 +1756,11 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
     </div>
     <div id="gpOld" hidden>
     <div class="lnkbox" id="lnkBox">
-      <b>쓰던 기기의 FS 포털과 연결</b>
+      <b>쓰던 기기의 FS Portal과 연결</b>
       <p id="lnkTip">쓰던 기기에서 만든 6자리 코드를 넣으면 관리자 승인 없이 바로 열립니다.</p>
       <div class="lnkrow"><label for="lnkCode" class="vh">연결 코드</label><input id="lnkCode" inputmode="numeric" maxlength="6" placeholder="6자리 코드" autocomplete="one-time-code"><button class="btn pri" type="button" id="lnkBtn">연결</button></div>
     </div>
-      <ol class="ghow"><li>쓰던 기기(PC·휴대폰)에서 FS 포털을 엽니다</li><li>메뉴 → 설정 → 「다른 기기 연결」을 누릅니다</li><li>화면에 나온 6자리 숫자를 위 칸에 넣고 「연결」</li></ol>
+      <ol class="ghow"><li>쓰던 기기(PC·휴대폰)에서 FS Portal을 엽니다</li><li>메뉴 → 설정 → 「다른 기기 연결」을 누릅니다</li><li>화면에 나온 6자리 숫자를 위 칸에 넣고 「연결」</li></ol>
     </div>
   </form>
 </div>
@@ -1769,7 +1770,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
     <h1>승인을 기다리고 있어요</h1>
     <p id="waitMsg">등록 요청을 보냈습니다. 관리자가 승인하면 이 화면이 자동으로 바뀝니다.</p>
     <ol class="gsteps"><li class="done">이름 선택</li><li class="on">관리자 승인</li><li>사용 시작</li></ol>
-    <div class="gtip">승인은 FSS팀(관리자)이 합니다. 급하면 팀장이나 FSS팀에 「FS 포털 승인 부탁」이라고 알려 주세요. 이 화면은 닫아도 되고, 다시 열면 이어집니다.</div>
+    <div class="gtip">승인은 FSS팀(관리자)이 합니다. 급하면 팀장이나 FSS팀에 「FS Portal 승인 부탁」이라고 알려 주세요. 이 화면은 닫아도 되고, 다시 열면 이어집니다.</div>
     <div class="gtip" id="waitInst" hidden></div>
     <button class="btn" type="button" id="reRegBtn">이름·팀을 잘못 골랐어요</button>
     <div class="uid" id="myUid"></div>
@@ -1915,7 +1916,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <div class="lockov" id="lockOv" hidden>
   <div class="lockbox">
     <div class="locklogo">FS</div>
-    <div class="locktitle">FS 포털 잠금</div>
+    <div class="locktitle">FS Portal 잠금</div>
     <div class="lockmsg" id="lockMsg">PIN 4자리를 입력하세요</div>
     <div class="lockdots" id="lockDots"><i></i><i></i><i></i><i></i></div>
     <div class="lockpad" id="lockPad"></div>
@@ -1935,7 +1936,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.244";
+const APP_VERSION="2026-11-10.245";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2121,7 +2122,7 @@ auth.onAuthStateChanged(u=>{
 });
 let meLoaded=false;
 /* ---------- 앱 안 브라우저(카카오톡 등) 막기 + 기기 연결 코드 ----------
-   브라우저마다 저장 공간이 달라 FS 포털이 새 기기로 인식됨 → 외부 브라우저로 보내거나, 쓰던 기기의 6자리 코드로 바로 연결 */
+   브라우저마다 저장 공간이 달라 FS Portal이 새 기기로 인식됨 → 외부 브라우저로 보내거나, 쓰던 기기의 6자리 코드로 바로 연결 */
 const UA=navigator.userAgent||"";
 const isKakao=/KAKAOTALK/i.test(UA),uaAndroid=/Android/i.test(UA),uaIOS=/iPhone|iPad|iPod/.test(UA);
 let inAppStay=false;try{inAppStay=sessionStorage.getItem("fstalk-inapp-stay")==="1";}catch(e){}
@@ -2136,7 +2137,7 @@ function inAppGate(){
   $("inAppOpen").onclick=openExt;
   $("inAppCopy").onclick=()=>copyText(url);
   $("inAppStay").onclick=()=>{inAppStay=true;try{sessionStorage.setItem("fstalk-inapp-stay","1");}catch(e){}applyMe();};
-  $("inAppHint").textContent=uaIOS?"아이폰에서 홈 화면에 FS 포털을 설치해 쓰고 있다면, 이 링크 대신 홈 화면의 FS 포털 아이콘으로 여는 것이 가장 좋습니다.":"Chrome에 설치한 FS 포털이 있으면 같은 계정으로 바로 열립니다.";
+  $("inAppHint").textContent=uaIOS?"아이폰에서 홈 화면에 FS Portal을 설치해 쓰고 있다면, 이 링크 대신 홈 화면의 FS Portal 아이콘으로 여는 것이 가장 좋습니다.":"Chrome에 설치한 FS Portal이 있으면 같은 계정으로 바로 열립니다.";
   $("inAppOpen").textContent=isKakao?"브라우저로 열기":uaAndroid?"Chrome으로 열기":"Safari로 여는 방법";
   if(isKakao&&!inAppTried){inAppTried=true;setTimeout(openExt,300);}   // 카카오톡은 자동으로 외부 브라우저로
 }
@@ -2161,7 +2162,7 @@ async function openLinkCode(){
   const c=$("pCard");c.textContent="";c.classList.remove("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");c.appendChild(x);
   c.appendChild(el("h3",null,"다른 기기 연결"));
-  c.appendChild(el("div","pkhint","새 휴대폰·PC, 카카오톡 링크로 열린 브라우저처럼 FS 포털이 처음 열린 곳의 등록 화면에서 아래 코드를 넣으세요. 관리자 승인 없이 "+me.name+"님으로 바로 열립니다."));
+  c.appendChild(el("div","pkhint","새 휴대폰·PC, 카카오톡 링크로 열린 브라우저처럼 FS Portal이 처음 열린 곳의 등록 화면에서 아래 코드를 넣으세요. 관리자 승인 없이 "+me.name+"님으로 바로 열립니다."));
   const cd=el("div","lcode","······");c.appendChild(cd);const tm=el("div","ltime","만드는 중…");c.appendChild(tm);
   const warn=el("div","pkhint","코드는 5분 동안 한 번만 쓸 수 있습니다. 다른 사람에게 알려 주지 마세요.");c.appendChild(warn);
   const done=el("button","btn","닫기");c.appendChild(done);
@@ -2187,7 +2188,7 @@ function applyMe(){
     }else if(me.status==="pending"){
       show("gReg",false);show("gWait",true);show("app",false);
       $("waitMsg").textContent=me.name+" ("+me.team+(me.office?" · "+me.office:"")+") 님의 등록 요청을 보냈습니다. 관리자가 승인하면 이 화면이 자동으로 바뀝니다.";
-      try{const w=$("waitInst");if(!isStandalone()){w.hidden=false;w.innerHTML="<b>기다리는 동안</b> 홈 화면에 FS 포털을 추가해 두세요. 앱처럼 열리고 알림도 받아요.<br>"+(isIOS?"사파리 아래쪽 공유(□↑) → 「홈 화면에 추가」":"브라우저 메뉴(⋮) → 「홈 화면에 추가」 또는 「앱 설치」")+"<br><small>홈 화면 앱은 처음 열 때 「쓰던 기기가 있어요」로 연결하면 승인 없이 바로 열려요.</small>";}}catch(e){}
+      try{const w=$("waitInst");if(!isStandalone()){w.hidden=false;w.innerHTML="<b>기다리는 동안</b> 홈 화면에 FS Portal을 추가해 두세요. 앱처럼 열리고 알림도 받아요.<br>"+(isIOS?"사파리 아래쪽 공유(□↑) → 「홈 화면에 추가」":"브라우저 메뉴(⋮) → 「홈 화면에 추가」 또는 「앱 설치」")+"<br><small>홈 화면 앱은 처음 열 때 「쓰던 기기가 있어요」로 연결하면 승인 없이 바로 열려요.</small>";}}catch(e){}
     }else if(me.status==="approved"&&!isAdmin&&rosterList().length&&!rosterList().some(p=>p.name===me.name&&p.team===me.team)){
       show("gReg",false);show("gWait",true);show("app",false);
       $("waitMsg").textContent="직원 명단에 없는 사용자입니다. FSS팀(관리자)에게 문의하세요.";$("reRegBtn").hidden=true;
@@ -2255,7 +2256,7 @@ $("lnkBtn").onclick=linkWithCode;
 $("lnkCode").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();linkWithCode();}});
 /* 홈 화면에 추가한 앱(아이폰)은 사파리와 저장 공간이 따로라 처음 열면 새 기기로 보임 → 연결 안내를 그 상황에 맞게 */
 setTimeout(function(){try{if(!isStandalone())return;const t=$("lnkTip");if(!t)return;
-  t.textContent="홈 화면에 추가한 앱은 "+(isIOS?"사파리와 ":"브라우저와 ")+"기록이 따로 저장돼서 처음 한 번만 연결이 필요해요. 쓰던 "+(isIOS?"사파리":"브라우저")+"(또는 다른 기기)의 FS 포털 → 설정 → 「다른 기기 연결」에서 6자리 코드를 만들어 아래에 넣으세요. 관리자 승인 없이 바로 열립니다.";
+  t.textContent="홈 화면에 추가한 앱은 "+(isIOS?"사파리와 ":"브라우저와 ")+"기록이 따로 저장돼서 처음 한 번만 연결이 필요해요. 쓰던 "+(isIOS?"사파리":"브라우저")+"(또는 다른 기기)의 FS Portal → 설정 → 「다른 기기 연결」에서 6자리 코드를 만들어 아래에 넣으세요. 관리자 승인 없이 바로 열립니다.";
   $("lnkBox").classList.add("hl");gSeg(true);}catch(e){}},0);   // isIOS 등이 아래에서 선언되므로 다음 틈에
 $("regForm").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -2595,7 +2596,7 @@ async function openBulkPhotos(files){
   await draw();
 }
 
-/* ---------- FS 포털 홈 (첫 화면) ----------
+/* ---------- FS Portal 홈 (첫 화면) ----------
    지금 있는 기능·링크를 한 화면에: 통합 검색(대화+실마리) · 공지 · 일정표 · 실마리 · 전국시스템 · 최근 대화 · 바로가기
    아직 자료가 없는 칸(기술정보·동영상 교육)은 「준비 중」으로 자리만 */
 const LINKS={install:"https://balhm12.github.io/Sysmex-schedule/index.html",work:"https://balhm12.github.io/Sysmex-schedule/work-schedule.html",silmari:"https://balhm12.github.io/sysmex-ts/",system:"https://sysmex-system-configuration.web.app/",voc:"https://balhm12.github.io/Sysmex-schedule/voc-dashboard.html",kpi:"https://balhm12.github.io/Sysmex-schedule/fsg-kpi.html",pm:"https://script.google.com/macros/s/AKfycbwvSKftylso7NX1qLE5-f5xdhDxVfB5PS7Oox_Smv16FdoKFNxpl9SH6fJBWe8SAxOl/exec"};
@@ -3449,7 +3450,7 @@ function renderExt(q){
 let homeScope="all";   /* 194: 홈 검색 범위(이 세션에서만 기억) */
 function hcard(title,ic,cls){const c=el("section","hcard"+(cls?" "+cls:""));const h=el("div","hch");h.appendChild(icEl(ic,"hcic",20));h.appendChild(el("h2",null,title));c.appendChild(h);c._head=h;return c;}
 function hmore(c,label,fn){const a=el("button","hmore",label+" ›");a.onclick=fn;c._head.appendChild(a);}
-/* ===== 홈 대시보드 (FS 포털 – Field Service Integrated Portal) =====
+/* ===== 홈 대시보드 (FS Portal – Field Service Integrated Portal) =====
    위쪽 바(날짜·인사·통합 검색·알림 센터·테마·프로필) → 요약 숫자 4개 → 오늘의 업무 | 업무 커뮤니케이션
    → 기술지원(실마리·기술정보·교육) → 서비스 현황(만족도·KPI) → 바로가기(사용자 선택·순서)
    모든 숫자는 실제 데이터에서만 — 데이터가 없으면 「–」와 이유를 보여 줌 */
@@ -3921,7 +3922,7 @@ function openMenuDrawer(){                                 // 휴대폰: 전체 
   const grp=(t,list)=>{c.appendChild(el("div","dgrp",t));const g=el("div","dlist");list.forEach(([i,t2,fn])=>{const b=el("button","dli");b.appendChild(icEl(i,"",20));b.appendChild(el("span",null,t2));b.onclick=()=>{closeProfile();fn();};g.appendChild(b);});c.appendChild(g);};
   L.splice(3,0,["headset","Slack 요청",()=>go("req")]);
   if(isAdmin||myLead())L.splice(3,0,["users","팀 현황",()=>go("team")]);
-  grp("FS 포털",L);
+  grp("FS Portal",L);
   grp("업무 도구 (새 창)",["install","work","pm","silmari","system","voc"].concat(isAdmin||myLead()?["kpi"]:[],poOk()?["po"]:[]).map(k=>HLINKS[k]));
   grp("회사 사이트 (새 창)",[HLINKS.hr,HLINKS.skr]);
   grp("기술지원",[HLINKS.tech,HLINKS.hist,HLINKS.video,HLINKS.kc,HLINKS.pmdb,["compass","실마리",()=>openApp("silmari")]]);
@@ -3949,12 +3950,12 @@ function renderMenuPage(){
   b.appendChild(el("div","mnh","앱"));
   const L=el("div","mnlist");const row=(ic,t,sub,fn)=>{const r=el("button","mnrow");r.appendChild(icEl(ic,"",20));const tx=el("span","mnrt");tx.appendChild(el("b",null,t));if(sub)tx.appendChild(el("small",null,sub));r.appendChild(tx);r.appendChild(icEl("chevron","mnchev",18));r.onclick=fn;L.appendChild(r);};
   row("info","사용 안내 · 새 기능","화면을 하나씩 짚어 주는 30초 둘러보기",()=>openCoach());
-  row("info","버전 정보","FS 포털 "+APP_VERSION+" · 최근 바뀐 것",()=>openVersion());
+  row("info","버전 정보","FS Portal "+APP_VERSION+" · 최근 바뀐 것",()=>openVersion());
   row("layout","홈 화면 순서·표시","자주 보는 카드를 위로",()=>{go("home");setTimeout(openLayoutEditor,60);});
   if(!isStandalone()&&(isIOS||isAndroid||deferredInstall))row("download","홈 화면에 설치하기","앱처럼 쓰고 알림도 받아요",()=>{go("");instOpen=true;try{localStorage.removeItem("fstalk-inst-hide");}catch(e){}renderInstall();});
   row("gear","설정","사진·연락처·알림·글자 크기·다른 기기 연결",()=>go("settings"));
   b.appendChild(L);
-  b.appendChild(el("div","mnver","FS 포털 · "+APP_VERSION));
+  b.appendChild(el("div","mnver","FS Portal · "+APP_VERSION));
 }
 /* ===== Slack 요청함 (198): CSO 기술요청·야간 접수(CS쉐어링) 인계를 포털에서 담당·회신·완료 =====
    자료 talk/slack/req/{id}: 서버(Slack 앱 연결 후 1분마다, id = cso_…·night_…) 또는 직원의 「Slack 글 붙여넣기」(id = p_…)
@@ -4453,7 +4454,7 @@ function noticeCards(nav){
 }
 function navFooter(nav){
   const f=el("div","navfoot");const i=el("img","brandlogo");i.alt="Sysmex";i.width=59;i.height=18;i.src=document.documentElement.dataset.theme==="dark"?"icons/sysmex-logo-white.png":"icons/sysmex-logo-blue.png";
-  f.appendChild(i);f.appendChild(el("span",null,"FS 포털 · Made by FSS Team"));nav.appendChild(f);
+  f.appendChild(i);f.appendChild(el("span",null,"FS Portal · Made by FSS Team"));nav.appendChild(f);
 }
 function schTodayOf(nm){                                 // 조직도: 오늘 근무일정(휴가·야간·당직·교육) 표시
   if(!schData||schData.today!==ymd(new Date()))return [];const o=schData.w,out=[];
@@ -4569,7 +4570,7 @@ function openGuide(mode){track("guide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");c.appendChild(x);
   const done=()=>{try{localStorage.setItem("fstalk-guide",GUIDE_NEW.k);}catch(e){}closeProfile();};x.onclick=done;
   const tour=mode==="tour";
-  c.appendChild(el("h3",null,tour?"FS 포털 1분 둘러보기":GUIDE_NEW.t));
+  c.appendChild(el("h3",null,tour?"FS Portal 1분 둘러보기":GUIDE_NEW.t));
   const L=el("div","gdl");(tour?GUIDE_TOUR:GUIDE_NEW.items).forEach(([ic2,t,d])=>{const r=el("div","gdi");r.appendChild(icEl(ic2,"gdic",22));const m=el("div");m.appendChild(el("b",null,t));m.appendChild(el("small",null,d));r.appendChild(m);L.appendChild(r);});c.appendChild(L);
   if(tour&&!isStandalone()&&(isIOS||isAndroid)){const ins=el("div","gdins");ins.appendChild(el("b",null,"홈 화면에 설치하면 앱처럼 쓰고 알림도 받아요"));
     ins.appendChild(el("small",null,isIOS?"사파리 아래쪽 공유(□↑) → 「홈 화면에 추가」 → 추가":"크롬 오른쪽 위 ⋮ → 「앱 설치」 또는 「홈 화면에 추가」"));c.appendChild(ins);}
@@ -4581,7 +4582,7 @@ function openGuide(mode){track("guide");
 /* ===== 1분 둘러보기 = 코치 마크: 실제 탭을 하나씩 비추며 설명 (일반 앱의 첫 실행 안내처럼) ===== */
 function coachSteps(){   /* 217: 처음 쓰는 사람 = 홈에서 가장 많이 쓰는 3곳(요청·검색·오늘의 업무)부터, 그다음 탭 */
   const m=isM();
-  return [[null,"FS 포털에 오신 걸 환영해요","자주 쓰는 곳만 30초 안에 짚어 드릴게요. 언제든 「건너뛰기」로 끝낼 수 있어요."],
+  return [[null,"FS Portal에 오신 걸 환영해요","자주 쓰는 곳만 30초 안에 짚어 드릴게요. 언제든 「건너뛰기」로 끝낼 수 있어요."],
     ["#hreq","Slack 요청","CSO(평일)·CS쉐어링(야간·휴일) 요청이 맨 위에 와요. 누르면 장비·증상·회신처가 보이고 「✅ 확인」을 남길 수 있어요."],
     ["#homeBody .hsw","검색","에러코드·부품번호·장비·병원으로 찾아요. 왼쪽에서 범위(Sysmex Talk·실마리·부품·기술정보)를 고르고, 옆 버튼으로 바코드를 찍어도 돼요."],
     ["#hc-sched","오늘의 업무","내 일정·우리 팀 설치와 오늘 근무가 보여요. 「+ 일정 등록」으로 휴가·교육을 바로 넣어요."],
@@ -4593,7 +4594,7 @@ function openCoach(){track("guide");
   if(view!=="home")go("home");   // 217: 둘러보기는 홈 카드를 비추므로 홈에서
   closeProfile();
   const old=$("coach");if(old)old.remove();
-  const ov=el("div","coach");ov.id="coach";ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");ov.setAttribute("aria-label","FS 포털 둘러보기");
+  const ov=el("div","coach");ov.id="coach";ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");ov.setAttribute("aria-label","FS Portal 둘러보기");
   const hole=el("div","chole");ov.appendChild(hole);const tip=el("div","ctip");ov.appendChild(tip);document.body.appendChild(ov);
   const S=coachSteps();let i=0;
   const finish=()=>{try{localStorage.setItem("fstalk-guide",GUIDE_NEW.k);}catch(e){}ov.remove();window.removeEventListener("resize",draw);document.removeEventListener("keydown",key);};
@@ -5006,7 +5007,7 @@ function showView(){
   $("favBtn").hidden=view!=="chat"||!room;syncFavBtn();
   $("popBtn").hidden=view!=="chat"||!room||isTouch();
   $("aiBtn").hidden=view!=="chat"||!room;$("rsBtn").hidden=view!=="chat"||!room;if((view!=="chat"||!room||rsRoom!==room)&&!$("rsBar").hidden)rsClose(true);
-  if(view==="chat"&&!room){$("title").textContent="FS 포털";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(icEl("chat","emptyic",44));e.appendChild(el("b",null,"대화방을 선택하세요"));e.appendChild(el("span",null,"왼쪽 목록에서 방을 고르거나 ＋ 새 방으로 대화를 시작하세요."));b.appendChild(e);}
+  if(view==="chat"&&!room){$("title").textContent="FS Portal";$("desc").textContent="왼쪽에서 대화방을 고르세요";$("infoBtn").hidden=true;const b=$("msgs");b.textContent="";const e=el("div","empty");e.appendChild(icEl("chat","emptyic",44));e.appendChild(el("b",null,"대화방을 선택하세요"));e.appendChild(el("span",null,"왼쪽 목록에서 방을 고르거나 ＋ 새 방으로 대화를 시작하세요."));b.appendChild(e);}
   else if(view==="chat"){const r=getRoom(room);if(!r){room="";showView();return;}
     if(isTouch()&&!(()=>{try{return localStorage.getItem("fstalk-tip-lp");}catch(e){return 1;}})()){setTimeout(()=>{if(view!=="chat"||!room||(isM()&&mList)||!document.querySelector("#msgs .bubble"))return;   // 대화방을 실제로 보고 있을 때만 한 번
       try{localStorage.setItem("fstalk-tip-lp","1");}catch(e){}toast("메시지를 길게 누르면 답장·반응·저장 메뉴가 열려요");},900);}ta.appendChild(roomAv(room,"s"));$("title").textContent=r.name;const n=roomMembers(room).length;$("desc").textContent=r.dm?r.desc:r.group?n+"명 · "+r.desc.replace(/^그룹 대화 · /,""):(n?n+"명 · ":"")+r.desc;renderMsgs(true);if(!(isM()&&mList))markSeen();}
@@ -5018,7 +5019,7 @@ function showView(){
   else if(view==="menu"){$("title").textContent="전체";$("desc").textContent="";renderMenuPage();}
   else if(view==="org"){$("title").textContent="조직도";$("desc").textContent="";renderOrgBoard();}
   else if(view==="app"){$("title").textContent=(APPS[appKey]||{}).t||"";$("desc").textContent="";}
-  else if(view==="home"){$("title").textContent="FS 포털";$("desc").textContent="";renderHome();}
+  else if(view==="home"){$("title").textContent="FS Portal";$("desc").textContent="";renderHome();}
   else if(view==="saved"){$("title").textContent="저장한 글";$("desc").textContent="중요한 글을 모아 둔 곳 · 나만 볼 수 있어요";renderSaved();}
   else{$("title").textContent="관리";$("desc").textContent="등록 승인 · 관리자 지정 · 직원 명단";renderAdmin();}
   renderPin();renderCbar();renderMbox();
@@ -5913,7 +5914,7 @@ async function voiceStart(mode){
   if(vRec)return;
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
-  catch(e){toast(e&&e.name==="NotAllowedError"?"마이크 사용을 허용해 주세요 (브라우저·휴대폰 설정 → FS 포털 → 마이크).":"마이크를 열지 못했습니다.");return;}
+  catch(e){toast(e&&e.name==="NotAllowedError"?"마이크 사용을 허용해 주세요 (브라우저·휴대폰 설정 → FS Portal → 마이크).":"마이크를 열지 못했습니다.");return;}
   const types=["audio/webm;codecs=opus","audio/mp4","audio/webm","audio/ogg"];const mt=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||"";
   const rec=new MediaRecorder(stream,mt?{mimeType:mt,audioBitsPerSecond:32000}:undefined);const chunks=[];
   vRec={rec,stream,mode,cancel:false,t0:Date.now()};
@@ -6333,7 +6334,7 @@ function renderInstall(){
   if(!instOpen){const mo=el("span","instmore","방법 보기 ›");c.appendChild(mo);c.onclick=()=>{instOpen=true;renderInstall();};box.appendChild(c);return;}
   if(isIOS){
     c.appendChild(document.createTextNode("앱처럼 전체 화면으로 열리고, 다음 단계에서 알림도 받을 수 있어요."));
-    const ol=el("ol");["Safari 주소창 옆 ⋯ 버튼(또는 공유 □↑)을 누르세요","「공유」 → 「홈 화면에 추가」 → 「추가」를 누르세요","홈 화면의 FS 포털 아이콘으로 여세요"].forEach(t=>ol.appendChild(el("li",null,t)));c.appendChild(ol);
+    const ol=el("ol");["Safari 주소창 옆 ⋯ 버튼(또는 공유 □↑)을 누르세요","「공유」 → 「홈 화면에 추가」 → 「추가」를 누르세요","홈 화면의 FS Portal 아이콘으로 여세요"].forEach(t=>ol.appendChild(el("li",null,t)));c.appendChild(ol);
     if(!/Safari/.test(navigator.userAgent)||/CriOS|FxiOS|EdgiOS|NAVER|KAKAOTALK/.test(navigator.userAgent))c.appendChild(el("div",null,"※ 지금 브라우저에서 안 되면 Safari로 이 주소를 열어 주세요."));
   }else if(deferredInstall){
     c.appendChild(document.createTextNode("앱처럼 바로 열고, 다음 단계에서 알림도 받을 수 있어요."));c.appendChild(el("br"));
@@ -6479,7 +6480,7 @@ function editMyProfile(req){
   const c=$("pCard");c.textContent="";
   if(!req){const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);}
   c.appendChild(personAv(me.name));c.appendChild(el("h3",null,req?"연락처를 입력해 주세요":"내 연락처"));
-  c.appendChild(el("div","tm2",req?"회사 번호·휴대폰 번호·메일은 꼭 필요합니다. FS 포털 사용자 모두가 볼 수 있어요 (조직도에서 바로 전화·메일).":"FS 포털 사용자 모두가 볼 수 있어요 · 세 칸 모두 필수"));
+  c.appendChild(el("div","tm2",req?"회사 번호·휴대폰 번호·메일은 꼭 필요합니다. FS Portal 사용자 모두가 볼 수 있어요 (조직도에서 바로 전화·메일).":"FS Portal 사용자 모두가 볼 수 있어요 · 세 칸 모두 필수"));
   const pf=profiles[myKey]||{};
   const f=el("form");f.style.marginTop="14px";
   const mk=(lab,id,type,ph,val)=>{const d=el("div","f");const l=el("label",null,lab);l.htmlFor=id;const i=el("input");i.id=id;i.type=type;i.placeholder=ph;i.value=val||"";i.autocomplete="off";d.appendChild(l);d.appendChild(i);return d;};
@@ -6519,7 +6520,7 @@ async function saveToken(){
 async function enablePush(){
   try{
     const perm=await Notification.requestPermission();
-    if(perm!=="granted"){toast(perm==="denied"?"알림이 차단돼 있어요. 휴대폰 설정에서 FS 포털 알림을 허용해 주세요.":"알림 허용을 누르지 않았어요.");renderPushCard();return;}
+    if(perm!=="granted"){toast(perm==="denied"?"알림이 차단돼 있어요. 휴대폰 설정에서 FS Portal 알림을 허용해 주세요.":"알림 허용을 누르지 않았어요.");renderPushCard();return;}
     await saveToken();toast("이 기기에서 알림을 받습니다.");
   }catch(e){toast("알림 설정 실패: "+(e.code||e.message));}
   renderPushCard();renderInfo();
@@ -6594,7 +6595,7 @@ function renderPushCard(){
   if(!pushSupported()||pushOn())return;
   const c=el("div","inst");
   c.appendChild(el("b",null,"🔔 새 메시지 알림 받기"));
-  if(Notification.permission==="denied"){c.appendChild(document.createTextNode("알림이 차단돼 있어요. 휴대폰(또는 브라우저) 설정 → 알림에서 FS 포털을 허용한 뒤 다시 열어 주세요."));}
+  if(Notification.permission==="denied"){c.appendChild(document.createTextNode("알림이 차단돼 있어요. 휴대폰(또는 브라우저) 설정 → 알림에서 FS Portal을 허용한 뒤 다시 열어 주세요."));}
   else{c.appendChild(document.createTextNode("앱을 닫아 둬도 새 메시지가 오면 알려 드려요."));c.appendChild(el("br"));const b=el("button","btn pri","알림 켜기");b.onclick=enablePush;c.appendChild(b);}
   box.appendChild(c);
 }
@@ -6613,9 +6614,9 @@ async function testAdminNotify(btn){
     if(!j)t="❌ 알림 발송기 응답이 없습니다.";
     else if(!j.ver)t="❌ Apps Script가 예전 버전입니다. GitHub의 apps-script/notify.gs로 코드를 바꾸고 「배포 관리 → ✏️ → 새 버전 → 배포」를 해 주세요.";
     else if(!j.ok)t="❌ 실패: "+(j.err||"알 수 없음");
-    else if(!j.targets)t="⚠️ 알림을 켠 관리자 기기가 없습니다 (관리자 "+j.people+"명 · 기기 "+j.devices+"대). 관리자 휴대폰에서 FS 포털을 열고 「알림 켜기」를 눌러 주세요.";
+    else if(!j.targets)t="⚠️ 알림을 켠 관리자 기기가 없습니다 (관리자 "+j.people+"명 · 기기 "+j.devices+"대). 관리자 휴대폰에서 FS Portal을 열고 「알림 켜기」를 눌러 주세요.";
     else t="✅ 관리자 기기 "+j.targets+"대 중 "+j.sent+"대로 보냈습니다. 각 기기에 알림이 왔는지 확인하세요."+
-      (pushOn()?" 이 기기도 대상입니다 — 안 뜨면 윈도우 「설정 → 시스템 → 알림」에서 Microsoft Edge(또는 FS 포털) 알림과 방해 금지를 확인하세요.":" (이 기기는 아직 알림을 안 켰어요 — 대화 목록 위 「🔔 알림 켜기」)");
+      (pushOn()?" 이 기기도 대상입니다 — 안 뜨면 윈도우 「설정 → 시스템 → 알림」에서 Microsoft Edge(또는 FS Portal) 알림과 방해 금지를 확인하세요.":" (이 기기는 아직 알림을 안 켰어요 — 대화 목록 위 「🔔 알림 켜기」)");
     box.textContent=t;
   }catch(e){box.textContent="❌ 알림 발송기 연결 실패: "+e.message;}
   btn.disabled=false;
@@ -6637,7 +6638,7 @@ async function notifyOthers(r,msgId){
     }
   }catch(e){if(isAdmin)toast("알림 발송기 연결 실패: "+e.message);}
 }
-/* 앱 창이 열려 있을 때 온 알림: 다른 창을 보고 있으면 윈도우(시스템) 알림, FS 포털을 보고 있으면 앱 안 안내 */
+/* 앱 창이 열려 있을 때 온 알림: 다른 창을 보고 있으면 윈도우(시스템) 알림, FS Portal을 보고 있으면 앱 안 안내 */
 if(messaging){
   messaging.onMessage(async p=>{
     const r=p&&p.data&&p.data.room||"";
@@ -6649,7 +6650,7 @@ if(messaging){
     if(!adminNote&&focused){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));return;}
     try{
       const reg=await getSwReg();
-      await reg.showNotification(n.title||"FS 포털",{body:n.body||"",icon:"icons/icon-192.png",badge:"icons/icon-192.png",
+      await reg.showNotification(n.title||"FS Portal",{body:n.body||"",icon:"icons/icon-192.png",badge:"icons/icon-192.png",
         tag:r?"room-"+r:"fstalk-admin",renotify:true,requireInteraction:adminNote||r==="notice",vibrate:r==="notice"?[200,100,200,100,500]:undefined,data:{url:location.pathname+(r?"#room-"+encodeURIComponent(r):"#admin")}});
     }catch(e){if(n.title)toast((n.title||"")+" — "+(n.body||"").slice(0,40));}
   });
@@ -6659,7 +6660,7 @@ let lastBadge=-1;
 function syncBadge(n,force){
   if(n===lastBadge&&!force)return;lastBadge=n;
   try{caches.open("fstalk-meta").then(c=>c.put("./badge",new Response(String(n)))).catch(()=>{});}catch(e){}   // 앱이 꺼져 있을 때 서비스 워커가 이어서 셈
-  document.title=n?"("+(n>99?"99+":n)+") FS 포털":"FS 포털";
+  document.title=n?"("+(n>99?"99+":n)+") FS Portal":"FS Portal";
   try{if("setAppBadge" in navigator){n?navigator.setAppBadge(n):navigator.clearAppBadge();}}catch(e){}
 }
 
@@ -6673,8 +6674,8 @@ const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function pinHash(pin,salt){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+"|"+pin+"|fstalk"));return b64(d);}
 async function bioAvailable(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
 async function bioRegister(){
-  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"FS 포털"},
-    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:(me&&me.name)||"FS 포털",displayName:(me&&me.name)||"FS 포털"},
+  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"FS Portal"},
+    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:(me&&me.name)||"FS Portal",displayName:(me&&me.name)||"FS Portal"},
     pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
     authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
   return b64(c.rawId);
@@ -6786,19 +6787,19 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/10","이름 「FS Portal」·새 아이콘 — 홈 화면에 추가해 둔 앱은 지우고 다시 추가하면 새 아이콘으로"],["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
   const c=$("pCard");c.textContent="";c.classList.remove("wide");const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"버전 정보"));
   const tb=el("div","bdinfo");const row=(k,v)=>{const r=el("div","bdr");r.appendChild(el("span","bdk",k));r.appendChild(el("span","bdv",v));tb.appendChild(r);};
-  row("앱","FS 포털 "+APP_VERSION);row("접속",isStandalone()?"홈 화면 앱":"브라우저");c.appendChild(tb);
+  row("앱","FS Portal "+APP_VERSION);row("접속",isStandalone()?"홈 화면 앱":"브라우저");c.appendChild(tb);
   if(winHosts().length){const w=el("div","pkhint","새 창으로 여는 사이트: "+winHosts().join(", ")+" ");const u=el("button","appwin","포털 안에서 열기로 되돌리기");u.onclick=()=>{try{localStorage.removeItem("fstalk-win");}catch(e){}w.remove();toast("다시 포털 안에서 엽니다.");};w.appendChild(u);c.appendChild(w);}
   c.appendChild(el("div","dgrp","최근 바뀐 것"));const L=el("div","vlog");VLOG.forEach(([d,t])=>{const r=el("div","vlr");r.appendChild(el("span","vld",d));r.appendChild(el("span",null,t));L.appendChild(r);});c.appendChild(L);
   const bt=el("div","lebtns wrap");const ck=el("button","btn pri","새 버전 확인");ck.onclick=async()=>{ck.disabled=true;await checkUpdate(true);ck.disabled=false;if($("updBar").hidden)toast("최신 버전을 쓰고 있어요.");else{closeProfile();toast("새 버전이 있어요 — 위의 안내를 누르면 바뀝니다.");}};bt.appendChild(ck);
   const gd=el("button","btn","사용 안내");gd.onclick=()=>{closeProfile();setTimeout(openCoach,50);};bt.appendChild(gd);c.appendChild(bt);
-  const ft=el("div","pkhint","FS 포털 · Made by FSS Team");c.appendChild(ft);$("pOv").hidden=false;track("ver");
+  const ft=el("div","pkhint","FS Portal · Made by FSS Team");c.appendChild(ft);$("pOv").hidden=false;track("ver");
 }
 function renderSettings(){
   const body=$("settingsBody");if(!body||!me)return;body.textContent="";
@@ -6816,8 +6817,8 @@ function renderSettings(){
   setRow(c,"mail","메일",pf.email||"입력 안 함",()=>editMyProfile());
   // 알림
   c=setSec(wrap,"알림");
-  if(!pushSupported()||(isIOS&&!isStandalone()))setRow(c,"bellOff","이 기기에서는 알림을 받을 수 없어요",isIOS?"iPhone은 홈 화면에 설치한 FS 포털에서 알림을 켤 수 있어요":"알림을 지원하지 않는 브라우저예요");
-  else if(!pushOn())setRow(c,"bell","새 메시지 알림 받기",Notification.permission==="denied"?"알림이 차단돼 있어요 — 기기·브라우저 설정에서 FS 포털 알림을 허용하세요":"이 기기에서 알림을 켭니다",Notification.permission==="denied"?null:()=>enablePush().then(renderSettings));
+  if(!pushSupported()||(isIOS&&!isStandalone()))setRow(c,"bellOff","이 기기에서는 알림을 받을 수 없어요",isIOS?"iPhone은 홈 화면에 설치한 FS Portal에서 알림을 켤 수 있어요":"알림을 지원하지 않는 브라우저예요");
+  else if(!pushOn())setRow(c,"bell","새 메시지 알림 받기",Notification.permission==="denied"?"알림이 차단돼 있어요 — 기기·브라우저 설정에서 FS Portal 알림을 허용하세요":"이 기기에서 알림을 켭니다",Notification.permission==="denied"?null:()=>enablePush().then(renderSettings));
   else{
     const sw=el("button","switch"+(myMute._all?"":" on"));sw.setAttribute("role","switch");sw.setAttribute("aria-checked",myMute._all?"false":"true");sw.onclick=async e=>{e.stopPropagation();await setMute("_all",!myMute._all);renderSettings();};
     setRow(c,myMute._all?"bellOff":"bell","이 기기 알림",myMute._all?"모든 대화방 알림이 꺼져 있어요":"방별로 끄려면 대화방 ☰ 정보에서",null,sw);
@@ -6844,7 +6845,7 @@ function renderSettings(){
   setRow(c,"refresh","새 버전 확인","",async()=>{await checkUpdate(true);toast($("updBar").hidden?"최신 버전을 쓰고 있어요.":"새 버전이 있어요 — 위의 안내를 누르세요.");});
   if(!isStandalone()&&(isIOS||isAndroid||deferredInstall))setRow(c,"download","홈 화면에 설치하기","앱처럼 쓰고 알림도 받아요",()=>{go("");instOpen=true;try{localStorage.removeItem("fstalk-inst-hide");}catch(e){}renderInstall();});
   const ft=el("div","sfoot");const lg=el("img");lg.src=document.documentElement.dataset.theme==="dark"?"icons/sysmex-logo-white.png":"icons/sysmex-logo-blue.png";lg.alt="Sysmex";lg.width=111;lg.height=34;ft.appendChild(lg);
-  ft.appendChild(el("div",null,"FS 포털 · Made by FSS Team"));wrap.appendChild(ft);
+  ft.appendChild(el("div",null,"FS Portal · Made by FSS Team"));wrap.appendChild(ft);
 }
 
 /* ---------- 새 버전 안내 ---------- */
