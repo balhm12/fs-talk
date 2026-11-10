@@ -1702,6 +1702,11 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 .splsk .skel{flex:1 1 auto;gap:8px}.splsk .skel i{height:11px}.splskh .skel i:first-child{width:60%}.splskh .skel i:last-child{width:85%}
 @media (prefers-reduced-motion:reduce){.splskh .c{animation:none}}
 img.spllogo{display:block;background:none;object-fit:contain}
+/* 246: 로딩 = 물결 막대(새 아이콘의 하늘색 띠와 같은 그림, 사용자 시안 4) — 243 의 스켈레톤 카드(.splsk) 대신 */
+.splwave{width:150px;height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:2px auto 12px}
+.splwave svg{display:block;width:300px;height:10px;animation:splwv 1.4s linear infinite}.splwave path{fill:#00B8EE}
+@keyframes splwv{to{transform:translateX(-80px)}}
+@media (prefers-reduced-motion:reduce){.splwave svg{animation:none}}
 </style>
 
 </head>
@@ -1709,7 +1714,7 @@ img.spllogo{display:block;background:none;object-fit:contain}
 <!-- 로딩·등록·대기 화면 -->
 <div class="gate splash" id="gLoad"><div class="splbox">
   <img class="spllogo" src="icons/icon-192.png" alt="" width="72" height="72"><div class="splname">FS Portal</div>
-  <div class="splsk" aria-hidden="true"><div class="splskh"><i class="c"></i><div class="skel"><i></i><i></i></div></div><div class="skel"><i></i><i></i><i></i></div></div><p id="loadMsg" role="status" aria-live="polite">연결 중…</p>
+  <div class="splwave" aria-hidden="true"><svg viewBox="0 0 320 24" preserveAspectRatio="none"><path d="M0 12 Q20 4 40 12 T80 12 T120 12 T160 12 T200 12 T240 12 T280 12 T320 12 V24 H0Z"/></svg></div><p id="loadMsg" role="status" aria-live="polite">연결 중…</p>
   <img class="splsys" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="118" height="36">
 </div></div>
 <div class="gate" id="gInApp" hidden>
@@ -1936,7 +1941,7 @@ img.spllogo{display:block;background:none;object-fit:contain}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.245";
+const APP_VERSION="2026-11-10.246";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2932,7 +2937,7 @@ async function kpiPublish(manual){
 function openKpiUpload(){
   const c=$("pCard");c.textContent="";c.classList.remove("wide");const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"KPI 다시 올리기"));
-  c.appendChild(el("div","pkhint","바탕화면 「FSG 대시보드 올리기」와 같습니다 — CRM 「2. 모든 약속_활동」 엑셀을 KPI 대시보드에 올리고(암호화·백업 포함), 이어서 포털 KPI를 새로 계산합니다. 파일은 보통 다운로드 폴더에 있습니다."));
+  c.appendChild(el("div","pkhint","바탕화면 「FSG 대시보드 올리기」와 같습니다 — CRM 「2. 모든 약속_활동」 엑셀을 KPI 대시보드에 올리고(암호화·백업 포함), 이어서 FS Portal KPI를 새로 계산합니다. 파일은 보통 다운로드 폴더에 있습니다."));
   const f=el("div","f");f.appendChild(el("label",null,"CRM 파일 (모든 약속_활동 .xlsx)"));const fi=el("input");fi.type="file";fi.accept=".xlsx,.xls,.csv";f.appendChild(fi);c.appendChild(f);
   const fw=el("div","nthint");c.appendChild(fw);
   fi.onchange=()=>{const fl=fi.files[0];fw.textContent="";if(!fl)return;const age=(Date.now()-fl.lastModified)/864e5;
@@ -2946,8 +2951,8 @@ function openKpiUpload(){
   go.onclick=async()=>{const fl=fi.files[0];if(!fl){st.textContent="CRM 파일을 골라 주세요.";return;}if(!em.value.trim()||!pw.value){st.textContent="관리자 이메일과 비밀번호를 넣어 주세요.";return;}
     go.disabled=only.disabled=true;try{localStorage.setItem("fstalk-kpiadm",em.value.trim());}catch(e){}
     try{await kpiUploadCrm(fl,em.value.trim(),pw.value,t=>{st.textContent=t;});pw.value="";
-      st.textContent="✅ 대시보드에 올렸습니다. 포털 KPI를 새로 계산하는 중… (30초 정도)";track("kpi_up");
-      await kpiPublish(true);st.textContent="✅ 완료 — KPI 대시보드와 포털 KPI 모두 새 파일 기준입니다 ("+fl.name+")";}
+      st.textContent="✅ 대시보드에 올렸습니다. FS Portal KPI를 새로 계산하는 중… (30초 정도)";track("kpi_up");
+      await kpiPublish(true);st.textContent="✅ 완료 — KPI 대시보드와 FS Portal KPI 모두 새 파일 기준입니다 ("+fl.name+")";}
     catch(e){st.textContent="❌ "+e.message;}finally{go.disabled=only.disabled=false;}};
   $("pOv").hidden=false;setTimeout(()=>fi.focus(),50);
 }
@@ -3385,7 +3390,7 @@ function boardForm(k,ed){
   const B=BOARD[k];const c=$("pCard");c.textContent="";c.classList.remove("wide");c.classList.add("drawer");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,B.title+(ed?" 고치기·개정":" 등록")));
-  c.appendChild(el("div","pkhint",ed?"내용을 고치거나, 개정판이면 「개정」을 체크하고 개정 표시(예: Rev.08)를 적으세요. 개정하면 알림 센터에 「기술정보 개정」으로 뜹니다.":"링크(사내 드라이브·유튜브·SharePoint 등)를 등록하면 FSG 모두의 포털 첫 화면에 보입니다."));
+  c.appendChild(el("div","pkhint",ed?"내용을 고치거나, 개정판이면 「개정」을 체크하고 개정 표시(예: Rev.08)를 적으세요. 개정하면 알림 센터에 「기술정보 개정」으로 뜹니다.":"링크(사내 드라이브·유튜브·SharePoint 등)를 등록하면 FSG 모두의 FS Portal 첫 화면에 보입니다."));
   const fld=(lab,node)=>{const f=el("div","f");const l=el("label",null,lab);fld.n=(fld.n||0)+1;node.id="bf"+fld.n;l.htmlFor=node.id;f.appendChild(l);f.appendChild(node);c.appendChild(f);return node;};
   let cat=null;if(k==="tech"){cat=fld("분류",el("select"));Object.entries(BCAT).forEach(([v,l])=>{const o=el("option",null,l);o.value=v;cat.appendChild(o);});cat.value=(ed&&BCAT[ed.c]?ed.c:"")||"manual";}
   const NOC={ecr:"ECR 번호",fca:"FCA 번호"};   /* 166: ECR·FCA는 번호 입력, 링크는 비우면 KnowledgeCenter */
@@ -3426,7 +3431,7 @@ function boardForm(k,ed){
     if(ed){if(ed.ru)v.ru=ed.ru;if(ed.rby)v.rby=ed.rby;if(rv&&rv.value.trim())v.rv=rv.value.trim().slice(0,30);if(rc&&rc.checked){v.ru=SV;v.rby=me.name;}}
     ok.disabled=true;const ref=ed?R("board/"+k+"/"+ed.id):R("board/"+k).push();
     ref.set(v).then(async()=>{
-      if(nc.checked){const txt=(k==="tech"?"📄 ["+(rc&&rc.checked?"기술정보 개정":"기술정보")+"] ":"🎬 [동영상 교육] ")+(v.d?v.d+" · ":"")+(v.no?"["+v.no+(v.ecr?" · ECR "+v.ecr:"")+"] ":"")+tv+(v.rv?" ("+v.rv+")":"")+(v.n?"\n"+v.n:"")+"\n"+uv+"\n\n포털 첫 화면 「"+B.title+"」에서도 볼 수 있습니다.";
+      if(nc.checked){const txt=(k==="tech"?"📄 ["+(rc&&rc.checked?"기술정보 개정":"기술정보")+"] ":"🎬 [동영상 교육] ")+(v.d?v.d+" · ":"")+(v.no?"["+v.no+(v.ecr?" · ECR "+v.ecr:"")+"] ":"")+tv+(v.rv?" ("+v.rv+")":"")+(v.n?"\n"+v.n:"")+"\n"+uv+"\n\nFS Portal 첫 화면 「"+B.title+"」에서도 볼 수 있습니다.";
         try{const r2=await R("msgs/notice").push({uid,name:me.name,text:txt.slice(0,4000),ts:SV});afterSend("notice",r2.key);}catch(e){toast("공지 올리기 실패: "+(e.code||e.message));}}
       toast(ed?"저장했습니다.":"등록했습니다.");openBoard(k);}).catch(e=>{ok.disabled=false;toast("실패: "+e.message);});};
   $("pOv").hidden=false;setTimeout(()=>t.focus(),50);
@@ -3570,7 +3575,7 @@ function renderHome(){
   const s4=sec("links");s4.dataset.hk="links";s4.id="hc-links";const lh=el("div","hsech");lh.appendChild(el("h2","hsect","바로가기"));const le=el("button","hmore","편집");le.onclick=openLinkEditor;lh.appendChild(le);s4.appendChild(lh);
   const lks=homeLinks().filter(k=>(k!=="kpi"||isAdmin||myLead())&&(k!=="po"||poOk())),used={};
   const lgs=el("div","hlgs");s4.appendChild(lgs);
-  LGRP.concat([["포털",lks,"p"]]).forEach(([gt,keys,tone])=>{const ks=lks.filter(k=>keys.indexOf(k)>=0&&!used[k]);if(!ks.length)return;
+  LGRP.concat([["FS Portal",lks,"p"]]).forEach(([gt,keys,tone])=>{const ks=lks.filter(k=>keys.indexOf(k)>=0&&!used[k]);if(!ks.length)return;
     const gb=el("div","hlgb");gb.style.setProperty("--k",ks.length);gb.appendChild(el("div","hlgh",gt));const lg=el("div","hlg");gb.appendChild(lg);lgs.appendChild(gb);
     ks.forEach(k=>{used[k]=1;const [i,t,fn,tip]=HLINKS[k];const x=el("button","hlink");if(tip){x.title=tip;x.setAttribute("aria-label",t+" — "+tip);}
       const ic=el("span","hlic "+tone);ic.appendChild(icEl(i,"",18));x.appendChild(ic);const tx=el("span","hltx");tx.appendChild(el("b",null,t.replace("KnowledgeCenter","Knowledge\u200BCenter")));if(tip)tx.appendChild(el("small",null,tip.replace(/^Sysmex Korea 회사 사이트 · /,"")));x.appendChild(tx);x.onclick=fn;lg.appendChild(x);});});
@@ -4193,7 +4198,7 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   const url=slkUrl(r);if(url){const a=el("button","hmore","Slack에서 열기 ›");a.onclick=()=>openUrl(url);go2.appendChild(a);}
   c.appendChild(go2);
   const th=Object.keys(r.th||{}).map(k=>r.th[k]).filter(t=>t&&t.t).sort((a,b)=>a.at-b.at);
-  if(th.length){c.appendChild(el("div","slkh2","스레드 "+th.length));const tl=el("div","slkth");th.forEach(t=>{const m=el("div","slkm"+(t.p?" me":""));m.appendChild(el("b",null,(t.n||"")+" · "+slkAgo(t.at)+(t.p&&!slkLive(r)?" · 포털 기록":"")));m.appendChild(el("span",null,t.t));tl.appendChild(m);});c.appendChild(tl);}
+  if(th.length){c.appendChild(el("div","slkh2","스레드 "+th.length));const tl=el("div","slkth");th.forEach(t=>{const m=el("div","slkm"+(t.p?" me":""));m.appendChild(el("b",null,(t.n||"")+" · "+slkAgo(t.at)+(t.p&&!slkLive(r)?" · FS Portal 기록":"")));m.appendChild(el("span",null,t.t));tl.appendChild(m);});c.appendChild(tl);}
   const og=el("details","slkog");og.appendChild(el("summary",null,"원문 보기"));og.appendChild(el("pre",null,r.t||""));c.appendChild(og);
   const live=slkLive(r),canRe=!r.multi&&isAdmin;
   if(canRe){const fd=el("div","f");const lb=el("label",null,live?"Slack 스레드에 회신":"회신 문구 (복사해서 Slack 스레드에 붙여 넣기)");const ta=el("textarea","slkre");ta.id="slkRe";ta.rows=3;ta.maxLength=1500;ta.placeholder="예) 내일 오전 방문 예정입니다. 고객께 연락드렸습니다.";lb.htmlFor="slkRe";fd.appendChild(lb);fd.appendChild(ta);c.appendChild(fd);}
@@ -4203,7 +4208,7 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
     if(live){if(await slkDo(id,"reply",t))openSlkReq(id);return;}
     await copyText(t);await slkDo(id,"reply",t);if(url)openUrl(url);else toast("복사했습니다 — Slack 원래 글의 스레드에 붙여 넣으세요.");openSlkReq(id);});
   const ackB=()=>{if(r.st!=="done"&&!r.ack&&slkCanAck(r)){const x=B("✅ 확인 (V)","pri",async()=>{if(await slkDo(id,"ack",txt()))openSlkReq(id);});x.title="Slack 원래 글에 ✅ 를 달고 스레드에 「확인」을 남깁니다";}};
-  if(!isAdmin){ackB();if(bt.children.length)c.appendChild(bt);c.appendChild(el("p","hp slknote",r.multi?"✅ 확인은 누구나 할 수 있습니다(여러 요청이 묶인 글이라 포털에만 표시). 담당·완료 표시는 관리자가 합니다.":"✅ 확인은 누구나 할 수 있습니다(Slack 원래 글에 ✅ 가 달립니다). 담당·회신·완료 표시는 관리자가 합니다."));$("pOv").hidden=false;return;}
+  if(!isAdmin){ackB();if(bt.children.length)c.appendChild(bt);c.appendChild(el("p","hp slknote",r.multi?"✅ 확인은 누구나 할 수 있습니다(여러 요청이 묶인 글이라 FS Portal에만 표시). 담당·완료 표시는 관리자가 합니다.":"✅ 확인은 누구나 할 수 있습니다(Slack 원래 글에 ✅ 가 달립니다). 담당·회신·완료 표시는 관리자가 합니다."));$("pOv").hidden=false;return;}
   ackB();
   if(r.st==="new")B("내가 담당",r.st==="new"?"pri":null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
   else if(r.st==="doing"&&r.who!==me.name)B("내가 담당",null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
@@ -4211,8 +4216,8 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   else B("다시 열기",null,async()=>{if(await slkDo(id,"reopen",""))openSlkReq(id);});
   if(r.kind==="paste"&&(r.pu===uid||isAdmin))B("삭제","bad",async()=>{if(!confirm("이 요청을 요청함에서 지울까요? (Slack 글은 그대로)"))return;try{await R("slack/req/"+id).remove();closeProfile();toast("지웠습니다.");}catch(e){toast("지우지 못했습니다.");}});
   c.appendChild(bt);
-  if(r.multi&&slkAct(r)&&r.st!=="done")c.appendChild(el("p","hp slknote","한 Slack 글에 여러 요청이 묶인 인계라 담당·확인·완료는 포털에만 표시됩니다(Slack 원래 글에는 반응을 달지 않음)."));
-  else if(!live&&r.st!=="done")c.appendChild(el("p","hp slknote","Slack 자동 연결 전이라 담당·완료는 포털에만 기록됩니다. Slack 원래 글의 확인·완료 반응은 직접 눌러 주세요."));
+  if(r.multi&&slkAct(r)&&r.st!=="done")c.appendChild(el("p","hp slknote","한 Slack 글에 여러 요청이 묶인 인계라 담당·확인·완료는 FS Portal에만 표시됩니다(Slack 원래 글에는 반응을 달지 않음)."));
+  else if(!live&&r.st!=="done")c.appendChild(el("p","hp slknote","Slack 자동 연결 전이라 담당·완료는 FS Portal에만 기록됩니다. Slack 원래 글의 확인·완료 반응은 직접 눌러 주세요."));
   $("pOv").hidden=false;
 }
 /* 요청 상세 창: 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청 (전역 화면 전환 스와이프는 창이 열려 있으면 꺼지므로 따로 처리) */
@@ -4231,7 +4236,7 @@ function openSlkClean(L){if(!isAdmin)return;const c=$("pCard");c.textContent="";
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
   c.appendChild(el("h3",null,"목록 정리 · "+L.length+"건"));
   c.appendChild(el("p","hp","지금 화면에 보이는 요청("+(slkSt==="all"?"전체":SLK_ST[slkSt])+(slkKindF?" · "+SLK_KN[slkKindF]:"")+")만 대상입니다. Slack 채널에는 글·반응을 남기지 않습니다."));
-  const run=async(op)=>{if(op==="del"&&!confirm(L.length+"건을 포털에서 지웁니다. 되돌릴 수 없습니다. 지울까요?"))return;
+  const run=async(op)=>{if(op==="del"&&!confirm(L.length+"건을 FS Portal에서 지웁니다. 되돌릴 수 없습니다. 지울까요?"))return;
     try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackBulk",idToken,op,ids:L.map(r=>r.id)})});
       const j=await res.json().catch(()=>null);if(!j||!j.ok){toast((j&&j.err)||"처리하지 못했습니다.");return;}
       closeProfile();toast(j.n+"건을 "+(op==="del"?"지웠습니다.":"완료로 정리했습니다."));track("slk_clean");}catch(e){toast("연결하지 못했습니다.");}};
@@ -4510,7 +4515,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"포털 안 앱",
+const TRK={room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
@@ -4554,7 +4559,7 @@ async function renderUsage(box){
 /* ===== 처음 쓰는 사람 안내(1분 둘러보기) + 새 기능 안내(묶음마다 한 번) =====
    처음 = 이 기기에서 안내를 본 적 없음 → 둘러보기 / 이미 쓰던 사람 = 새 묶음(GUIDE_NEW.k)이 바뀌었을 때만 새 기능 안내. 메뉴 「사용 안내」로 언제든 다시 봄 */
 const GUIDE_NEW={k:"2026-11-09",t:"새로 바뀐 것",items:[
-  ["headset","홈 맨 위 = Slack 요청","CSO(평일)·CS쉐어링(야간·휴일) 요청이 홈 맨 위에 와요. Slack 요청 글에 ✅를 달거나 포털 「✅ 확인 (V)」을 누르면 양쪽에 같이 표시돼요."],
+  ["headset","홈 맨 위 = Slack 요청","CSO(평일)·CS쉐어링(야간·휴일) 요청이 홈 맨 위에 와요. Slack 요청 글에 ✅를 달거나 FS Portal 「✅ 확인 (V)」을 누르면 양쪽에 같이 표시돼요."],
   ["search","검색은 한 줄로","검색창 왼쪽에서 범위(전체·Sysmex Talk·실마리·부품·기술정보)를 고르고, 검색창을 누르면 장비 바로 찾기(XN·XR…)가 펼쳐져요."],
   ["calendar","오늘의 업무가 간단해졌어요","오늘 근무는 「휴가 2 · 교육 1」처럼 숫자만 — 누르면 이름이 보여요. 나·우리 팀·전체는 카드 제목 옆에서."],
   ["sysgrid","나머지는 「더 보기」 한 줄에","부품 재고·기술정보·만족도·KPI·교육·바로가기는 홈 아래 「더 보기」에서 펼쳐요."]]};
@@ -4587,7 +4592,7 @@ function coachSteps(){   /* 217: 처음 쓰는 사람 = 홈에서 가장 많이 
     ["#homeBody .hsw","검색","에러코드·부품번호·장비·병원으로 찾아요. 왼쪽에서 범위(Sysmex Talk·실마리·부품·기술정보)를 고르고, 옆 버튼으로 바코드를 찍어도 돼요."],
     ["#hc-sched","오늘의 업무","내 일정·우리 팀 설치와 오늘 근무가 보여요. 「+ 일정 등록」으로 휴가·교육을 바로 넣어요."],
     [m?"#tChat":"#rChat","대화","맨 위가 「우리 팀」 방이에요. 「/휴가 11/3」처럼 쓰면 근무일정에 바로 등록돼요."],
-    m?["#tMenu","메뉴","설치·근무일정표 같은 업무 도구, 저장한 글, 알림 센터, 설정이 여기 있어요."]:["#rApps","업무 앱","설치일정·근무일정·실마리·전국시스템을 포털 안에서 바로 열어요. 그 밖의 것은 아래 「메뉴」에."],
+    m?["#tMenu","메뉴","설치·근무일정표 같은 업무 도구, 저장한 글, 알림 센터, 설정이 여기 있어요."]:["#rApps","업무 앱","설치일정·근무일정·실마리·전국시스템을 FS Portal 안에서 바로 열어요. 그 밖의 것은 아래 「메뉴」에."],
     [null,"준비 끝!",(m?"화면을 좌우로 밀어도 탭이 바뀌어요. ":"Ctrl+K로 어디든 빠르게 갈 수 있어요. ")+"다시 보려면 메뉴 → 「사용 안내」."]];
 }
 function openCoach(){track("guide");
@@ -6787,7 +6792,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/10","이름 「FS Portal」·새 아이콘 — 홈 화면에 추가해 둔 앱은 지우고 다시 추가하면 새 아이콘으로"],["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/10","로딩 화면 물결 막대, 화면 문구의 「포털」도 「FS Portal」로"],["11/10","이름 「FS Portal」·새 아이콘 — 홈 화면에 추가해 둔 앱은 지우고 다시 추가하면 새 아이콘으로"],["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 FS Portal 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 FS Portal 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
@@ -6795,7 +6800,7 @@ function openVersion(){
   c.appendChild(el("h3",null,"버전 정보"));
   const tb=el("div","bdinfo");const row=(k,v)=>{const r=el("div","bdr");r.appendChild(el("span","bdk",k));r.appendChild(el("span","bdv",v));tb.appendChild(r);};
   row("앱","FS Portal "+APP_VERSION);row("접속",isStandalone()?"홈 화면 앱":"브라우저");c.appendChild(tb);
-  if(winHosts().length){const w=el("div","pkhint","새 창으로 여는 사이트: "+winHosts().join(", ")+" ");const u=el("button","appwin","포털 안에서 열기로 되돌리기");u.onclick=()=>{try{localStorage.removeItem("fstalk-win");}catch(e){}w.remove();toast("다시 포털 안에서 엽니다.");};w.appendChild(u);c.appendChild(w);}
+  if(winHosts().length){const w=el("div","pkhint","새 창으로 여는 사이트: "+winHosts().join(", ")+" ");const u=el("button","appwin","FS Portal 안에서 열기로 되돌리기");u.onclick=()=>{try{localStorage.removeItem("fstalk-win");}catch(e){}w.remove();toast("다시 FS Portal 안에서 엽니다.");};w.appendChild(u);c.appendChild(w);}
   c.appendChild(el("div","dgrp","최근 바뀐 것"));const L=el("div","vlog");VLOG.forEach(([d,t])=>{const r=el("div","vlr");r.appendChild(el("span","vld",d));r.appendChild(el("span",null,t));L.appendChild(r);});c.appendChild(L);
   const bt=el("div","lebtns wrap");const ck=el("button","btn pri","새 버전 확인");ck.onclick=async()=>{ck.disabled=true;await checkUpdate(true);ck.disabled=false;if($("updBar").hidden)toast("최신 버전을 쓰고 있어요.");else{closeProfile();toast("새 버전이 있어요 — 위의 안내를 누르면 바뀝니다.");}};bt.appendChild(ck);
   const gd=el("button","btn","사용 안내");gd.onclick=()=>{closeProfile();setTimeout(openCoach,50);};bt.appendChild(gd);c.appendChild(bt);
