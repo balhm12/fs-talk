@@ -1935,7 +1935,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.243";
+const APP_VERSION="2026-11-10.244";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4015,7 +4015,8 @@ function slkDefScope(){return myField()&&myRole()!=="group"?"team":"all";}
 function slkIn(r,sc){return sc==="all"||(sc==="me"?slkMine(r):slkTeams(r).indexOf(myTeamU())>=0||slkMine(r));}
 function slkList(){return Object.keys(slkReq).map(id=>Object.assign({id},slkReq[id])).filter(r=>r.f&&r.at);}
 function slkNewCount(){const sc=slkDefScope();return slkList().filter(r=>r.st==="new"&&slkIn(r,sc)).length;}
-function slkLive(r){return !!(slkMeta&&slkMeta.ok&&r.ch&&r.ts&&slkMeta.chans&&slkMeta.chans[r.ch]&&!r.multi);}
+function slkAct(r){return !!(slkMeta&&slkMeta.ok&&r.ch&&r.ts&&slkMeta.chans&&slkMeta.chans[r.ch]);}   // 236: 서버로 바꿀 수 있음(묶음 글 포함)
+function slkLive(r){return slkAct(r)&&!r.multi;}   // Slack 스레드·반응까지 가는 것
 function slkUrl(r){if(r.u)return r.u;if(!r.ch||!r.ts||!slkMeta||!slkMeta.url)return "";return slkMeta.url.replace(/\/?$/,"/")+"archives/"+r.ch+"/p"+String(r.ts).replace(".","");}
 /* 218: 접수 시각(사용자 요청 「접수시간도 표기」) — 오늘이면 「14:07 · 2분 전」, 다른 날이면 「11/6(목) 09:12」 */
 function slkWhen(t){if(!t)return "";const d=new Date(t),hm=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
@@ -4201,7 +4202,7 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
     if(live){if(await slkDo(id,"reply",t))openSlkReq(id);return;}
     await copyText(t);await slkDo(id,"reply",t);if(url)openUrl(url);else toast("복사했습니다 — Slack 원래 글의 스레드에 붙여 넣으세요.");openSlkReq(id);});
   const ackB=()=>{if(r.st!=="done"&&!r.ack&&slkCanAck(r)){const x=B("✅ 확인 (V)","pri",async()=>{if(await slkDo(id,"ack",txt()))openSlkReq(id);});x.title="Slack 원래 글에 ✅ 를 달고 스레드에 「확인」을 남깁니다";}};
-  if(!isAdmin){ackB();if(bt.children.length)c.appendChild(bt);c.appendChild(el("p","hp slknote","✅ 확인은 누구나 할 수 있습니다(Slack 원래 글에 ✅ 가 달립니다). 담당·회신·완료 표시는 관리자가 합니다."));$("pOv").hidden=false;return;}
+  if(!isAdmin){ackB();if(bt.children.length)c.appendChild(bt);c.appendChild(el("p","hp slknote",r.multi?"✅ 확인은 누구나 할 수 있습니다(여러 요청이 묶인 글이라 포털에만 표시). 담당·완료 표시는 관리자가 합니다.":"✅ 확인은 누구나 할 수 있습니다(Slack 원래 글에 ✅ 가 달립니다). 담당·회신·완료 표시는 관리자가 합니다."));$("pOv").hidden=false;return;}
   ackB();
   if(r.st==="new")B("내가 담당",r.st==="new"?"pri":null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
   else if(r.st==="doing"&&r.who!==me.name)B("내가 담당",null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
@@ -4209,7 +4210,8 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   else B("다시 열기",null,async()=>{if(await slkDo(id,"reopen",""))openSlkReq(id);});
   if(r.kind==="paste"&&(r.pu===uid||isAdmin))B("삭제","bad",async()=>{if(!confirm("이 요청을 요청함에서 지울까요? (Slack 글은 그대로)"))return;try{await R("slack/req/"+id).remove();closeProfile();toast("지웠습니다.");}catch(e){toast("지우지 못했습니다.");}});
   c.appendChild(bt);
-  if(!live&&r.st!=="done")c.appendChild(el("p","hp slknote","Slack 자동 연결 전이라 담당·완료는 포털에만 기록됩니다. Slack 원래 글의 확인·완료 반응은 직접 눌러 주세요."));
+  if(r.multi&&slkAct(r)&&r.st!=="done")c.appendChild(el("p","hp slknote","한 Slack 글에 여러 요청이 묶인 인계라 담당·확인·완료는 포털에만 표시됩니다(Slack 원래 글에는 반응을 달지 않음)."));
+  else if(!live&&r.st!=="done")c.appendChild(el("p","hp slknote","Slack 자동 연결 전이라 담당·완료는 포털에만 기록됩니다. Slack 원래 글의 확인·완료 반응은 직접 눌러 주세요."));
   $("pOv").hidden=false;
 }
 /* 요청 상세 창: 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청 (전역 화면 전환 스와이프는 창이 열려 있으면 꺼지므로 따로 처리) */
@@ -4239,9 +4241,10 @@ function openSlkClean(L){if(!isAdmin)return;const c=$("pCard");c.textContent="";
   c.appendChild(el("p","hp","완료로 정리하면 「완료」 탭에 7일 동안 남고 기록이 유지됩니다. 삭제한 요청은 Slack 에서 다시 가져오지 않습니다."));
   $("pOv").hidden=false;}
 async function slkDo(id,op,text){const r=slkReq[id];if(!r||!me)return false;if(!isAdmin&&!(op==="ack"&&slkCanAck(r))){toast("관리자만 바꿀 수 있습니다.");return false;}track(op==="ack"?"slk_ack":"slk_act");
-  if(slkLive(r)){try{const idToken=await auth.currentUser.getIdToken();
+  if(slkAct(r)){try{const idToken=await auth.currentUser.getIdToken();
       const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slack",idToken,op,id,text})});
       const j=await res.json().catch(()=>null);if(!j||!j.ok){toast((j&&j.err)||"Slack에 보내지 못했습니다.");return false;}
+      if(r.multi){toast({claim:"담당으로 표시했습니다.",ack:"확인으로 표시했습니다.",done:"완료로 표시했습니다.",reopen:"다시 열었습니다."}[op]||"바꿨습니다.");return true;}
       toast({claim:"담당으로 표시하고 Slack 스레드에 알렸습니다.",ack:"✅ 확인을 Slack 원래 글에 달았습니다.",reply:"Slack 스레드에 보냈습니다.",done:"완료로 표시하고 Slack 스레드에 알렸습니다.",reopen:"다시 열었습니다."}[op]);return true;}
     catch(e){toast("연결하지 못했습니다.");return false;}}
   if(r.kind!=="paste"){toast("Slack 연결이 끊겨 지금은 바꿀 수 없습니다.");return false;}
@@ -6783,7 +6786,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/10","Slack 요청 — 여러 요청이 한 글에 묶인 야간 인계(CS쉐어링)도 담당·확인·완료 가능(「연결이 끊겨」 오류 수정)"],["11/10","처음 접속 화면 — 가운데 정렬, 막대 대신 스켈레톤"],["11/10","CSO·CS쉐어링 채널 방 — 요청이 확인(✅)되면 그 글 아래에 「✅ 확인 · 이름」 표시"],["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
