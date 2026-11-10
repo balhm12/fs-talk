@@ -1702,6 +1702,8 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 .splsk .skel{flex:1 1 auto;gap:8px}.splsk .skel i{height:11px}.splskh .skel i:first-child{width:60%}.splskh .skel i:last-child{width:85%}
 @media (prefers-reduced-motion:reduce){.splskh .c{animation:none}}
 img.spllogo{display:block;background:none;object-fit:contain}
+img.locklogo,.ghead img.gapp{display:block;background:none;object-fit:contain}   /* 248: 새 앱 아이콘(원본 비율 유지) */
+.rail .logo img{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit}
 /* 246: 로딩 = 물결 막대(새 아이콘의 하늘색 띠와 같은 그림, 사용자 시안 4) — 243 의 스켈레톤 카드(.splsk) 대신 */
 .splwave{width:150px;height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:2px auto 12px}
 .splwave svg{display:block;width:300px;height:10px;animation:splwv 1.4s linear infinite}.splwave path{fill:#00B8EE}
@@ -1736,7 +1738,7 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 </div>
 <div class="gate" id="gReg" hidden>
   <form class="card gcard" id="regForm" autocomplete="off">
-    <div class="ghead"><img class="gsys brandlogo" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="92" height="28"><div class="gapp">FS</div><h1>FS Portal</h1><p>FSG 업무 포털 · 대화·일정·기술정보를 한 곳에서</p></div>
+    <div class="ghead"><img class="gsys brandlogo" src="icons/sysmex-logo-blue.png" alt="Sysmex" width="92" height="28"><img class="gapp" src="icons/icon-192.png" alt="" width="56" height="56"><h1>FS Portal</h1><p>FSG 업무 포털 · 대화·일정·기술정보를 한 곳에서</p></div>
     <div class="gseg" role="tablist" aria-label="시작 방법">
       <button type="button" role="tab" id="gsNew" aria-selected="true">처음 사용해요</button>
       <button type="button" role="tab" id="gsOld" aria-selected="false">쓰던 기기가 있어요</button>
@@ -1791,7 +1793,7 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 
 <div class="app" id="app" hidden>
   <nav class="rail" id="rail">
-    <button class="logo" id="rLogo" title="홈으로" aria-label="홈으로">FS</button>
+    <button class="logo" id="rLogo" title="홈으로" aria-label="홈으로"><img src="icons/icon-192.png" alt="" width="40" height="40"></button>
     <button id="rHome" title="홈"><span class="ri" data-ic="home"></span>홈</button>
     <button id="rReq" title="Slack 요청 — CSO 기술요청(평일)·CS쉐어링 접수(야간·휴일)"><span class="ri" data-ic="headset"></span>요청</button>
     <button id="rInst" data-app="install" title="설치일정 — 설치·이전·평가 일정표"><span class="ri" data-ic="box"></span>설치</button>
@@ -1927,7 +1929,7 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 <div class="vov" id="vOv" hidden></div>
 <div class="lockov" id="lockOv" hidden>
   <div class="lockbox">
-    <div class="locklogo">FS</div>
+    <img class="locklogo" src="icons/icon-192.png" alt="" width="56" height="56">
     <div class="locktitle">FS Portal 잠금</div>
     <div class="lockmsg" id="lockMsg">PIN 4자리를 입력하세요</div>
     <div class="lockdots" id="lockDots"><i></i><i></i><i></i><i></i></div>
@@ -1948,7 +1950,7 @@ html[data-theme=dark] .hschqb .ico{background:#13304D;color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-10.247";
+const APP_VERSION="2026-11-10.248";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
