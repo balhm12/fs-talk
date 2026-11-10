@@ -1928,7 +1928,7 @@ html[data-theme=dark] .stalk b{color:#8CC4F5}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-09.236";
+const APP_VERSION="2026-11-10.241";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2272,7 +2272,7 @@ $("reRegBtn").onclick=()=>{show("gWait",false);show("gReg",true);picked=null;$("
 let started=false,renderQ=false;
 function start(){
   if(started){renderNav();return;}
-  started=true;setTimeout(posterAuto,3000);setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
+  started=true;setTimeout(()=>{try{window.openNoteRoom&&window.openNoteRoom();}catch(e){}},600);setTimeout(posterAuto,3000);setTimeout(guideAuto,4000);setTimeout(()=>track("open"),5000);
   R("mute/"+uid).on("value",s=>{myMute=s.val()||{};if(view==="chat")renderInfo();renderNav();syncMuteBtn();syncAlarmMarks();},()=>{});
   myKey=personKey(me.team,me.name);
   R("joined/"+myKey).set(true).catch(()=>{});
@@ -2418,8 +2418,10 @@ const isMine=m=>m.author===uid||(!!me&&m.name===me.name);   // 같은 사람의 
 const readFor=m=>inAll(m.room)?Math.max(myRead(m.room),myRead("all")):myRead(m.room);
 const isUnread=(m,id)=>!isMine(m)&&m.ts>Math.max(myRead(id),readFor(m));
 function unread(id){return msgs.filter(m=>inRoom(m,id)&&isUnread(m,id)).length;}
+/* 239: 안 읽은 숫자는 Slack 채널 방(CSO·CS쉐어링·group-sysmex-talk)만 — 다른 고정 방(팀·사무소·공지·FS)은 관리자만 숫자가 보임(사용자 요청). 1:1·그룹 대화는 그대로 */
+function showUnr(id){return isAdmin||!ROOMS.some(x=>x.id===id)||/^sk_(cso|night|talk)$/.test(id);}
 function unreadMention(id){return msgs.some(m=>inRoom(m,id)&&isUnread(m,id)&&mentionsMe(m));}
-function totalUnread(){return msgs.filter(m=>shown(m)&&!isMuted(m.room)&&!isMine(m)&&m.ts>readFor(m)).length;}   // 알림을 꺼 둔 방은 아이콘 숫자에서 뺌
+function totalUnread(){return msgs.filter(m=>shown(m)&&showUnr(m.room)&&!isMuted(m.room)&&!isMine(m)&&m.ts>readFor(m)).length;}   // 알림을 꺼 둔 방은 아이콘 숫자에서 뺌
 const isImgF=f=>/^image\//.test(f&&f.mime||"");
 function previewText(m){if(m.text)return m.text;if(m.file)return isImgF(m.file)?"사진":"파일: "+m.file.name;return "";}
 const msgText=m=>m.text+(m.file?" "+m.file.name:"");
@@ -2461,7 +2463,7 @@ function renderNav(){
       groups.forEach(([k,label,list])=>{
         if(!list.length&&k!=="dm")return;
         const h=el("button","lgrp fold");h.appendChild(el("span",null,(fold[k]?"▸ ":"▾ ")+label));
-        if(fold[k]){const n=list.filter(r=>r.id!=="all").reduce((a,r)=>a+unread(r.id),0);if(n)h.appendChild(el("span","cnt",n>99?"99+":String(n)));}
+        if(fold[k]){const n=list.filter(r=>r.id!=="all").reduce((a,r)=>a+(showUnr(r.id)?unread(r.id):0),0);if(n)h.appendChild(el("span","cnt",n>99?"99+":String(n)));}
         h.onclick=()=>{fold[k]=!fold[k];try{localStorage.setItem("fstalk-fold",JSON.stringify(fold));}catch(e){}renderNav();};
         nav.appendChild(h);
         if(fold[k])return;
@@ -2509,7 +2511,7 @@ function roomBtn(r,indent){
   b.appendChild(mid);
   const rt=el("div","rt");
   if(last)rt.appendChild(el("span","tm",fmtTime(last.ts)));
-  const u=active?0:(navStats?(navStats.unr[r.id]||0):unread(r.id));
+  const u=active||!showUnr(r.id)?0:(navStats?(navStats.unr[r.id]||0):unread(r.id));
   if(u){b.classList.add("hasun");const bd=el("div","bdg");if(navStats?navStats.ment[r.id]:unreadMention(r.id))bd.appendChild(el("span","cnt at","@"));bd.appendChild(el("span","cnt",u>99?"99+":String(u)));rt.appendChild(bd);}
   b.appendChild(rt);
   b.onclick=()=>go("room-"+r.id);
@@ -3595,7 +3597,7 @@ function updateHome(){
     const tl=el("div","htalk");if(!top.length)tl.appendChild(el("div","hp","아직 대화가 없습니다."));top.forEach(r=>tl.appendChild(roomBtn(r,false)));cm.appendChild(tl);}
   renderStats();updateNotiBadge();
 }
-function homeUnread(){const st=navStats||buildNavStats();let n=0;Object.keys(st.unr).forEach(k=>{if(k!=="all")n+=st.unr[k];});return n;}
+function homeUnread(){const st=navStats||buildNavStats();let n=0;Object.keys(st.unr).forEach(k=>{if(k!=="all"&&showUnr(k))n+=st.unr[k];});return n;}
 /* ===== 포털 안에서 열기: 같은 주소(balhm12.github.io) 앱은 포털 화면 안에, 한 번 연 화면은 상태를 유지 ===== */
 const APPS={install:{t:"설치일정",ic:"box",u:LINKS.install},work:{t:"근무일정",ic:"calendar",u:LINKS.work},silmari:{t:"실마리",ic:"compass",u:LINKS.silmari},
   voc:{t:"고객 만족도",ic:"star",u:LINKS.voc},kpi:{t:"KPI 대시보드",ic:"chart",u:LINKS.kpi,lead:true},system:{t:"전국시스템",ic:"sysgrid",u:LINKS.system,ext:true},
@@ -3989,10 +3991,19 @@ function slkWatch(){if(slkOn||!me)return;slkOn=true;
   if(myKey)R("prefs/"+myKey+"/slkchk").on("value",s=>{slkChk=s.val()||{};if(view==="req")renderReqPage();else if(view==="home")try{renderHomeReq();}catch(e){}},()=>{});}   // 208: 내가 확인한 요청(사람마다)
 function slkH(s){let a=0x811c9dc5,b=0x9e3779b9;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,2246822519);}return (a>>>0).toString(36)+(b>>>0).toString(36);}
 function slkSrc(r){return r.kind==="paste"?(r.src||"etc"):r.kind;}
-function slkTeam(r){const f=r.f||{};if(f.team){let t=String(f.team).toUpperCase().replace(/^(FS\s+(?:WEST|EAST|CENTRAL|SOUTH))\b.*/,"$1");if(/^FS(OM|S)$/.test(t))t+=" TEAM";return t;}const p=r.mention&&rosterList().find(x=>x.name===r.mention);return p?String(p.team).toUpperCase():"";}
+function slkNightRegion(a){ a = String(a||'');
+  if(/^(서울|경기|강원|제주|인천|목동)/.test(a)) return 'ew';
+  if(/(대전|세종|충남|충북|충청|청주|전북|전남|전라|광주)/.test(a)) return 'central';
+  if(/(부산|대구|울산|경남|경북|경상|포항)/.test(a)) return 'south';
+  return ''; }
+function slkTeam1(r){const f=r.f||{};if(f.team){let t=String(f.team).toUpperCase().replace(/^(FS\s+(?:WEST|EAST|CENTRAL|SOUTH))\b.*/,"$1");if(/^FS(OM|S)$/.test(t))t+=" TEAM";return t;}const p=r.mention&&rosterList().find(x=>x.name===r.mention);return p?String(p.team).toUpperCase():"";}
+function slkTeams(r){const t=slkTeam1(r);if(t)return [t];   // 237: CS쉐어링(야간·휴일) — 담당자(멘션) 팀이 우선, 없으면 기관명 지역
+  if(slkSrc(r)!=="night")return [];const f=r.f||{},a=f.area||((/\(([^)]+)\)\s*$/.exec(f.hosp||"")||[])[1])||"",g=slkNightRegion(a);
+  return g==="ew"?["FS EAST","FS WEST","FSS TEAM"]:g==="central"?["FS CENTRAL"]:g==="south"?["FS SOUTH"]:[];}
+function slkTeam(r){return slkTeams(r).map(t=>t.replace(/^FS /,"")).join("·");}
 function slkMine(r){return !!me&&(r.who===me.name||r.mention===me.name);}
 function slkDefScope(){return myField()&&myRole()!=="group"?"team":"all";}
-function slkIn(r,sc){return sc==="all"||(sc==="me"?slkMine(r):slkTeam(r)===myTeamU()||slkMine(r));}
+function slkIn(r,sc){return sc==="all"||(sc==="me"?slkMine(r):slkTeams(r).indexOf(myTeamU())>=0||slkMine(r));}
 function slkList(){return Object.keys(slkReq).map(id=>Object.assign({id},slkReq[id])).filter(r=>r.f&&r.at);}
 function slkNewCount(){const sc=slkDefScope();return slkList().filter(r=>r.st==="new"&&slkIn(r,sc)).length;}
 function slkLive(r){return !!(slkMeta&&slkMeta.ok&&r.ch&&r.ts&&slkMeta.chans&&slkMeta.chans[r.ch]&&!r.multi);}
@@ -6320,6 +6331,12 @@ function renderInstall(){
   box.appendChild(c);
 }
 if("serviceWorker" in navigator&&window.isSecureContext){
+  /* 238: 알림을 누르면 그 방으로 — 서비스워커가 누른 방을 알려 주거나(열려 있을 때) 기록해 둠(새로 열릴 때) */
+  const openNoteRoom=async()=>{try{if(!started||!window.caches)return;const c=await caches.open("fstalk-meta"),r=await c.match("./openroom");if(!r)return;await c.delete("./openroom");
+    const [id,t]=(await r.text()).split("|");if(/^[\w-]+$/.test(id)&&Date.now()-(+t||0)<90000)go("room-"+id);}catch(e){}};
+  window.openNoteRoom=openNoteRoom;
+  navigator.serviceWorker.addEventListener("message",e=>{const d=e.data;if(d&&d.fsOpenRoom&&/^[\w-]+$/.test(d.fsOpenRoom)){if(started){go("room-"+d.fsOpenRoom);try{caches.open("fstalk-meta").then(c=>c.delete("./openroom"));}catch(x){}}}});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(openNoteRoom,300);});
   window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});});
 }
 renderInstall();
@@ -6756,7 +6773,7 @@ function setRow(parent,icon,title,sub,onClick,right,cls){
 }
 function setSec(body,title){const sec=el("section","ssec");sec.appendChild(el("h4",null,title));const card=el("div","scard");sec.appendChild(card);body.appendChild(sec);return card;}
 /* 169: 버전 정보 — 지금 버전 + 최근 바뀐 것(사용자에게 보이는 것만) + 새 버전 확인 */
-const VLOG=[["11/9","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
+const VLOG=[["11/10","Slack 요청 상세에서 왼쪽으로 밀면 다음 요청, 오른쪽으로 밀면 이전 요청"],["11/10","CS쉐어링(주말·야간) 요청 — 서울·경기·강원·제주·인천은 EAST·WEST·FSS, 대전·광주는 CENTRAL, 부산·대구는 SOUTH에 표시(담당자 멘션이 우선)"],["11/9","Slack 글도 알림 — 알림을 켠 팀 방·Slack 채널 방에 Slack 글이 오면 울림(같은 글은 한 번)"],["11/9","알림 처음 설정 — 우리 팀·전체공지·FS·Slack 채널 켬, 다른 팀·사무소 방 끔"],["11/9","CS 방 없앰 — CSO·CS쉐어링 글은 Slack 채널 방에서"],["11/9","전체방 없앰 — FS·CS·전체공지·팀방·Slack 채널 방으로"],["11/9","Slack 요청 — 「FS WEST 로 전달」처럼 다시 넘긴 요청도 받기, 같은 날 재요청은 「재요청」 표시(완료였으면 다시 새 요청)"],["11/9","「대화 알림」 — 홈 위쪽·대화 목록에서 전체·방별 알림 한 번에 켜고 끄기, 꺼져 있으면 「대화」 아이콘에 표시"],["11/9","대화방 위 아이콘 아래 이름 표시·「알림」 바로 켜고 끄기, Slack 채널 방은 기본 알림 꺼짐(내 팀 글은 팀 방에서 알림)"],["11/9","Slack 채널 방 3개(CSO 요청·CS쉐어링 요청·group-sysmex-talk) — 여기서 쓴 글은 Slack 으로, 채널 글은 해당 팀 방에도"],["11/9","PC 왼쪽 「Talk」 = Sysmex Talk 검색, 통합 검색에 「Sysmex Talk에서 찾기」"],["11/9","「수리이력 검색」 이름을 「Sysmex Talk 검색」으로"],["11/9","홈 정리 — 검색 한 줄·오늘 근무 숫자 먼저·나머지는 「더 보기」, PC 왼쪽 메뉴 정리(업무 앱·메뉴), 처음 쓰는 분 둘러보기 새로"],["11/9","Slack 요청 홈 맨 위·✅ 확인 양쪽 표시·현장 「이동/마칩니다」로 상태 자동 반영"],["11/6","Slack 요청함 — CSO 기술요청·야간 접수 글을 붙여 넣으면 기관·장비·요청으로 나눠 담당·회신·완료 관리 (메뉴 「Slack 요청」)"],["11/5","수리이력 검색 2차 개선 — 주제별 탐색·적용 조건 해제·연관 대화 묶어 보기·대화 복사"],["11/5","홈에 수리이력 검색 카드 — 실마리 바로 아래에서 바로 검색"],["11/5","수리이력 검색 — 시스멕스톡 2016~2026 현장 이력(약 38만 건)을 장비·유형·기간·작성자로 검색"],["11/3","팀방·사무소방은 그 팀·사무소 사람과 관리자만"],["11/3","기술정보 첨부 보기·실마리 즐겨찾기 포털 안에서 열기 (KnowledgeCenter·HR·교육 영상·SharePoint는 새 창)"],["11/3","/휴가 11/5 오전 같은 대화 명령 인식 오류 수정"],["11/3","기술정보에 파일 올리기·받기 (10MB 이하)"],["11/3","부품 발주 관리 시스템 포털 안에서 열기"],["11/3","부품 검색(홈) — CRM 부품재고·입출 기준, 사무소별 재고·최근 1년 출고·교체 부품, 같은 부품의 신규·중고를 한 줄에"],["11/3","부품 발주 관리 시스템 바로가기(FSS·FSOM)"],["11/3","기술정보: 누르면 정보를 먼저 보고 「열기」, ECR·FCA 번호, 직원 누구나 등록(고치기는 본인·관리자)"],
   ["11/3","대화 입력창 「/」로 일정 바로 등록 안내"],["11/3","팀방·사무소방은 해당 인원만 보기"],["11/3","홈 오늘의 업무: 우리 팀 먼저, 길면 더보기"],["11/3","조직도 체계도(고객접점부문 → FSG → 팀)"],["11/3","바로가기 묶음 정리·회사 사이트·KnowledgeCenter·Product Manual DB"],
   ["11/3","고객만족도 월간 게시물·접속 시 팝업"],["10/31","휴대폰 홈 오늘 중심·탭 밀기 개선·길찾기 수정"]];
 function openVersion(){
