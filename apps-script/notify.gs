@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v42';
+const NOTIFY_VER = 'v43';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1188,7 +1188,7 @@ function slackSend_(req){
   slkTeamRooms_(text, text, name, C).forEach(function(r){ dbPut_('talk/msgs/'+r+'/'+key+'t', v); rooms.push(r); });
   if(C.type === 'feed'){ try{ slkFieldHint_(text, name, now); }catch(e){ console.error(e); } }
   try{ slkPushFlush_([{rooms:rooms, name:name, text:text, at:now, by:me.team+'_'+me.name}]); }catch(e){ console.error(e); }   // 235
-  return {ok:true, ts:j.ts, ver:NOTIFY_VER};
+  return {ok:true, ts:j.ts, rooms:rooms, ver:NOTIFY_VER};   // 256: 복사된 방도 알려 줌
 }
 /* 224: 한 번 — 222 때 CS 방·전체방에 들어간 Slack 글을 채널 방으로 옮김(CS 방은 포털 전용으로 되돌림) */
 function slkMig224_(){
