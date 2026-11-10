@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v49';
+const NOTIFY_VER = 'v50';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -887,7 +887,7 @@ function slackPull(force, opt){
               if(!known && norm(cur.t) !== norm(b.slice(0,4000)) && +m.ts*1000 - (+cur.at||0) > 60*1000){
                 dbPut_('talk/slack/req/'+id+'/rr/'+rk, {n:slkPerson_(who), t:b.slice(0,600), at:at, ch:ch, ts:m.ts});
                 const p = {rrAt:at};
-                if(cur.st === 'done'){ p.st = 'new'; p.doneAt = null; p.doneBy = null; p.autoFin = null; p.fin = null; added++; }
+                if(cur.st === 'done'){ p.st = 'new'; p.doneAt = null; p.doneBy = null; p.autoFin = null; p.fin = null; p.ackDone = null; added++; }
                 dbPatch_('talk/slack/req/'+id, p);
                 return;
               }
@@ -934,6 +934,7 @@ function slackPull(force, opt){
     if(!PR.SLK_DEDUP_232){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_REQDUP_233){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_LINK_229){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
+    if(!PR.SLK_ACKDONE_266){ try{ slkAckDone266_(); props.setProperty('SLK_ACKDONE_266','1'); }catch(e){ meta.err = '확인 완료 정리: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!PR.SLK_MIG_224){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
     // 213: 확인(✅)·답글 맞추기를 1분마다(요청 채널 기록 2번 읽기로 가볍게). Slack 이벤트가 들어오고 있으면 5분마다만(이벤트가 바로 처리함)
     // 214: 이벤트가 잠금에 막혀 못 한 확인 맞추기(slkSyncPend)는 다음 1분 트리거가 바로 함
@@ -1016,7 +1017,8 @@ function slkSync_(names){
       const an = uids.length ? slkPerson_(slkUser_(uids[0], names)) : '';
       patch.ack = {n: an || '', at: Date.now()};
     }
-    if(ackR && (r.st === 'new' || autoDone)){ patch.st = 'doing'; if(!r.who && patch.ack && patch.ack.n) { patch.who = patch.ack.n; patch.whoAt = Date.now(); } }
+    // 266: ✅ 확인 = 「확인 완료」(사용자 결정 A — 전화 처리·방문 안 함이 많아 처리 중에 쌓였음). 현장 「이동」 글이 있는 방문 중 건은 그대로
+    if(ackR && (r.st === 'new' || autoDone || (r.st === 'doing' && !r.mv))){ const an = (patch.ack && patch.ack.n) || (r.ack && r.ack.n) || ''; if(!r.who && an){ patch.who = an; patch.whoAt = Date.now(); } slkAckDone_(patch, r, an, Date.now()); }
     else if(r.st === 'new' || autoDone){
       const rep = Object.keys(th).map(function(k){ return th[k]; }).filter(function(x){ return x.n && x.n !== r.by; })[0];
       if(rep){ patch.st = 'doing'; patch.who = r.who || rep.n; patch.whoAt = rep.at; }
@@ -1368,23 +1370,37 @@ function slkFieldPurpose_(flat, hosp, r){
   const req = (String(r.t||'') + (r.f ? Object.keys(r.f).map(function(k){ return r.f[k]; }).join(' ') : '')).replace(/\s+/g,'');
   return req.indexOf(m[0]) >= 0 ? '' : m[0];
 }
+/* 266: 한 번 — 처리 중인데 ✅ 확인이 있고 방문 중(이동 글) 표시가 없는 요청(최근 21일)을 「확인 완료」로. 확인 뒤 재요청이 붙은 건은 그대로 */
+function slkAckDone266_(){
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-21*864e5)) || {}; const up = {};
+  Object.keys(all).forEach(function(id){ const r = all[id]; if(!r || r.st !== 'doing' || !r.ack || r.mv) return; if(+r.rrAt > +(r.ack.at||0)) return;
+    up[id+'/st'] = 'done'; up[id+'/doneAt'] = +r.ack.at || Date.now(); up[id+'/doneBy'] = r.ack.n || r.who || 'Slack'; up[id+'/ackDone'] = true; });
+  if(Object.keys(up).length) dbPatch_('talk/slack/req', up);
+  return Object.keys(up).length/4;
+}
+/* 266: 확인하면 완료 — 방문 중(현장 「이동」 글)이 아니면 st=done·ackDone. 나중에 담당이 「이동」 글을 쓰면 다시 방문 중, 「마칩니다」면 방문 완료 */
+function slkAckDone_(patch, r, n, at){
+  if(r.mv && r.st !== 'done'){ if(r.st === 'new') patch.st = 'doing'; return; }
+  patch.st = 'done'; patch.doneAt = at; patch.doneBy = n || 'Slack'; patch.ackDone = true;
+}
 function slkFieldHint_(text, who, at){
   if(!SLK_FIN_RE.test(text) && !SLK_MOVE_RE.test(text)) return;
   const all = SLK_BATCH ? (SLK_REQC || (SLK_REQC = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {})) : (dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {});   // 261: 도는 동안 한 번만 읽음
   const flat = text.replace(/\s+/g,''), change = SLK_CHANGE_RE.test(flat);
   Object.keys(all).forEach(function(id){
     const r = all[id]; if(!r || !r.f || !r.f.hosp) return;
-    const open = r.st !== 'done'; let act = open ? slkFieldAct_(flat, r.f.hosp) : ''; const patch = {};
+    const open = r.st !== 'done' || !!r.ackDone; let act = open ? slkFieldAct_(flat, r.f.hosp) : ''; const patch = {};   // 266: 확인 완료 건도 현장 글로 방문 중·방문 완료가 될 수 있음
     if(change && open && r.mv && act !== 'move' && slkSameName_(r.mv.n, who) && (+r.mv.at||0) < at) patch.mv = null;   // 258: 경로 변경·취소
     if(act && slkFieldPurpose_(flat, r.f.hosp, r)) act = '';   // 258: 요청과 무관한 이동·마침(설치·대기·평가…)
     if(act === 'fin'){
       patch.fin = {n:who, t:text.slice(0,400), at:at};
-      patch.st = 'done'; patch.doneAt = at; patch.doneBy = who || 'Slack'; patch.autoFin = true; if(!r.who && who) patch.who = who;
+      patch.st = 'done'; patch.doneAt = at; patch.doneBy = who || 'Slack'; patch.autoFin = true; patch.ackDone = null; if(!r.who && who) patch.who = who;
     }else if(act === 'move'){
       if(!slkIsOwner_(r, who)) act = '';   // 258: 그 요청의 담당·확인한 사람이 아니면 방문 중으로 바꾸지 않음(새 요청 담당 자동 지정도 없앰)
       else if(!(r.mv && r.mv.at >= at)){
         patch.mv = {n:who, t:text.slice(0,400), at:at};
         if(r.st === 'new') patch.st = 'doing';
+        if(r.ackDone){ patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null; patch.ackDone = null; }   // 266: 확인 완료 뒤 방문 → 다시 방문 중
       }
     }
     if(Object.keys(patch).length){ dbPatch_('talk/slack/req/'+id, patch); if(SLK_BATCH) Object.keys(patch).forEach(function(k){ if(patch[k] === null) delete r[k]; else r[k] = patch[k]; }); }   // 캐시도 같이 고침
@@ -1431,12 +1447,12 @@ function slackAct_(req){
     if(r.st === 'new'){ patch.st = 'doing'; patch.who = r.who || name; patch.whoAt = now; }
   }else if(op === 'ack'){   // 210: ✅ = 확인(접수)
     if(!r.multi){ try{ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); }catch(e){} post('✅ '+name+' 확인'+(text?'\n'+text:'')); }
-    patch.ack = {n:name, at:now}; if(r.st === 'new'){ patch.st = 'doing'; } if(!r.who){ patch.who = name; patch.whoAt = now; }
+    patch.ack = {n:name, at:now}; if(!r.who){ patch.who = name; patch.whoAt = now; } if(r.st !== 'done') slkAckDone_(patch, r, name, now);   // 266: 확인하면 완료(방문 중이면 그대로)
   }else if(op === 'done'){   // 210: ✅ 는 「확인」이라 완료에는 반응을 달지 않음
     if(!r.multi){ post('처리 완료 — '+name+(text?'\n'+text:'')); }
-    patch.st = 'done'; patch.doneAt = now; patch.doneBy = name; if(!r.who) patch.who = name;
+    patch.st = 'done'; patch.doneAt = now; patch.doneBy = name; patch.ackDone = null; if(!r.who) patch.who = name;
   }else if(op === 'reopen'){
-    patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null;
+    patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null; patch.ackDone = null;
   }else return {ok:false,err:'bad op',ver:NOTIFY_VER};
   dbPatch_('talk/slack/req/'+id, patch);
   return {ok:true,ver:NOTIFY_VER};

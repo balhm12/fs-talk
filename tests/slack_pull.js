@@ -25,7 +25,7 @@ const ctx={
  ContentService:{createTextOutput:t=>({t,setMimeType(){return this}}),MimeType:{JSON:1}},
  ScriptApp:{getProjectTriggers:()=>[]},Logger:{log(){}},console};
 ctx.accessToken_=null;
-const f=new Function(...Object.keys(ctx),src+';verifyUser_=function(t){return String(t||"").indexOf("tok-")===0?String(t).slice(4):null;};return {slackPull,doPost,slackSend_,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
+const f=new Function(...Object.keys(ctx),src+';verifyUser_=function(t){return String(t||"").indexOf("tok-")===0?String(t).slice(4):null;};return {slackPull,doPost,slackSend_,slkFieldHint_,slkAckDone266_,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
 const g=f(...Object.values(ctx));
 module.exports={g,db,props,calls,cache,hist,sent};
 // 213: Slack 가져오기 회귀 시험 — 한 글 오류가 전체를 멈추지 않는지, 따옴표 쿼리, 확인(✅) 동기화, 이벤트 처리
@@ -34,7 +34,7 @@ if(require.main===module){
   g.slackPull(true);
   const m=db.talk.slack.meta, R=Object.values(db.talk.slack.req);
   assert(m.ok && !m.err, 'meta 오류 없음: '+m.err);
-  assert(R.length===1 && R[0].st==='doing' && R[0].ack.n==='테스트2' && !R[0].mv, '요청·확인 표시, 담당·확인자가 아닌 사람(테스트1)의 「이동」은 방문 중으로 안 바뀜(258)');
+  assert(R.length===1 && R[0].st==='done' && R[0].ackDone===true && R[0].ack.n==='테스트2' && !R[0].mv, '요청·✅ 확인 → 확인 완료(266), 담당·확인자가 아닌 사람(테스트1)의 「이동」은 방문 중으로 안 바뀜(258)');
   assert(Object.keys(props).filter(k=>k.startsWith('SLK_TS_')).length===3, '세 채널 모두 읽은 시각 저장');
   assert(!calls.some(u=>/[" ]/.test(u)), '따옴표·공백 없는 주소');
   const n=calls.filter(u=>u.includes('conversations.replies')).length; g.slackPull(true);
@@ -62,7 +62,7 @@ if(require.main===module){
   g.slackPull(true);
   R=db.talk.slack.req[R[0]];
   assert.strictEqual(R.ch,'C0AT8RP3QDN','handover 로 옮김');
-  assert(R.ack && R.ack.n==='테스트2' && R.st==='doing','handover 의 ✔ 를 확인으로');
+  assert(R.ack && R.ack.n==='테스트2' && R.st==='done' && R.ackDone===true,'handover 의 ✔ 를 확인으로');
   console.log('slack_pull 214: 통과');
 }
 // 214-A: handover 글을 이미 지나 읽은 뒤(배포 전 자료) — 확인 맞추기가 handover 짝을 찾아 옮김
