@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v43';
+const NOTIFY_VER = 'v44';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1238,27 +1238,49 @@ function slkChanBackfill_(ch, C, names, since){
 }
 /* 현장 마무리 보고(「○○병원 마칩니다」)에 열린 요청의 기관명이 있으면 요청에 표시 — 자동으로 닫지는 않음 */
 /* 215: 현장 글(#group-sysmex-talk)의 기관명이 열린 요청과 맞으면 (사용자 결정 2026-11-09)
- *  「○○ 이동합니다」 = 방문 중(mv, 새 요청이면 처리 중·담당), 「○○ 마칩니다/마쳤/마치고/마무리/종료/완료」 = 완료(fin + st done, autoFin).
- *  한 글에 병원이 여럿이면 병원 이름 바로 뒤에 먼저 나오는 말로 판단(「A 마치고 B 이동합니다」 → A 완료·B 방문 중) */
+ *  「○○ 이동합니다」 = 방문 중(mv), 「○○ 마칩니다/마쳤/마치고/마무리/종료/완료」 = 완료(fin + st done, autoFin).
+ *  한 글에 병원이 여럿이면 병원 이름 바로 뒤에 먼저 나오는 말로 판단(「A 마치고 B 이동합니다」 → A 완료·B 방문 중)
+ *  258(사용자 지적 2026-11-11 「이동한 게 아님」): ①이동은 글쓴이가 그 요청의 담당·확인한 사람일 때만 방문 중으로 표시(새 요청 담당 자동 지정 없음)
+ *  ②병원 이름 근처에 이전설치·서비스 대기·평가·교육 같은 용건이 있고 요청 글에는 없으면 요청과 무관한 이동·마침이라 건너뜀
+ *  ③「경로변경·취소」 글이면 같은 사람이 앞서 이동한 다른 요청의 방문 중 표시를 지움 */
 const SLK_FIN_RE = /마칩니다|마쳤|마치고|마침|마무리|종료|완료/;
 const SLK_MOVE_RE = /이동/;
+const SLK_CHANGE_RE = /경로(?:를)?변경|행선지(?:를)?변경|목적지(?:를)?변경|일정변경|취소/;
+const SLK_PURPOSE_RE = /이전설치|이설|설치|서비스대기|대기|평가|데모|교육|회의|연수/;
+function slkSameName_(a, b){ const n = function(x){ return slkPerson_(x).replace(/\s+/g,''); }; const x = n(a), y = n(b); return !!x && !!y && x === y; }
+function slkIsOwner_(r, who){ return slkSameName_(r.who, who) || !!(r.ack && slkSameName_(r.ack.n, who)); }
+/* 기관명 근처(앞 10자 ~ 이동·마침 말까지)에 요청과 무관한 용건이 있고 요청 글에는 그 말이 없으면 그 말을 돌려줌 */
+function slkFieldPurpose_(flat, hosp, r){
+  const h = String(hosp||'').replace(/\s+/g,'').replace(/^(의료법인|재단법인|학교법인)/,'');
+  let i = flat.indexOf(h), L = h.length;
+  if(i < 0 && h.length >= 6){ i = flat.indexOf(h.slice(0,4)); L = 4; }
+  if(i < 0) return '';
+  const rest = flat.slice(i + L), e = rest.search(new RegExp(SLK_FIN_RE.source + '|' + SLK_MOVE_RE.source));
+  const seg = flat.slice(Math.max(0, i - 10), i + L + (e < 0 ? rest.length : e));
+  const m = SLK_PURPOSE_RE.exec(seg); if(!m) return '';
+  const req = (String(r.t||'') + (r.f ? Object.keys(r.f).map(function(k){ return r.f[k]; }).join(' ') : '')).replace(/\s+/g,'');
+  return req.indexOf(m[0]) >= 0 ? '' : m[0];
+}
 function slkFieldHint_(text, who, at){
   if(!SLK_FIN_RE.test(text) && !SLK_MOVE_RE.test(text)) return;
   const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {};
-  const flat = text.replace(/\s+/g,'');
+  const flat = text.replace(/\s+/g,''), change = SLK_CHANGE_RE.test(flat);
   Object.keys(all).forEach(function(id){
-    const r = all[id]; if(!r || r.st === 'done' || !r.f || !r.f.hosp) return;
-    const act = slkFieldAct_(flat, r.f.hosp); if(!act) return;
-    const patch = {}, who2 = r.who || who;
+    const r = all[id]; if(!r || !r.f || !r.f.hosp) return;
+    const open = r.st !== 'done'; let act = open ? slkFieldAct_(flat, r.f.hosp) : ''; const patch = {};
+    if(change && open && r.mv && act !== 'move' && slkSameName_(r.mv.n, who) && (+r.mv.at||0) < at) patch.mv = null;   // 258: 경로 변경·취소
+    if(act && slkFieldPurpose_(flat, r.f.hosp, r)) act = '';   // 258: 요청과 무관한 이동·마침(설치·대기·평가…)
     if(act === 'fin'){
       patch.fin = {n:who, t:text.slice(0,400), at:at};
       patch.st = 'done'; patch.doneAt = at; patch.doneBy = who || 'Slack'; patch.autoFin = true; if(!r.who && who) patch.who = who;
-    }else{
-      if(r.mv && r.mv.at >= at) return;
-      patch.mv = {n:who, t:text.slice(0,400), at:at};
-      if(r.st === 'new'){ patch.st = 'doing'; if(!r.who && who){ patch.who = who; patch.whoAt = at; } }
+    }else if(act === 'move'){
+      if(!slkIsOwner_(r, who)) act = '';   // 258: 그 요청의 담당·확인한 사람이 아니면 방문 중으로 바꾸지 않음(새 요청 담당 자동 지정도 없앰)
+      else if(!(r.mv && r.mv.at >= at)){
+        patch.mv = {n:who, t:text.slice(0,400), at:at};
+        if(r.st === 'new') patch.st = 'doing';
+      }
     }
-    dbPatch_('talk/slack/req/'+id, patch);
+    if(Object.keys(patch).length) dbPatch_('talk/slack/req/'+id, patch);
   });
 }
 /* 기관명 위치 뒤에서 먼저 나오는 말: 'fin' | 'move' | '' */
