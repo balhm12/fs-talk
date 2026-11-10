@@ -2,7 +2,7 @@ const fs=require('fs');const src=fs.readFileSync(process.env.GS||require('path')
 const db={talk:{roster:{'FSS Team':{'테스트1':'',},'FS WEST':{'테스트2':''}},slack:{req:{}}}};
 const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cache={};let calls=[];const sent=[];const fcm=[];
 function get(p){let o=db;for(const k of p.split('/').filter(Boolean)){o=o&&o[decodeURIComponent(k)];}return o;}
-function set(p,v,patch){const ks=p.split('/').filter(Boolean).map(decodeURIComponent);let o=db;for(const k of ks.slice(0,-1)){o[k]=o[k]||{};o=o[k];}const L=ks[ks.length-1];if(patch){o[L]=o[L]||{};for(const k in v){if(v[k]===null)delete o[L][k];else o[L][k]=v[k];}}else o[L]=v;}
+function set(p,v,patch){const ks=p.split('/').filter(Boolean).map(decodeURIComponent);let o=db;for(const k of ks.slice(0,-1)){o[k]=o[k]||{};o=o[k];}const L=ks[ks.length-1];if(patch){o[L]=o[L]||{};for(const k in v){if(k.includes('/')){set(ks.concat(k.split('/')).join('/'),v[k]===null?undefined:v[k]);continue;}if(v[k]===null)delete o[L][k];else o[L][k]=v[k];}}else o[L]=v;}
 const now=Date.now()/1000;
 const hist={C0AT8RP3QDN:[{ts:(now-60).toFixed(6),user:'U1',text:'<기술 요청>\n<인계 : FS WEST>\n기관명 : 테스트병원\n장비 : XN-1000\n요청사항 : 에러 확인',reactions:[{name:'white_check_mark',users:['U2']}],reply_count:1,latest_reply:(now-30).toFixed(6)}],C0AHFJGKMTL:[],C0C6U7RQ44D:[{ts:(now-50).toFixed(6),user:'U1',text:'테스트병원 이동합니다'}]};
 const ctx={
