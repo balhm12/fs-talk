@@ -106,7 +106,7 @@ function doPost(e){
   }
 }
 
-const NOTIFY_VER = 'v41';
+const NOTIFY_VER = 'v42';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -178,7 +178,7 @@ function voice_(req){
   const ext = /mp4|m4a|aac/.test(mt) ? 'm4a' : /ogg/.test(mt) ? 'ogg' : /wav/.test(mt) ? 'wav' : /mpeg|mp3/.test(mt) ? 'mp3' : 'webm';
   const rooms = (Array.isArray(req.rooms) ? req.rooms : []).map(function(x){ return String(x).replace(/[\r\n]+/g,' ').slice(0,40); }).filter(String).slice(0,200);
   // 1) 받아쓰기 — 방 이름·장비 용어를 힌트로 주면 더 정확함
-  const hint = ('FS 포털(사내 메신저·업무 포털). 방: ' + rooms.slice(0,40).join(', ') + '. 장비: XN, XN-L, UF, UC, SP-50, CN, HISCL, CS-1600, CA-620.').slice(0,600);
+  const hint = ('FS Portal(사내 메신저·업무 포털). 방: ' + rooms.slice(0,40).join(', ') + '. 장비: XN, XN-L, UF, UC, SP-50, CN, HISCL, CS-1600, CA-620.').slice(0,600);
   const blob = Utilities.newBlob(Utilities.base64Decode(data), mt, 'voice.'+ext);
   const tr = UrlFetchApp.fetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'post',muteHttpExceptions:true,
     headers:{Authorization:'Bearer '+key},
@@ -697,7 +697,7 @@ function removeDigestTrigger(){
 
 /* =====================================================================
  * v24: Slack 요청함 — Slack 채널의 요청을 포털로 가져와 처리하고, 처리 내용을 Slack 스레드로 되돌림
- *  - 비밀값: 스크립트 속성 SLACK_BOT_TOKEN (xoxb-…, Slack 앱 「FS 포털」) — 코드·저장소·채팅에 두지 않음
+ *  - 비밀값: 스크립트 속성 SLACK_BOT_TOKEN (xoxb-…, Slack 앱 「FS Portal」(예전 이름 FS 포털)) — 코드·저장소·채팅에 두지 않음
  *  - installSlackTrigger() 한 번 실행 → 1분마다 slackPull() (새 글 가져오기 + 5분마다 열린 요청의 스레드·반응 맞추기)
  *  - DB: talk/slack/meta · req/{id} · feed/{ts}  (읽기 = 승인된 직원, 쓰기 = 이 서버만)
  *  - 포털 → Slack: doPost type 'slack' (op: claim·reply·done·reopen) — 승인된 직원만, 그 사람 이름으로 스레드에 씀
@@ -811,7 +811,7 @@ function slackPull(force, opt){
           if(+m.ts <= +last) return;
           if(+m.ts > +maxTs) maxTs = m.ts;
           if(m.subtype && ['bot_message','thread_broadcast'].concat(C.type === 'feed' ? ['file_share'] : []).indexOf(m.subtype) < 0) return;   // 들어옴·나감 등
-          if(m.bot_id && m.app_id && m.username && /FS 포털/.test(m.username)) return;          // 우리가 보낸 글
+          if(m.bot_id && m.app_id && m.username && /FS (?:포털|Portal)/.test(m.username)) return;          // 우리가 보낸 글
           const raw = String(m.text||''), text = slkClean_(raw);
           const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
           const men = /<@([A-Z0-9]+)\|([^>]*)>/.exec(raw);
@@ -936,8 +936,8 @@ function slkSync_(names){
     const parent = msgs[0], patch = {}, th = {};
     if(lr !== null && lr !== String(r.lr || '')) patch.lr = lr || null;
     msgs.slice(1).forEach(function(m){
-      const n = m.user ? slkPerson_(slkUser_(m.user, names)) : slkPerson_(String(m.username||'').replace(/\s*\(FS 포털\)\s*$/,''));
-      th[slkKey_(m.ts)] = {n:n, t:slkClean_(m.text).slice(0,1500), at:Math.round(+m.ts*1000), p:/FS 포털/.test(m.username||'')||null};
+      const n = m.user ? slkPerson_(slkUser_(m.user, names)) : slkPerson_(String(m.username||'').replace(/\s*\(FS (?:포털|Portal)\)\s*$/,''));
+      th[slkKey_(m.ts)] = {n:n, t:slkClean_(m.text).slice(0,1500), at:Math.round(+m.ts*1000), p:/FS (?:포털|Portal)/.test(m.username||'')||null};
     });
     if(Object.keys(th).length) patch.th = th;
     const rx = (parent.reactions||[]).map(function(x){ return x.name; });
@@ -1165,7 +1165,7 @@ function slkToChan_(m, raw, text, name, at, ch, C, opt){
     dbPut_('talk/msgs/'+r+'/'+key+'t', v); pq.rooms.push(r);
   });   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
 }
-/* 포털 채널 방에서 쓴 글 → Slack 채널(「이름 (FS 포털)」) + 포털 채널 방·팀 방에 저장. 승인된 직원 누구나(사용자 결정) */
+/* 포털 채널 방에서 쓴 글 → Slack 채널(「이름 (FS Portal)」) + 포털 채널 방·팀 방에 저장. 승인된 직원 누구나(사용자 결정) */
 function slackSend_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid) || {};
@@ -1179,7 +1179,7 @@ function slackSend_(req){
   cache.put('slks:'+uid, '1', 2);
   const C = SLACK_CH[ch], name = String(me.name||'').slice(0,20);
   const esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const j = slackApi_('chat.postMessage', {channel:ch, text:esc, username:name+' (FS 포털)', unfurl_links:false}, true);
+  const j = slackApi_('chat.postMessage', {channel:ch, text:esc, username:name+' (FS Portal)', unfurl_links:false}, true);
   if(!j || !j.ts) return {ok:false,err:'Slack 전송 실패',ver:NOTIFY_VER};
   const now = Date.now(), key = 's'+slkKey_(j.ts);
   const v = {uid:uid, name:name, text:text.slice(0,4000), ts:now, slk:{ch:ch, ts:j.ts, cn:C.name, out:true}};
@@ -1228,7 +1228,7 @@ function slkChanBackfill_(ch, C, names, since){
     const j = slackApi_('conversations.history', prm);
     (j.messages||[]).forEach(function(m){
       if(m.subtype && ['bot_message','thread_broadcast','file_share'].indexOf(m.subtype) < 0) return;
-      if(m.bot_id && m.username && /FS 포털/.test(m.username)) return;
+      if(m.bot_id && m.username && /FS (?:포털|Portal)/.test(m.username)) return;
       const who = slkPerson_(m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || ''));
       if(C.type === 'req') slkMarkCso_(m, who);
       slkToChan_(m, String(m.text||''), slkClean_(String(m.text||'')), who, Math.round(+m.ts*1000), ch, C, {noTeam:true});
@@ -1289,7 +1289,7 @@ function slackAct_(req){
   const r = db_('talk/slack/req/'+id); if(!r || !SLACK_CH[r.ch]) return {ok:false,err:'요청이 없습니다',ver:NOTIFY_VER};
   const op = String(req.op||''), name = String(me.name||'').slice(0,20), text = String(req.text||'').trim().slice(0,1500);
   // 211: ✅ 확인은 승인된 직원 누구나 (근무표대로 안 하는 경우가 많음 — 사용자 결정)
-  const post = function(t){ return slackApi_('chat.postMessage',{channel:r.ch, thread_ts:r.ts, text:t, username:name+' (FS 포털)', unfurl_links:false}, true); };
+  const post = function(t){ return slackApi_('chat.postMessage',{channel:r.ch, thread_ts:r.ts, text:t, username:name+' (FS Portal)', unfurl_links:false}, true); };
   const now = Date.now(), patch = {};
   if(r.multi && op !== 'claim' && op !== 'ack' && op !== 'done' && op !== 'reopen') return {ok:false,err:'야간 인계 요약 글은 스레드 회신 대신 담당·완료만 할 수 있습니다',ver:NOTIFY_VER};
   if(op === 'claim'){

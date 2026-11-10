@@ -131,7 +131,7 @@ if(require.main===module){
   let r=g.slackSend_({idToken:'tok-u2',room:'sk_talk',text:'테스트사백병원 <마칩니다> & 확인'});
   assert(r.ok,'보내기 성공 '+JSON.stringify(r));
   const p=sent[sent.length-1];
-  assert(p.channel==='C0C6U7RQ44D' && p.username==='테스트2 (FS 포털)' && /&lt;마칩니다&gt; &amp; 확인/.test(p.text),'Slack 채널·이름·이스케이프');
+  assert(p.channel==='C0C6U7RQ44D' && p.username==='테스트2 (FS Portal)' && /&lt;마칩니다&gt; &amp; 확인/.test(p.text),'Slack 채널·이름·이스케이프');
   const key='s'+r.ts.replace('.','_');
   assert(db.talk.msgs.sk_talk[key].uid==='u2' && db.talk.msgs.sk_talk[key].slk.out && db.talk.msgs.west[key+'t'],'채널 방(내 글) + 팀방 복사본');
   r=g.slackSend_({idToken:'tok-u2',room:'sk_cso',text:'&lt;기술요청&gt;'}); // 같은 사람 2초 안
