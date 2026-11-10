@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v48';
+const NOTIFY_VER = 'v49';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -865,7 +865,7 @@ function slackPull(force, opt){
           }
           else if(C.type === 'feed'){
             if(seen) return;
-            dbPut_('talk/slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
+            slkBatchSet_('slack/feed/'+slkKey_(m.ts), {n:slkPerson_(who), t:text.slice(0,2000), at:at, ch:ch, ts:m.ts});
             slkFieldHint_(text, slkPerson_(who), at);
             return;
           }
@@ -874,6 +874,7 @@ function slackPull(force, opt){
             ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
           blocks.forEach(function(b, i){
             const f = slkParse_(b); if(!f) return;
+            SLK_REQC = null;   // 261: 이 블록이 요청을 쓸 수 있으므로 현장 판정용 요청 목록 캐시를 비움
             if(blocks.length === 1 && hTeam) f.team = hTeam;   // 227: 「CSO Team 먼저 인계드렸으나, FS WEST … 전달」 같은 머리말 = FS 요청(양식이 학술요청이어도)
             else if(/학술\s*요청/.test(b) || (f.team && !/^FS/.test(f.team))) return;   // 202: 학술요청·CSO/SA 인계는 FSG 요청함에 넣지 않음
             const day = Utilities.formatDate(new Date(at), 'Asia/Seoul', 'yyyyMMdd');
@@ -914,14 +915,20 @@ function slackPull(force, opt){
         cursor = j.response_metadata && j.response_metadata.next_cursor || '';
       }while(cursor && ++page < SLK_PULL_PAGES);
       if(fetchOk && cursor) meta.err = '#'+C.name+' 새 글이 '+(SLK_PULL_PAGES*200)+'건을 넘어 가장 오래된 글 일부는 건너뜀';   // 멈춰 서 있는 것보다 최근 글부터 따라잡는 쪽을 택함
+      let batchFail = false;
       if(fetchOk){   // 받기가 중간에 실패하면 새 쪽 글만 받은 것이라 처리하지 않음(읽은 시각을 앞으로 넘기면 사이 글이 빠짐)
         msgs.sort(function(x, y){ return +x.ts - +y.ts; });
+        SLK_BATCH = {upd:{}, ck:[], failed:false, err:''}; SLK_REQC = null;
         for(let k = 0; k < msgs.length; k++){
           if(Date.now() - now > SLK_PULL_BUDGET){ meta.err = '#'+C.name+' 글이 많아 '+k+'/'+msgs.length+'건까지 처리 — 나머지는 다음 분에'; break; }
           try{ slkOne_(msgs[k]); }catch(e){ meta.err = '글 '+msgs[k].ts+': '+String(e.message||e).slice(0,160); console.error(e); }
         }
       }
-      if(fetchOk && String(maxTs) !== String(PR['SLK_TS_'+ch])) props.setProperty('SLK_TS_'+ch, String(maxTs));   // 262: 바뀔 때만 씀   // maxTs 는 oldLast 에서 시작해 처리한 글까지 커짐(오래된 글부터 처리)
+      if(SLK_BATCH){   // 261: 모아 둔 글을 마저 쓰고, 하나라도 못 썼으면 읽은 시각을 넘기지 않음(다음 분에 같은 글부터 다시)
+        slkBatchFlush_(); batchFail = SLK_BATCH.failed; if(batchFail) meta.err = '#'+C.name+' 글 저장 실패 — 다음 분에 다시: '+SLK_BATCH.err;
+        SLK_BATCH = null; SLK_REQC = null;
+      }
+      if(fetchOk && !batchFail && String(maxTs) !== String(PR['SLK_TS_'+ch])) props.setProperty('SLK_TS_'+ch, String(maxTs));   // 262: 바뀔 때만 씀   // maxTs 는 oldLast 에서 시작해 처리한 글까지 커짐(오래된 글부터 처리)
     });
     if(!PR.SLK_RESCAN_227) props.setProperty('SLK_RESCAN_227','1');
     if(!PR.SLK_DEDUP_232){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
@@ -948,7 +955,7 @@ function slackPull(force, opt){
   }catch(e){
     console.error(e);
     try{ dbPatch_('talk/slack/meta',{ok:false, err:String(e.message||e).slice(0,200), at:Date.now()}); }catch(e2){}
-  }finally{ try{lock.releaseLock();}catch(e){} if(!statDone) statAdd_(trig ? (Date.now() - now || 1) : 0); }
+  }finally{ SLK_BATCH = null; SLK_REQC = null; try{lock.releaseLock();}catch(e){} if(!statDone) statAdd_(trig ? (Date.now() - now || 1) : 0); }
 }
 /* 열린 요청(7일 안)의 스레드 답글·반응을 읽어 상태를 맞춤 — Slack 에서 👀/답글 = 처리 중, ✅ = 완료 */
 function slkSync_(names){
@@ -1208,6 +1215,31 @@ function slkPushFlush_(q){
   props.setProperty('SLK_PUSH_DAY', day + '|' + (used + targets.length));
   return {at:Date.now(), posts:q.length, devices:targets.length, sent:sent, skipped:skipped, day:used + targets.length};
 }
+/* 261: 한꺼번에 많이 올라올 때 DB 호출 줄이기 — slackPull 이 글을 처리하는 동안(SLK_BATCH)은 채널 방·팀 방 글과 #group-sysmex-talk 기록(feed)을
+ * 모아 두었다가 100건마다·채널 끝에서 `talk` 에 멀티패스 PATCH 한 번으로 씀. 실패하면 경로별 PUT 으로 다시 쓰고, 그래도 안 되면 읽은 시각을 넘기지 않아 다음 분에 다시 처리 */
+var SLK_BATCH = null;
+var SLK_REQC = null;   // 261: 한 번 도는 동안 요청 목록(현장 「이동/마칩니다」 판정용) 한 번만 읽기 — 요청을 쓰면 비움
+function dbTalk_(updates){   // 'talk' 기준 상대 경로 → 값(null = 삭제)
+  const ks = Object.keys(updates); if(!ks.length) return;
+  const one = function(k){ if(updates[k] === null) dbDelete_('talk/'+k); else dbPut_('talk/'+k, updates[k]); };
+  if(ks.length === 1){ one(ks[0]); return; }
+  try{ dbPatch_('talk', updates); }
+  catch(e){ console.error('멀티패스(talk) 실패 — 경로별로 다시 씀: '+String(e.message||e).slice(0,120)); ks.forEach(one); }
+}
+function slkBatchSet_(path, v, ck){   // path = 'talk' 기준 상대 경로
+  if(!SLK_BATCH){ const u = {}; u[path] = v; dbTalk_(u); return; }
+  SLK_BATCH.upd[path] = v; (ck||[]).forEach(function(c){ SLK_BATCH.ck.push(c); });
+  if(Object.keys(SLK_BATCH.upd).length >= 100) slkBatchFlush_();
+}
+function slkBatchFlush_(){
+  const b = SLK_BATCH; if(!b || !Object.keys(b.upd).length) return !(b && b.failed);
+  const upd = b.upd, ck = b.ck; b.upd = {}; b.ck = [];
+  try{ dbTalk_(upd); return true; }
+  catch(e){   // 쓰지 못한 글의 팀 방 중복 방지 표시를 지워야 다시 처리할 때 복사본이 만들어짐
+    const c = CacheService.getScriptCache(); ck.forEach(function(k){ try{ c.remove(k); }catch(e2){} });
+    b.failed = true; b.err = String(e.message||e).slice(0,160); console.error(e); return false;
+  }
+}
 /* 260-B: 여러 방에 같은 글을 쓸 때 요청 한 번으로(Firebase 멀티패스 PATCH — 전부 쓰이거나 전부 안 쓰임). 실패하면 경로별로 다시 씀
  * updates 키 = 'talk/msgs' 아래 상대 경로('방/글키') */
 function dbMsgs_(updates){
@@ -1215,6 +1247,11 @@ function dbMsgs_(updates){
   if(ks.length === 1){ dbPut_('talk/msgs/'+ks[0], updates[ks[0]]); return; }
   try{ dbPatch_('talk/msgs', updates); }
   catch(e){ console.error('멀티패스 실패 — 경로별로 다시 씀: '+String(e.message||e).slice(0,120)); ks.forEach(function(k){ dbPut_('talk/msgs/'+k, updates[k]); }); }
+}
+function slkMsgWrite_(upd, cks){
+  if(!SLK_BATCH){ dbMsgs_(upd); return; }
+  Object.keys(upd).forEach(function(k){ SLK_BATCH.upd['msgs/'+k] = upd[k]; }); (cks||[]).forEach(function(c){ SLK_BATCH.ck.push(c); });
+  if(Object.keys(SLK_BATCH.upd).length >= 100) slkBatchFlush_();
 }
 function slkToChan_(m, raw, text, name, at, ch, C, opt){
   if(!C.pr) return;
@@ -1224,15 +1261,15 @@ function slkToChan_(m, raw, text, name, at, ch, C, opt){
   const key = 's'+slkKey_(m.ts), v = {uid:'slack', name:(name||'Slack').slice(0,40), text:t.slice(0,4000), ts:at, slk:{ch:ch, ts:m.ts, cn:C.name}};
   const upd = {}; upd[C.pr+'/'+key] = v;
   const pq = (opt && opt.noTeam) ? null : {rooms:[C.pr], name:v.name, text:t, at:at};
-  if(opt && opt.noTeam){ dbMsgs_(upd); return; }
+  if(opt && opt.noTeam){ slkMsgWrite_(upd, []); return; }
   SLK_PUSHQ.push(pq);
   // 232: CSO 가 같은 글을 handover 와 group-sysmex-talk 에 같이 올리면 팀 방에 두 번 들어가던 것 → 같은 사람·같은 내용은 15분 안에 한 번만
-  const cache = CacheService.getScriptCache(), hsh = slkHash_((name||'')+'|'+String(text||'').replace(/\s+/g,''));
+  const cache = CacheService.getScriptCache(), hsh = slkHash_((name||'')+'|'+String(text||'').replace(/\s+/g,'')), cks = [];
   slkTeamRooms_(raw, text, name, C).forEach(function(r){
-    const ck = 'slkdup:'+r+':'+hsh; if(cache.get(ck)) return; cache.put(ck, '1', 900);
+    const ck = 'slkdup:'+r+':'+hsh; if(cache.get(ck)) return; cache.put(ck, '1', 900); cks.push(ck);
     upd[r+'/'+key+'t'] = v; pq.rooms.push(r);
   });
-  dbMsgs_(upd);   // 채널 방 + 팀 방 복사본을 한 번에   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
+  slkMsgWrite_(upd, cks);   // 채널 방 + 팀 방 복사본(글이 많으면 여러 글을 한 번에)   // 팀 방 복사본 키 = 채널 방 키 + 't'(포털 화면은 글 키가 겹치면 하나만 보임)
 }
 /* 포털 채널 방에서 쓴 글 → Slack 채널(「이름 (FS Portal)」) + 포털 채널 방·팀 방에 저장. 승인된 직원 누구나(사용자 결정) */
 function slackSend_(req){
@@ -1333,7 +1370,7 @@ function slkFieldPurpose_(flat, hosp, r){
 }
 function slkFieldHint_(text, who, at){
   if(!SLK_FIN_RE.test(text) && !SLK_MOVE_RE.test(text)) return;
-  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {};
+  const all = SLK_BATCH ? (SLK_REQC || (SLK_REQC = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {})) : (dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-10*864e5)) || {});   // 261: 도는 동안 한 번만 읽음
   const flat = text.replace(/\s+/g,''), change = SLK_CHANGE_RE.test(flat);
   Object.keys(all).forEach(function(id){
     const r = all[id]; if(!r || !r.f || !r.f.hosp) return;
@@ -1350,7 +1387,7 @@ function slkFieldHint_(text, who, at){
         if(r.st === 'new') patch.st = 'doing';
       }
     }
-    if(Object.keys(patch).length) dbPatch_('talk/slack/req/'+id, patch);
+    if(Object.keys(patch).length){ dbPatch_('talk/slack/req/'+id, patch); if(SLK_BATCH) Object.keys(patch).forEach(function(k){ if(patch[k] === null) delete r[k]; else r[k] = patch[k]; }); }   // 캐시도 같이 고침
   });
 }
 /* 기관명 위치 뒤에서 먼저 나오는 말: 'fin' | 'move' | '' */
@@ -1367,7 +1404,8 @@ function slkFieldAct_(flat, hosp){
 }
 function slkTrimFeed_(){
   const old = dbQuery_('talk/slack/feed','orderBy="at"&endAt='+(Date.now()-SLK_FEED_KEEP_DAYS*864e5)) || {};
-  Object.keys(old).slice(0,200).forEach(function(k){ dbDelete_('talk/slack/feed/'+k); });
+  const del = {}; Object.keys(old).slice(0,200).forEach(function(k){ del['slack/feed/'+k] = null; });   // 261: 200건을 한 번에 지움
+  dbTalk_(del);
 }
 
 /* 포털 → Slack: 담당·회신·완료·다시 열기 (승인된 직원, 그 사람 이름으로) */

@@ -7,11 +7,11 @@ h=h.replace("if(m==='conversations.history')r={ok:true,messages:hist[q.get('chan
 h=h.replace("if(m==='users.info')r=","if(m==='users.info'&&USERFAIL.n>0){USERFAIL.n--;r={ok:false,error:'ratelimited'};}else if(m==='users.info')r=");
 // 가짜 시계: DB 호출마다 0.4초 흐름
 h=h.replace("const ctx={","let CLOCK=Date.now();const RD=Date;function FD(...a){return a.length?new RD(...a):new RD(CLOCK);}FD.now=()=>CLOCK;FD.prototype=RD.prototype;FD.UTC=RD.UTC;\nconst ctx={Date:FD,");
-h=h.replace("fetch(u,o={}){calls.push(u);","fetch(u,o={}){calls.push(u);CLOCK+=400;");
+h=h.replace("fetch(u,o={}){calls.push(u);","fetch(u,o={}){calls.push(u);CLOCK+=((o.method==='patch'||o.method==='put')?global.WSTEP:400);");
 h=h.replace("Utilities:{","Utilities:{sleep(){},");
 const body=h+";module.exports={g,db,props,calls,cache,hist,sent,setClock:v=>CLOCK=v,getClock:()=>CLOCK};";
 const M={exports:{}};
-global.HISTFN=null;global.USERFAIL={n:0};
+global.HISTFN=null;global.USERFAIL={n:0};global.WSTEP=400;
 new Function('require','module','global','__dirname','HISTFN','USERFAIL',body.replace(/^const fs=require\('fs'\);/,'const fs=require("fs");'))(require,M,global,__dirname,q=>global.HISTFN(q),global.USERFAIL);
 const {g,db,props,cache}=M.exports;
 cache.at='tok';
@@ -30,6 +30,7 @@ assert(+props['SLK_TS_'+CH]>=+all[1299].ts,'A) 읽은 시각이 끝까지 넘어
 Object.keys(db.talk.msgs.sk_talk).forEach(k=>delete db.talk.msgs.sk_talk[k]);
 Object.keys(db.talk.msgs).forEach(r=>{if(r!=='sk_talk')delete db.talk.msgs[r];});
 props['SLK_TS_'+CH]=String(t0-1);
+global.WSTEP=30000;   // 261: 묶음 저장으로 쓰기 호출이 줄어, 쓰기 한 번이 오래 걸리는 상황(느린 DB)으로 시간 한도를 시험
 g.slackPull(true);
 const first=Object.keys(db.talk.msgs.sk_talk||{}).length;
 assert(first>0&&first<1300,'B) 첫 번째 실행은 시간 한도로 일부만: '+first);
@@ -37,6 +38,7 @@ const done=Object.values(db.talk.msgs.sk_talk).map(v=>v.slk.ts).sort();
 assert.strictEqual(done[done.length-1],all[first-1].ts.toString?all.slice().sort((x,y)=>+x.ts-+y.ts)[first-1].ts:'','B) 오래된 글부터 연속으로 처리');
 assert(+props['SLK_TS_'+CH]<+all[1299].ts,'B) 읽은 시각은 처리한 데까지만');
 for(let i=0;i<30;i++){g.slackPull(true);if(Object.keys(db.talk.msgs.sk_talk).length>=1300)break;}
+global.WSTEP=400;
 assert.strictEqual(Object.keys(db.talk.msgs.sk_talk).length,1300,'B) 여러 번 돌면 하나도 빠지지 않음');
 // C) 429 — 한 번 쉬고 다시 시도
 let first429=true;const base=pager(all);global.HISTFN=q=>{if(q.get('channel')!==CH)return {ok:true,messages:[]};if(first429){first429=false;return {http:429};}return base(q);};
