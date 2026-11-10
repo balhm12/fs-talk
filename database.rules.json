@@ -375,6 +375,9 @@
       },
       "avatars": {
         ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        ".indexOn": [
+          "ts"
+        ],
         "$p": {
           ".write": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && ($p === (root.child('talk/users/' + auth.uid + '/team').val() + '_' + root.child('talk/users/' + auth.uid + '/name').val()) || (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'))",
           ".validate": "newData.hasChildren(['d', 'ts'])",
