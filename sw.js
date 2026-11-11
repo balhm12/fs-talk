@@ -24,7 +24,7 @@ firebase.initializeApp({
 });
 firebase.messaging(); // 앱이 꺼져 있을 때 온 알림을 표시하고, 누르면 해당 방을 엶
 
-const CACHE = "fstalk-v7";   // v7: 아이콘 F·이름 FS Portal (245)
+const CACHE = "fstalk-v8";   // v8: 아이콘 파일 주소 -p2 (279 — PC 설치 앱 아이콘 갱신), v7: 아이콘 F·이름 FS Portal (245)
 //   // v6: 현장 오프라인(실마리 데이터·웹폰트 저장)
 const DATA = "fstalk-data";   // 실마리 암호화 데이터(열어 본 것만) — 버전이 바뀌어도 유지
 const META = "fstalk-meta";   // 앱 아이콘 숫자(안 읽은 수) 보관 — 캐시 정리 때 지우지 않음
@@ -54,7 +54,7 @@ self.addEventListener("notificationclick", e => {
     return self.clients.openWindow(target);
   }));
 });
-const SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
+const SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-p2.png", "./icons/icon-512-p2.png", "./icons/apple-touch-icon-p2.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
