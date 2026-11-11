@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v50';
+const NOTIFY_VER = 'v51';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -940,6 +940,7 @@ function slackPull(force, opt){
     // 214: 이벤트가 잠금에 막혀 못 한 확인 맞추기(slkSyncPend)는 다음 1분 트리거가 바로 함
     if(!opt.newOnly && (force || !evOn || min % 5 === 0 || cch.get('slkSyncPend'))){ cch.remove('slkSyncPend'); try{ slkSync_(names); }catch(e){ meta.err = '확인 맞추기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!opt.newOnly && min % 30 === 0){ try{ slkTrimFeed_(); }catch(e){ console.error(e); } }
+    if(!opt.newOnly && (force || min % 5 === 0)){ try{ const er = slkEscalate_(); if(er) meta.esc = er; }catch(e){ console.error(e); } }   // 277: 30분 넘게 아무도 ✅ 안 한 새 요청 → 그 팀 팀장에게 알림
     try{ const pr = slkPushFlush_(SLK_PUSHQ.splice(0)); if(pr) meta.push = pr; }catch(e){ console.error(e); }   // 235: 새 Slack 글 알림
     meta.ms = Date.now() - now;
     if(opt.ev) meta.ev = now;
@@ -1180,6 +1181,53 @@ function roomPushOk_(u, id, room, mute, admins){
   if(!sc) return true;                                   // Slack 채널 방·공지 등 = 기본 켬
   if(u.team === sc[0] && (!sc[1] || u.office === sc[1])) return true;
   return m === false && admins[id] === true;            // 다른 팀 방 = 관리자가 직접 켠 것만
+}
+/* 277: 미확인 요청 알림(사용자 요청 「안 맡은 요청 경고」) — 새 요청인데 ✅ 확인·담당이 없고 요청(재요청이면 재요청) 뒤 30분이 지나면
+ * 그 요청 팀(화면 slkTeams 와 같은 판정)의 팀장(명단 lead)에게 한 번 알림, 팀을 모르면 관리자에게.
+ * 한국 시간 07~21시에만 보냄(밤에 지난 것은 아침 7시에), 요청 뒤 24시간 넘은 것은 보내지 않음. 보낸 표시 req/{id}/esc = 기다리기 시작한 시각(재요청이면 다시 보냄) */
+var SLK_ESC_MIN = 30;
+function slkEscTeams_(r){
+  const f = r.f || {};
+  if(f.team){ let t = String(f.team).toUpperCase().replace(/^(FS\s+(?:WEST|EAST|CENTRAL|SOUTH))\b.*/,'$1'); if(/^FS(OM|S)$/.test(t)) t += ' TEAM'; return [t]; }
+  const ros = slkRoster_();
+  if(r.mention){ const tk = Object.keys(ros).filter(function(k){ return ros[k] && Object.prototype.hasOwnProperty.call(ros[k], r.mention); })[0]; if(tk) return [String(tk).toUpperCase()]; }
+  if((r.kind === 'paste' ? r.src : r.kind) !== 'night') return [];
+  const a = f.area || ((/\(([^)]+)\)\s*$/.exec(f.hosp||'') || [])[1]) || '', g = slkNightRegion_(a);
+  return g === 'ew' ? ['FS EAST','FS WEST','FSS TEAM'] : g === 'central' ? ['FS CENTRAL'] : g === 'south' ? ['FS SOUTH'] : [];
+}
+function slkEscalate_(nowMs){
+  const now = nowMs || Date.now(), hr = +Utilities.formatDate(new Date(now), 'Asia/Seoul', 'H');
+  if(hr < 7 || hr > 21) return null;
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(now - 24*3600e3)) || {};
+  const due = Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); }).filter(function(r){
+    const w = +(r.rrAt || r.at) || 0;
+    return r.f && r.st === 'new' && !r.ack && !r.who && w && now - w >= SLK_ESC_MIN*60000 && now - w < 24*3600e3 && +r.esc !== w; });
+  if(!due.length) return null;
+  const users = db_('talk/users') || {}, tokens = db_('talk/tokens') || {}, mute = db_('talk/mute') || {}, admins = db_('talk/admins') || {}, ros = slkRoster_();
+  const leadOf = function(team){ const k = Object.keys(ros).filter(function(x){ return String(x).toUpperCase() === team; })[0]; const T = k ? ros[k] : {};
+    return Object.keys(T || {}).filter(function(n){ return T[n] && T[n].lead; }).map(function(n){ return k + '_' + n; }); };
+  const per = {};   // 받을 사람(팀_이름) → 요청들
+  due.forEach(function(r){
+    let ppl = []; slkEscTeams_(r).forEach(function(t){ ppl = ppl.concat(leadOf(t)); });
+    if(!ppl.length) Object.keys(admins).forEach(function(id){ const u = users[id]; if(admins[id] === true && u && u.status === 'approved') ppl.push(u.team + '_' + u.name); });
+    ppl.forEach(function(p){ (per[p] = per[p] || []).push(r); });
+  });
+  const targets = [];
+  Object.keys(users).forEach(function(id){
+    const u = users[id]; if(!u || u.status !== 'approved' || (mute[id] && mute[id]._all)) return;
+    const L = per[u.team + '_' + u.name]; if(!L) return;
+    const t = tokens[id] || {};
+    const first = L[0], f = first.f || {}, mins = Math.floor((now - (+(first.rrAt || first.at)))/60000);
+    const title = L.length === 1 ? '⏱ ' + mins + '분째 아무도 확인 안 한 요청' : '⏱ 아무도 확인 안 한 요청 ' + L.length + '건';
+    const body = [f.hosp, f.eq].filter(Boolean).join(' · ') + (f.req ? ' — ' + String(f.req).replace(/\s+/g,' ').slice(0,80) : '') + (L.length > 1 ? ' 외 ' + (L.length-1) + '건' : '');
+    Object.keys(t).forEach(function(k){ if(t[k] && t[k].token) targets.push({uid:id, key:k, token:t[k].token, title:title, body:body}); });
+  });
+  const groups = {}; targets.forEach(function(x){ const g = x.title + '\u0001' + x.body; (groups[g] = groups[g] || []).push(x); });
+  let sent = 0;
+  Object.keys(groups).forEach(function(g){ const L = groups[g]; sent += send_(L, L[0].title, L[0].body, APP_URL + '#req', 'slk-late', {room:'_req'}); });
+  const up = {}; due.forEach(function(r){ up['slack/req/' + r.id + '/esc'] = +(r.rrAt || r.at); });
+  dbTalk_(up);
+  return {at:now, reqs:due.length, people:Object.keys(per).length, devices:targets.length, sent:sent};
 }
 function slkPushFlush_(q){
   q = (q || []).filter(function(p){ return p && p.rooms && p.rooms.length && +p.at > Date.now() - 15*60*1000; });
