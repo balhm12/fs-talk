@@ -1871,6 +1871,13 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
     mask-image:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - var(--fr)),transparent 100%)}
   .apptab{flex:0 0 auto;scroll-snap-align:start}
 }
+/* 290: 요청 채널 집계 표 */
+.slkstp{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+.slksthl{font-size:16px;font-weight:700;color:var(--strong);margin:4px 0}
+.kpt.slkst th.num,.kpt.slkst td.num{text-align:right;white-space:nowrap}.kpt.slkst th{white-space:nowrap}.kpt.slkst td:first-child{word-break:keep-all}.kpt.slkst td.b{font-weight:700}
+.kpt.slkst tr.slkstg td{background:var(--soft);font-weight:700;color:var(--strong);font-size:12px}
+.kpt.slkst tr.slkstA td{color:#005BAC;font-weight:600}html[data-theme=dark] .kpt.slkst tr.slkstA td{color:#8CC4F5}
+.slkstn{font-size:12px!important}
 </style>
 
 </head>
@@ -2105,7 +2112,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-12.289";
+const APP_VERSION="2026-11-13.290";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4429,7 +4436,7 @@ function renderReqPage(){
   cn.appendChild(el("span",null,live?"Slack 자동 연결됨 · "+new Date(slkMeta.at).toTimeString().slice(0,5)+" 확인":isAdmin?"Slack 자동 연결 전 — Slack 글의 ⋮ → 「텍스트 복사」 후 「Slack 글 붙여넣기」":"Slack 자동 연결 전 — 관리자가 올린 요청을 확인할 수 있습니다"));
   if(isAdmin&&slkMeta&&slkMeta.err)cn.appendChild(el("span","slkerr","· 오류: "+String(slkMeta.err).slice(0,100)));   // 212
   if(isAdmin&&slkMeta&&live)cn.appendChild(el("span","slkevt",slkMeta.evOn?"· Slack 바로 받기 켜짐"+(slkMeta.ev?" (마지막 "+new Date(slkMeta.ev).toTimeString().slice(0,5)+")":"")+" · 빠진 글은 5분마다 확인":slkMeta.ev&&Date.now()-slkMeta.ev<36e5?"· Slack 바로 받기 "+new Date(slkMeta.ev).toTimeString().slice(0,5):"· Slack 바로 받기 없음(1분마다 확인)"));   // 214: 이벤트 수신 확인용
-  if(isAdmin){const pv=el("button","hmore","연결 전 미리보기");pv.onclick=openSlkPreview;cn.appendChild(pv);const t=el("button","hmore","연결 시험");t.onclick=slkTest;cn.appendChild(t);}
+  if(isAdmin){const pv=el("button","hmore","연결 전 미리보기");pv.onclick=openSlkPreview;cn.appendChild(pv);const t=el("button","hmore","연결 시험");t.onclick=slkTest;cn.appendChild(t);const st=el("button","hmore","학술요청 집계");st.onclick=()=>slkAcadStats(28);cn.appendChild(st);}
   b.appendChild(cn);
   const all=slkList(),wk=Date.now()-7*864e5;
   const sc=el("div","obchips slkch");(myField()?[["team","우리 팀"]]:[]).concat([["me","내 담당"],["all","전체"]]).forEach(([k,l])=>{const x=el("button","hchip sm"+(slkScope===k?" on":""),l);x.setAttribute("aria-pressed",slkScope===k);x.onclick=()=>{slkScope=k;renderReqPage();};sc.appendChild(x);});
@@ -4613,6 +4620,32 @@ function openSlkPaste(){if(!isAdmin)return;track("slk_paste");
     catch(e){ok.disabled=false;toast("넣지 못했습니다: "+(e.message||e));}};
   $("pOv").hidden=false;setTimeout(()=>ta.focus(),30);
 }
+/* 290: 요청 채널 글 집계(관리자) — 학술요청이 평일 야간·주말에 얼마나 오는지. 서버 slackStats_ 가 Slack 기록을 읽어 숫자만 돌려줌(저장 없음) */
+async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30초)");track("slk_stats");
+  let j=null;try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackStats",idToken,days})});j=await res.json().catch(()=>null);}catch(e){}
+  const c=$("pCard");c.textContent="";c.classList.remove("drawer");c.classList.add("wide");
+  const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);c.appendChild(el("h3",null,"요청 채널 집계 — 학술요청"));
+  const pr=el("div","chips slkstp");[7,28,60].forEach(d=>{const b=el("button","chip"+(d===days?" on":""),"최근 "+d+"일");b.setAttribute("aria-pressed",d===days?"true":"false");b.onclick=()=>slkAcadStats(d);pr.appendChild(b);});c.appendChild(pr);
+  if(!j||!j.ok){c.appendChild(el("p","hp",(j&&j.err)||"서버 응답이 없습니다. 잠시 뒤 다시 해 보세요."));$("pOv").hidden=false;return;}
+  const fd=d=>{const t=new Date(d);return (t.getMonth()+1)+"/"+t.getDate();};
+  const S=k=>Object.values(j.ch).reduce((a,R)=>a+R.acad[k],0),aw=S("wd"),an=S("wn"),ae=S("we"),at=aw+an+ae,off=an+ae;
+  const allN=Object.values(j.ch).reduce((a,R)=>a+["acad","tech","etc"].reduce((b,k)=>b+R[k].wd+R[k].wn+R[k].we,0),0);
+  c.appendChild(el("p","slksthl",at?"학술요청 "+at+"건 중 업무 시간 밖(평일 18시~09시·주말) "+off+"건 ("+Math.round(off*100/at)+"%)":"학술요청이 없습니다"));
+  c.appendChild(el("p","hp",fd(j.from)+" ~ "+fd(j.to)+" · 요청 채널 글 "+allN+"건(접수 건 기준) · 서버 "+(j.ver||"")));
+  const tbl=el("table","kpt slkst"),hd=el("tr");["채널 · 종류","평일 주간","평일 야간","주말","합계"].forEach((h,i)=>{const th=el("th",i?"num":null,h);th.scope="col";hd.appendChild(th);});
+  const th=el("thead");th.appendChild(hd);tbl.appendChild(th);const tb=el("tbody");
+  const KN={acad:"학술요청",tech:"기술요청·접수",etc:"그 밖(완료·안내)"},CN={cso:"CSO · 평일",night:"CS쉐어링 · 야간·휴일"};
+  ["cso","night"].forEach(ck=>{const R=j.ch[ck];if(!R)return;
+    const g=el("tr","slkstg");const gd=el("td",null,CN[ck]+(R.more?" (일부만 — 기간을 줄여 보세요)":""));gd.colSpan=5;g.appendChild(gd);tb.appendChild(g);
+    ["acad","tech","etc"].forEach(k=>{const v=R[k],tr=el("tr",k==="acad"?"slkstA":null);tr.appendChild(el("td",null,KN[k]+(k==="acad"&&R.fwd?" (FS 로 다시 넘김 "+R.fwd+")":"")));
+      [v.wd,v.wn,v.we,v.wd+v.wn+v.we].forEach((n,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(n))));tb.appendChild(tr);});});
+  tbl.appendChild(tb);c.appendChild(tbl);
+  const eq=Object.entries(j.eq||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if(eq.length)c.appendChild(el("p","hp","학술요청 장비: "+eq.map(([k,n])=>k+" "+n).join(" · ")));
+  const wk=Object.entries(j.week||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(wk.length>1)c.appendChild(el("p","hp","주별 학술요청(업무 시간 밖): "+wk.map(([k,w])=>k+"~ "+w.acad+"("+w.night+")").join(" · ")));
+  c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
+  $("pOv").hidden=false;}
 async function slkTest(){toast("Slack 연결 확인 중…");
   try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackTest",idToken,pull:true})});
     const j=await res.json().catch(()=>null);const c=$("pCard");c.textContent="";c.classList.remove("drawer","wide");
@@ -4838,7 +4871,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={sil_check:"실마리 연결 점검",av_zoom:"프로필 사진 크게 보기",home_inst:"홈 설치일정 버튼",home_work:"홈 근무일정 버튼",room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
+const TRK={slk_stats:"학술요청 집계(관리자)",sil_check:"실마리 연결 점검",av_zoom:"프로필 사진 크게 보기",home_inst:"홈 설치일정 버튼",home_work:"홈 근무일정 버튼",room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;

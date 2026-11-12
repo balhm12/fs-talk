@@ -59,6 +59,7 @@ function doPost0_(e){
     if(req.type === 'slack') return out_(slackAct_(req));
     if(req.type === 'slackSend') return out_(slackSend_(req));
     if(req.type === 'slackTest') return out_(slackTest_(req));
+    if(req.type === 'slackStats') return out_(slackStats_(req));   // 290: 학술요청 집계(관리자, 저장 없음)
     if(req.type === 'slackBulk') return out_(slackBulk_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
@@ -130,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v57';
+const NOTIFY_VER = 'v58';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1643,6 +1644,63 @@ function slkDiag_(){
       return {ch:chn(ch), ts:ts, rx:rxOf(hist[k]), sub:hist[k].subtype||'', linked:o}; });
     return {id:id, ch:chn(r.ch), ts:r.ts, st:r.st, key:key || '(병원·장비 없음)', rx:rxOf(hist[r.ch+'|'+r.ts]), near:near};
   });
+}
+/* 290: 요청 채널 글 집계 — 학술요청이 야간·주말에 얼마나 오는지(사용자 질문). 관리자만, 저장 없음, 이름·본문·병원은 돌려주지 않음.
+ *  대상 = handover 두 채널(#group-sysmex-talk 은 같은 글이 겹쳐 올라와 제외), 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다.
+ *  종류 = 학술(양식 <학술요청>·「학술 요청」) / 기술(<기술요청>·그 밖 접수) / 그 밖(양식 없는 안내·완료 글). 학술 중 머리말로 FS 팀에 다시 넘긴 것은 fwd.
+ *  시간대(한국 시간) = 평일 주간 09~18시 / 평일 야간 / 주말(토·일). 공휴일은 따로 모르므로 평일로 셈(→ CS쉐어링의 평일 주간 = 대개 공휴일). */
+function slkStatBand_(ms){
+  const d = new Date(ms + 9*3600e3), wd = d.getUTCDay(), h = d.getUTCHours();
+  if(wd === 0 || wd === 6) return 'we';
+  return (h >= 9 && h < 18) ? 'wd' : 'wn';
+}
+function slkStatKind_(b){
+  if(/<\s*학술\s*요청\s*>|학술\s*(?:요청|문의)/.test(b)) return 'acad';
+  if(/<\s*기술\s*요청\s*>|\[CS쉐어링 접수\]/.test(b)) return 'tech';
+  return 'etc';
+}
+function slackStats_(req){
+  const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
+  const me = db_('talk/users/'+uid);
+  if(!(db_('talk/admins/'+uid) === true && me && me.status === 'approved')) return {ok:false,err:'관리자만',ver:NOTIFY_VER};
+  if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'스크립트 속성 SLACK_BOT_TOKEN 이 없습니다',ver:NOTIFY_VER};
+  const days = Math.max(1, Math.min(90, +req.days || 28)), t0 = Date.now() - days*864e5;
+  const z = function(){ return {wd:0, wn:0, we:0}; };
+  const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, week:{}, ver:NOTIFY_VER};
+  Object.keys(SLACK_CH).forEach(function(ch){
+    const C = SLACK_CH[ch]; if(C.type !== 'req') return;
+    const R = {name:C.name, k:C.k, msgs:0, blocks:0, acad:z(), tech:z(), etc:z(), fwd:0, more:false};
+    let cursor = '', page = 0;
+    do{
+      const prm = {channel:ch, oldest:String(t0/1000), limit:200}; if(cursor) prm.cursor = cursor;
+      const j = slackApi_('conversations.history', prm);
+      (j.messages||[]).forEach(function(m){
+        if(m.thread_ts && m.thread_ts !== m.ts) return;
+        if(/^(channel_join|channel_leave|channel_topic|channel_purpose)$/.test(m.subtype||'')) return;
+        const ms = +m.ts*1000; if(ms < t0) return;
+        const raw = String(m.text||''), text = slkClean_(raw); if(!text.trim()) return;
+        R.msgs++;
+        const multi = (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1;
+        const blocks = multi ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
+        const band = slkStatBand_(ms), wk = Utilities.formatDate(new Date(ms - ((new Date(ms + 9*3600e3).getUTCDay()+6)%7)*864e5), 'Asia/Seoul', 'MM/dd');
+        blocks.forEach(function(b){
+          const kd = slkStatKind_(b); R.blocks++; R[kd][band]++;
+          if(kd === 'acad'){
+            if(!multi && slkHeadTeam_(raw, text)) R.fwd++;
+            const f = slkParse_(b), e = f && f.eq ? String(f.eq).toUpperCase().replace(/\s+/g,'').replace(/^([A-Z]+)-?.*$/,'$1') : '';
+            if(e) out.eq[e] = (out.eq[e]||0) + 1;
+            const W = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0});
+            W.acad++; if(band !== 'wd') W.night++;
+          }
+          const W2 = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0}); W2.all++;
+        });
+      });
+      cursor = j.response_metadata && j.response_metadata.next_cursor || '';
+    }while(cursor && ++page < 30);
+    if(cursor) R.more = true;
+    out.ch[C.k] = R;
+  });
+  return out;
 }
 function installSlackTrigger(){
   ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction() === 'slackPull') ScriptApp.deleteTrigger(t); });
