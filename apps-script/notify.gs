@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v55';
+const NOTIFY_VER = 'v56';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1051,6 +1051,12 @@ function slkSync_(names){
     if(Object.keys(patch).length) dbPatch_('talk/slack/req/'+id, patch);   // 바뀐 게 없으면 쓰지 않음
     if(patch.ack){ r.ack = patch.ack; try{ slkAckSiblings_(all, id, r, patch.ack); }catch(e){} }   // 282
   });
+  // 286: 이미 ✅ 확인된 요청(282 배포 전에 확인된 것 포함)의 같은 병원·장비 요청도 맞춤 — 같은 CSO 글이 handover·#group-sysmex-talk 두 채널에서
+  //  서로 다른 요청으로 들어오고(양식을 읽은 결과가 달라 id 가 다름) handover 쪽만 ✅ 된 경우. 확인 시각 + 10분 뒤에 온 요청(다음 날 새 건 등)은 그대로
+  Object.keys(all).forEach(function(id){
+    const r = all[id]; if(!r || !r.ack || r.ack.via || r.multi || Date.now() - (+r.ack.at || 0) > 2*864e5) return;
+    try{ slkAckSiblings_(all, id, r, r.ack, (+r.ack.at || 0) + 10*60e3); }catch(e){}
+  });
 }
 /* 213: Slack 이벤트(새 글·답글·반응)가 오면 바로 가져오기 — TAT 단축. 보낸 내용은 믿지 않고 「지금 확인하라」는 신호로만 씀
  *  (Apps Script 는 요청 머리글을 못 읽어 Slack 서명 확인이 안 되므로, 채널이 정해진 세 곳인지만 보고 실제 내용은 Slack API 로 다시 읽음).
@@ -1457,12 +1463,13 @@ function slkSibKey_(r){
   const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·]/g,'').toLowerCase(); };
   const h = n(f.hosp), e = n(f.eq); return (h.length >= 3 && e.length >= 2) ? h+'|'+e : '';
 }
-function slkAckSiblings_(all, id, r, ack){
+function slkAckSiblings_(all, id, r, ack, maxAt){   // 286: maxAt = 이 시각보다 뒤에 온(재요청 포함) 요청은 건드리지 않음
   const key = slkSibKey_(r); if(!key || r.multi) return 0;
   const t0 = +(r.rrAt || r.at) || 0; let n = 0;
   Object.keys(all || {}).forEach(function(k){
     const o = all[k]; if(k === id || !o || o.multi || o.ack || o.st === 'done') return;
     if(slkSibKey_(o) !== key || Math.abs((+(o.rrAt || o.at) || 0) - t0) > 864e5) return;
+    if(maxAt && (+(o.rrAt || o.at) || 0) > maxAt) return;
     const p = {ack:{n:ack.n||'', at:ack.at||Date.now(), via:id}}; if(!o.who && ack.n){ p.who = ack.n; p.whoAt = p.ack.at; }
     slkAckDone_(p, o, ack.n, p.ack.at); dbPatch_('talk/slack/req/'+k, p); o.ack = p.ack; n++;
   });
