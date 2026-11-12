@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v52';
+const NOTIFY_VER = 'v53';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1029,6 +1029,7 @@ function slkSync_(names){
       else if(rx.indexOf('eyes') >= 0){ patch.st = 'doing'; }
     }
     if(Object.keys(patch).length) dbPatch_('talk/slack/req/'+id, patch);   // 바뀐 게 없으면 쓰지 않음
+    if(patch.ack){ r.ack = patch.ack; try{ slkAckSiblings_(all, id, r, patch.ack); }catch(e){} }   // 282
   });
 }
 /* 213: Slack 이벤트(새 글·답글·반응)가 오면 바로 가져오기 — TAT 단축. 보낸 내용은 믿지 않고 「지금 확인하라」는 신호로만 씀
@@ -1430,6 +1431,23 @@ function slkAckDone266_(){
   return Object.keys(up).length/4;
 }
 /* 266: 확인하면 완료 — 방문 중(현장 「이동」 글)이 아니면 st=done·ackDone. 나중에 담당이 「이동」 글을 쓰면 다시 방문 중, 「마칩니다」면 방문 완료 */
+/* 282: 같은 건이 CSO·CS쉐어링 두 채널로 들어와 요청이 두 줄일 때 — 한쪽을 ✅ 확인하면 24시간 안의 같은 병원·장비 열린 요청도 함께 확인(사용자 결정 2026-11-12)
+ *  병원·장비 이름은 띄어쓰기·괄호(지역) 무시로 비교. 묶음 야간 인계(multi)·이미 확인된 것·방문 중은 건드리지 않음(방문 중은 slkAckDone_ 가 그대로 둠) */
+function slkSibKey_(r){
+  const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·]/g,'').toLowerCase(); };
+  const h = n(f.hosp), e = n(f.eq); return (h.length >= 3 && e.length >= 2) ? h+'|'+e : '';
+}
+function slkAckSiblings_(all, id, r, ack){
+  const key = slkSibKey_(r); if(!key || r.multi) return 0;
+  const t0 = +(r.rrAt || r.at) || 0; let n = 0;
+  Object.keys(all || {}).forEach(function(k){
+    const o = all[k]; if(k === id || !o || o.multi || o.ack || o.st === 'done') return;
+    if(slkSibKey_(o) !== key || Math.abs((+(o.rrAt || o.at) || 0) - t0) > 864e5) return;
+    const p = {ack:{n:ack.n||'', at:ack.at||Date.now(), via:id}}; if(!o.who && ack.n){ p.who = ack.n; p.whoAt = p.ack.at; }
+    slkAckDone_(p, o, ack.n, p.ack.at); dbPatch_('talk/slack/req/'+k, p); o.ack = p.ack; n++;
+  });
+  return n;
+}
 function slkAckDone_(patch, r, n, at){
   if(r.mv && r.st !== 'done'){ if(r.st === 'new') patch.st = 'doing'; return; }
   patch.st = 'done'; patch.doneAt = at; patch.doneBy = n || 'Slack'; patch.ackDone = true;
@@ -1506,6 +1524,7 @@ function slackAct_(req){
     patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null; patch.ackDone = null;
   }else return {ok:false,err:'bad op',ver:NOTIFY_VER};
   dbPatch_('talk/slack/req/'+id, patch);
+  if(op === 'ack'){ try{ slkAckSiblings_(dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-3*864e5)) || {}, id, r, patch.ack); }catch(e){} }   // 282: 같은 건 다른 채널 요청도
   return {ok:true,ver:NOTIFY_VER};
 }
 /* 관리 화면 「Slack 연결 시험」 — 관리자만. 토큰·채널 초대 상태와 마지막 가져오기 결과 */
