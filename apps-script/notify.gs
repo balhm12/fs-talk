@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v51';
+const NOTIFY_VER = 'v52';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -988,7 +988,10 @@ function slkSync_(names){
     });
     return hmap;
   };
-  Object.keys(all).slice(-80).forEach(function(id){
+  // 281: 키는 해시라 시각 순서가 아님 — 예전 slice(-80) 은 요청이 80건을 넘으면 최근 요청을 빼먹어 ✅ 확인이 반영되지 않았음. 열린 요청을 최근 순으로 120건까지
+  const ids = Object.keys(all).filter(function(id){ const r = all[id]; return r && (r.st !== 'done' || !r.doneBy); })
+    .sort(function(a,b){ return (+(all[b].rrAt||all[b].at)||0) - (+(all[a].rrAt||all[a].at)||0); }).slice(0,120);
+  ids.forEach(function(id){
     const r = all[id]; if(!r || r.multi) return;
     if(r.ch && SLACK_CH[r.ch] && SLACK_CH[r.ch].type !== 'req'){
       const h = hId()[id]; if(h){ dbPatch_('talk/slack/req/'+id, {ch:h.ch, ts:h.ts, lr:null}); r.ch = h.ch; r.ts = h.ts; r.lr = null; }
