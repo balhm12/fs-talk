@@ -27,7 +27,8 @@ assert.deepStrictEqual(C.tech,{wd:1,wn:0,we:0});assert.deepStrictEqual(C.etc,{wd
 assert.strictEqual(C.fwd,1,'머리말로 FS 전달 1');
 assert.strictEqual(N.msgs,2);assert.strictEqual(N.blocks,3,'묶음 글은 접수 건마다');
 assert.deepStrictEqual(N.acad,{wd:0,wn:0,we:2},'야간 학술 '+JSON.stringify(N.acad));assert.deepStrictEqual(N.tech,{wd:0,wn:0,we:1});
-assert.strictEqual(r.eq.XN,4,'장비 XN 4 '+JSON.stringify(r.eq));assert.strictEqual(r.eq.CN,1);
+assert.strictEqual(r.eq.XN,3,'장비 XN 3 '+JSON.stringify(r.eq));assert.strictEqual(r.eq['XN-L'],1,'XN-550 → XN-L');assert.strictEqual(r.eq.CN,1);
+assert.deepStrictEqual(r.eqB.XN,{wd:1,wn:2,we:0},'XN 시간대 '+JSON.stringify(r.eqB));assert.deepStrictEqual(r.eqB['XN-L'],{wd:0,wn:0,we:1});assert.deepStrictEqual(r.eqB.CN,{wd:0,wn:0,we:1});
 assert(!JSON.stringify(r).includes('테스트병원'),'병원 이름 안 돌려줌');assert(!JSON.stringify(r).includes('테스트1'),'이름 안 돌려줌');
 const W=Object.values(r.week).reduce((a,w)=>a+w.acad,0);assert.strictEqual(W,5,'주별 학술 합 5');
 console.log('slack_stats ok');

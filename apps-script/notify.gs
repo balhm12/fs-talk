@@ -131,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v58';
+const NOTIFY_VER = 'v59';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1659,6 +1659,12 @@ function slkStatKind_(b){
   if(/<\s*기술\s*요청\s*>|\[CS쉐어링 접수\]/.test(b)) return 'tech';
   return 'etc';
 }
+/* 291: 학술요청 장비군 — 모델 번호를 장비군으로(XN-350/450/550·XN-L → XN-L, 그 밖은 앞 글자 XN·XR·CN·CS·UF·UC·HISCL…). 모르면 '-' */
+function slkStatEq_(f){
+  const raw = f && f.eq ? String(f.eq).toUpperCase().replace(/\s+/g,'') : ''; if(!raw) return '-';
+  if(/^XN-?L\b|^XN-?(3|4|5)\d0\b/.test(raw)) return 'XN-L';
+  const m = /^([A-Z]+)/.exec(raw); return m ? m[1] : '-';
+}
 function slackStats_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid);
@@ -1666,7 +1672,7 @@ function slackStats_(req){
   if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'스크립트 속성 SLACK_BOT_TOKEN 이 없습니다',ver:NOTIFY_VER};
   const days = Math.max(1, Math.min(90, +req.days || 28)), t0 = Date.now() - days*864e5;
   const z = function(){ return {wd:0, wn:0, we:0}; };
-  const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, week:{}, ver:NOTIFY_VER};
+  const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, eqB:{}, week:{}, ver:NOTIFY_VER};
   Object.keys(SLACK_CH).forEach(function(ch){
     const C = SLACK_CH[ch]; if(C.type !== 'req') return;
     const R = {name:C.name, k:C.k, msgs:0, blocks:0, acad:z(), tech:z(), etc:z(), fwd:0, more:false};
@@ -1687,8 +1693,9 @@ function slackStats_(req){
           const kd = slkStatKind_(b); R.blocks++; R[kd][band]++;
           if(kd === 'acad'){
             if(!multi && slkHeadTeam_(raw, text)) R.fwd++;
-            const f = slkParse_(b), e = f && f.eq ? String(f.eq).toUpperCase().replace(/\s+/g,'').replace(/^([A-Z]+)-?.*$/,'$1') : '';
-            if(e) out.eq[e] = (out.eq[e]||0) + 1;
+            const e = slkStatEq_(slkParse_(b));   // 291: 장비군별·시간대별
+            const E = out.eqB[e] || (out.eqB[e] = {wd:0, wn:0, we:0}); E[band]++;
+            if(e !== '-') out.eq[e] = (out.eq[e]||0) + 1;
             const W = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0});
             W.acad++; if(band !== 'wd') W.night++;
           }

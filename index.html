@@ -1878,6 +1878,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 .kpt.slkst tr.slkstg td{background:var(--soft);font-weight:700;color:var(--strong);font-size:12px}
 .kpt.slkst tr.slkstA td{color:#005BAC;font-weight:600}html[data-theme=dark] .kpt.slkst tr.slkstA td{color:#8CC4F5}
 .slkstn{font-size:12px!important}
+.slksth{margin:14px 0 4px;font-size:14px;color:var(--strong)}
 </style>
 
 </head>
@@ -2112,7 +2113,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-13.290";
+const APP_VERSION="2026-11-13.291";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4640,8 +4641,18 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
     ["acad","tech","etc"].forEach(k=>{const v=R[k],tr=el("tr",k==="acad"?"slkstA":null);tr.appendChild(el("td",null,KN[k]+(k==="acad"&&R.fwd?" (FS 로 다시 넘김 "+R.fwd+")":"")));
       [v.wd,v.wn,v.we,v.wd+v.wn+v.we].forEach((n,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(n))));tb.appendChild(tr);});});
   tbl.appendChild(tb);c.appendChild(tbl);
-  const eq=Object.entries(j.eq||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  if(eq.length)c.appendChild(el("p","hp","학술요청 장비: "+eq.map(([k,n])=>k+" "+n).join(" · ")));
+  /* 291: 학술요청 장비별 — 장비군 × 시간대 표(많은 순, 10개 넘으면 나머지는 「그 밖」, 장비 칸이 없으면 「장비 미기재」) */
+  const EB=j.eqB||{},tot=v=>v.wd+v.wn+v.we;let er=Object.entries(EB).filter(([k])=>k!=="-").sort((a,b)=>tot(b[1])-tot(a[1])||a[0].localeCompare(b[0]));
+  if(er.length>10){const rest={wd:0,wn:0,we:0};er.slice(10).forEach(([,v])=>{rest.wd+=v.wd;rest.wn+=v.wn;rest.we+=v.we;});er=er.slice(0,10).concat([["그 밖 "+(er.length-10)+"종",rest]]);}
+  if(EB["-"])er.push(["장비 미기재",EB["-"]]);
+  if(er.length){c.appendChild(el("h4","slksth","학술요청 장비별"));
+    const t2=el("table","kpt slkst"),h2=el("tr");["장비","평일 주간","평일 야간","주말","합계","업무 시간 밖"].forEach((h,i)=>{const th=el("th",i?"num":null,h);th.scope="col";h2.appendChild(th);});
+    const th2=el("thead");th2.appendChild(h2);t2.appendChild(th2);const tb2=el("tbody");
+    er.forEach(([k,v])=>{const tr=el("tr"),n=tot(v),o=v.wn+v.we;tr.appendChild(el("td",null,k));[v.wd,v.wn,v.we,n].forEach((x,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(x))));
+      tr.appendChild(el("td","num",n?Math.round(o*100/n)+"%":"–"));tb2.appendChild(tr);});
+    t2.appendChild(tb2);c.appendChild(t2);}
+  else if(j.eqB)c.appendChild(el("p","hp","학술요청에 장비가 적힌 건이 없습니다."));
+  else{const eq=Object.entries(j.eq||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);if(eq.length)c.appendChild(el("p","hp","학술요청 장비: "+eq.map(([k,n])=>k+" "+n).join(" · ")));}
   const wk=Object.entries(j.week||{}).sort((a,b)=>a[0].localeCompare(b[0]));
   if(wk.length>1)c.appendChild(el("p","hp","주별 학술요청(업무 시간 밖): "+wk.map(([k,w])=>k+"~ "+w.acad+"("+w.night+")").join(" · ")));
   c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
