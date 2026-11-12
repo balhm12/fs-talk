@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v53';
+const NOTIFY_VER = 'v54';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -892,7 +892,7 @@ function slackPull(force, opt){
                 return;
               }
               // 214: 같은 요청이 #group-sysmex-talk 에 먼저 왔으면 handover 채널 글로 바꿔 둠 — ✅ 확인은 handover 원래 글에서 읽고 거기에 단다(사용자 확인)
-              if(C.type === 'req' && cur.ch && SLACK_CH[cur.ch] && SLACK_CH[cur.ch].type !== 'req') dbPatch_('talk/slack/req/'+id, {ch:ch, ts:m.ts, lr:null});
+              if(C.type === 'req' && cur.ch && SLACK_CH[cur.ch] && (SLACK_CH[cur.ch].type !== 'req' || (cur.ch === ch && cur.ts !== m.ts && !cur.ack))) dbPatch_('talk/slack/req/'+id, {ch:ch, ts:m.ts, lr:null});   // 284: 같은 채널에 같은 글을 다시 올리면(앞 글 삭제) 새 글로
               return;
             }
             if(!cur && blocks.length === 1){   // 233: 같은 Slack 글로 이미 만든 요청이 있으면 새로 만들지 않음 — 글을 고친 뒤 다시 읽으면 요청사항이 달라져 id 가 바뀌던 것
@@ -976,25 +976,45 @@ function slkSync_(names){
     }while(cursor && ++page < 3);
   });
   // 214: #group-sysmex-talk 에서 먼저 들어온 요청은 같은 id 의 handover 글을 찾아 그쪽으로 옮김(확인 ✅ 는 handover 에서)
-  let hmap = null;
+  // 284: 같은 id 의 handover 글이 여럿일 수 있어(CSO 가 지우고 다시 올리거나 두 번 올림) 목록으로, 같은 병원·장비(slkSibKey_) 목록도 함께
+  let hmap = null, hsib = null;
   const hId = function(){
-    if(hmap) return hmap; hmap = {};
+    if(hmap) return hmap; hmap = {}; hsib = {};
     Object.keys(hist).forEach(function(k){
       const m = hist[k], ch = k.split('|')[0], C = SLACK_CH[ch], text = slkClean_(String(m.text||''));
       if(/\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1) return;
       const f = slkParse_(text); if(!f) return;
       const day = Utilities.formatDate(new Date(Math.round(+m.ts*1000)), 'Asia/Seoul', 'yyyyMMdd');
-      hmap[(C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'))] = {ch:ch, ts:m.ts};
+      const kk = (C.k === 'talk' ? 'cso' : C.k), hid = kk+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|')), it = {ch:ch, ts:m.ts, k:kk};
+      (hmap[hid] = hmap[hid] || []).push(it);
+      const sk = slkSibKey_({f:f}); if(sk) (hsib[sk] = hsib[sk] || []).push(it);
     });
     return hmap;
+  };
+  const ACK_RE = /^(white_check_mark|heavy_check_mark|ballot_box_with_check|v)$/;
+  const hasAck = function(m){ return !!(m && (m.reactions||[]).some(function(x){ return ACK_RE.test(x.name); })); };
+  const linked = {}; Object.keys(all).forEach(function(k){ const x = all[k]; if(x && x.ch && x.ts) linked[x.ch+'|'+x.ts] = k; });
+  // 284: 요청이 가리키는 글이 handover 기록에 없거나(지운 글·다른 채널 글) ✅ 가 없는데, 같은 요청의 handover 글에 ✅ 가 있으면 그 글로 옮김
+  //  후보 = 같은 id 의 글 → 같은 종류 채널·같은 병원·장비·2시간 안의 글(다른 요청에 이미 묶인 글은 제외). loose = 지금 글이 기록에 없을 때(✅ 없는 글로도 옮김)
+  const altMsg = function(id, r, loose){
+    hId();
+    const sk = slkSibKey_(r), kind = (r.kind === 'night' ? 'night' : 'cso');
+    const cand = (hmap[id] || []).concat((sk && hsib[sk] || []).filter(function(x){ return x.k === kind && Math.abs(+x.ts - +r.ts) < 7200; }))
+      .filter(function(x){ const o = linked[x.ch+'|'+x.ts]; return !(x.ch === r.ch && x.ts === r.ts) && (!o || o === id) && SLACK_CH[x.ch] && SLACK_CH[x.ch].type === 'req'; });
+    const ok = cand.filter(function(x){ return hasAck(hist[x.ch+'|'+x.ts]); });
+    return ok[0] || (loose ? cand[0] : null) || null;
   };
   // 281: 키는 해시라 시각 순서가 아님 — 예전 slice(-80) 은 요청이 80건을 넘으면 최근 요청을 빼먹어 ✅ 확인이 반영되지 않았음. 열린 요청을 최근 순으로 120건까지
   const ids = Object.keys(all).filter(function(id){ const r = all[id]; return r && (r.st !== 'done' || !r.doneBy); })
     .sort(function(a,b){ return (+(all[b].rrAt||all[b].at)||0) - (+(all[a].rrAt||all[a].at)||0); }).slice(0,120);
   ids.forEach(function(id){
     const r = all[id]; if(!r || r.multi) return;
-    if(r.ch && SLACK_CH[r.ch] && SLACK_CH[r.ch].type !== 'req'){
-      const h = hId()[id]; if(h){ dbPatch_('talk/slack/req/'+id, {ch:h.ch, ts:h.ts, lr:null}); r.ch = h.ch; r.ts = h.ts; r.lr = null; }
+    if(r.ch && SLACK_CH[r.ch] && !r.ack){
+      const reqCh = SLACK_CH[r.ch].type === 'req', pm0 = hist[r.ch+'|'+r.ts];
+      if(!reqCh || !hasAck(pm0)){
+        const h = altMsg(id, r, !reqCh || !pm0);
+        if(h){ dbPatch_('talk/slack/req/'+id, {ch:h.ch, ts:h.ts, lr:null}); delete linked[r.ch+'|'+r.ts]; linked[h.ch+'|'+h.ts] = id; r.ch = h.ch; r.ts = h.ts; r.lr = null; }
+      }
     }
     const autoDone = r.st === 'done' && !r.doneBy;   // 210: v24~28 은 ✅ 를 「완료」로 잘못 봤음 — 사람이 완료하지 않은 것은 다시 맞춤
     if(r.st === 'done' && !autoDone) return;
@@ -1015,7 +1035,7 @@ function slkSync_(names){
     if(rx.length && rx.join(',') !== String(r.rx || '')) patch.rx = rx.join(',');
     if(autoDone){ patch.st = 'new'; patch.doneAt = null; }
     // 210: ✅(white_check_mark) = 담당·DP 가 「확인(접수)」했다는 뜻 (사용자 확인 2026-11-09). 완료는 포털 「완료」로만
-    const ackR = (parent.reactions||[]).filter(function(x){ return /^(white_check_mark|heavy_check_mark|ballot_box_with_check|v)$/.test(x.name); })[0];
+    const ackR = (parent.reactions||[]).filter(function(x){ return ACK_RE.test(x.name); })[0];
     if(ackR && !r.ack){
       const uids = (ackR.users||[]).filter(function(u){ return u !== slkBotId_(); });
       const an = uids.length ? slkPerson_(slkUser_(uids[0], names)) : '';
