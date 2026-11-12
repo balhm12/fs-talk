@@ -1857,6 +1857,15 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 .silckh{font-size:12px;color:var(--sub)}.silckt{font-size:14px;margin:4px 0 6px;white-space:pre-wrap;word-break:break-word}
 .silckl{font-size:12.5px;display:flex;gap:8px;line-height:1.5}.silckl b{flex:0 0 32px}.silckl.old span{color:var(--sub)}.silckb{display:flex;justify-content:flex-end;margin-top:12px}.silckl.new b{color:#005BAC}
 .slkdiag{font-size:12px;line-height:1.5;background:var(--soft);border-radius:8px;padding:10px;max-height:46vh;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:6px 0 10px}
+/* 288: 휴대폰 포털 안 앱 탭 줄 — 탭이 많아 가로로 밀리는데 「실마」「정」처럼 글자가 중간에 잘려 보이던 것(사용자 화면).
+   앱 아이콘(탭 이름과 중복)과 빈 칸(.grow — 탭 줄과 반씩 나눠 탭 줄이 110px 뿐이었음)을 숨겨 자리를 넓히고, 탭 단위로 멈추게(snap) 하고, 더 있는 쪽 끝은 흐리게 — 지금 탭은 가운데로 */
+@media (max-width:820px){
+  .apphd .appic,.apphd .grow{display:none}
+  .apptabs{position:relative;scroll-snap-type:x proximity;scroll-padding:0 6px;--fl:0px;--fr:0px;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - var(--fr)),transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - var(--fr)),transparent 100%)}
+  .apptab{flex:0 0 auto;scroll-snap-align:start}
+}
 </style>
 
 </head>
@@ -2091,7 +2100,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-12.287";
+const APP_VERSION="2026-11-12.288";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3899,12 +3908,18 @@ function openSite(u,title){if(!u)return;const h=siteHost(u);
   if(!/^https:/.test(u)||NOFRAME.test(h)||winHosts().includes(h)){openUrl(u);return;}
   if(/kcenter\.usu\.com$/.test(h)){openApp("kc",u);return;}
   APPS.web.t=(title||h).slice(0,30);APPS.web.u=u;openApp("web",u);}
+/* 288: 앱 탭 줄 — 지금 탭을 보이게 가운데로, 더 있는 쪽 끝만 흐리게(--fl·--fr) */
+function appTabsFade(){const t=$("appTabs");if(!t)return;const more=t.scrollWidth-t.clientWidth;t.style.setProperty("--fl",t.scrollLeft>2?"18px":"0px");t.style.setProperty("--fr",t.scrollLeft<more-2?"32px":"0px");}
+function appTabsFit(){const t=$("appTabs");if(!t)return;if(!t.dataset.fd){t.dataset.fd=1;t.addEventListener("scroll",appTabsFade,{passive:true});window.addEventListener("resize",appTabsFade);}
+  const on=t.querySelector(".apptab.on");if(on&&t.scrollWidth>t.clientWidth){t.scrollLeft=Math.max(0,on.offsetLeft-(t.clientWidth-on.offsetWidth)/2);}
+  appTabsFade();requestAnimationFrame(appTabsFade);}
 let appKey="",appUrlNext={};
 function openApp(k,url){if(!APPS[k]){openUrl(url||k);return;}const A=APPS[k];if(A.nofr||A.side&&winHosts().includes(siteHost(url||A.u))){openUrl(url||A.u);return;}if(url)appUrlNext[k]=url;go("app-"+k);}
 function showApp(){
   const A=APPS[appKey];if(!A)return;if(!A.u&&!appUrlNext[appKey]){go("home");return;}
   $("appTitle").textContent=A.t;const ic=$("appIc");ic.textContent="";ic.appendChild(icEl(A.ic,"",20));
   const tabs=$("appTabs");tabs.textContent="";Object.keys(APPS).filter(k=>(!APPS[k].lead||isAdmin||myLead())&&(!APPS[k].po||poOk())&&(!APPS[k].side||k===appKey)).forEach(k=>{const b=el("button","apptab"+(k===appKey?" on":""),APPS[k].t);b.onclick=()=>openApp(k);tabs.appendChild(b);});
+  appTabsFit();
   const box=$("appFrames");let f=box.querySelector('iframe[data-k="'+appKey+'"]');
   const want=appUrlNext[appKey];delete appUrlNext[appKey];
   if(!f){f=document.createElement("iframe");f.dataset.k=appKey;f.title=A.t;f.allow="clipboard-write; fullscreen";f.referrerPolicy="strict-origin-when-cross-origin";f.src=want||A.u;box.appendChild(f);}
