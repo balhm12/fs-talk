@@ -25,7 +25,7 @@ const ctx={
  ContentService:{createTextOutput:t=>({t,setMimeType(){return this}}),MimeType:{JSON:1}},
  ScriptApp:{getProjectTriggers:()=>[]},Logger:{log(){}},console};
 ctx.accessToken_=null;
-const f=new Function(...Object.keys(ctx),src+';verifyUser_=function(t){return String(t||"").indexOf("tok-")===0?String(t).slice(4):null;};return {slackPull,doPost,slackSend_,slkFieldHint_,slkAckDone266_,slkEscalate_,slkSync_,slkDiag_,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
+const f=new Function(...Object.keys(ctx),src+';verifyUser_=function(t){return String(t||"").indexOf("tok-")===0?String(t).slice(4):null;};return {slackPull,doPost,slackSend_,slkFieldHint_,slkAckDone266_,slkEscalate_,slkSync_,slkDiag_,slkMerge287_,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
 const g=f(...Object.values(ctx));
 module.exports={g,db,props,calls,cache,hist,sent,ctx,fcm};
 // 213: Slack 가져오기 회귀 시험 — 한 글 오류가 전체를 멈추지 않는지, 따옴표 쿼리, 확인(✅) 동기화, 이벤트 처리
