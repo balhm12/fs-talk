@@ -492,7 +492,7 @@
         ".read": "(auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/users/' + auth.uid + '/team').val() === '고객접점부문' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
         "$k": {
           ".write": "(auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/users/' + auth.uid + '/team').val() === '고객접점부문' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
-          ".validate": "newData.hasChildren(['s','by','ts'])",
+          ".validate": "newData.hasChildren(['s','by','ts']) && (newData.child('s').val() !== 'done' || (newData.child('t').isString() && newData.child('t').val().length >= 2))",
           "s": {
             ".validate": "newData.val() === 'doing' || newData.val() === 'done'"
           },
@@ -500,6 +500,15 @@
             ".validate": "newData.isString() && newData.val().length <= 40"
           },
           "ts": {
+            ".validate": "newData.isNumber()"
+          },
+          "r": {
+            ".validate": "newData.isString() && newData.val().length <= 30"
+          },
+          "t": {
+            ".validate": "newData.isString() && newData.val().length <= 500"
+          },
+          "at": {
             ".validate": "newData.isNumber()"
           },
           "$other": {
