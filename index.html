@@ -1791,6 +1791,11 @@ html[data-theme=dark] .schnone .schgo{color:#8CC4F5}
   .rail button:focus-visible,.rail a.rlink:focus-visible{outline:2px solid #00B8EE;outline-offset:2px}
   .rail .rsep{background:rgba(255,255,255,.18)}
   html[data-theme=dark] .rail{background:#111C2B!important;box-shadow:0 12px 32px rgba(0,0,0,.4)}
+  /* 289: 「업무 앱」 펼침(흰 판)의 실마리·전국시스템 글자가 위 흰 글자 규칙에 덮여 안 보이던 것 */
+  .rail .rfly a.rlink{color:var(--text)!important;border-radius:10px}
+  .rail .rfly a.rlink:hover{background:var(--soft2)!important;color:var(--strong)!important}
+  .rail .rfly a.rlink.on{background:#EAF2FB!important;color:#005BAC!important}
+  html[data-theme=dark] .rail .rfly a.rlink.on{background:#16273A!important;color:#8CC4F5!important}
 }
 html:not([data-theme=dark]) #hreq{background:linear-gradient(135deg,#0A2A4F 0%,#0B3F7A 60%,#005BAC 100%)!important;border:0!important;border-radius:22px!important;color:#fff;box-shadow:0 14px 34px rgba(10,42,79,.22)}
 html:not([data-theme=dark]) #hreq .hreqt,html:not([data-theme=dark]) #hreq .hreqt b,html:not([data-theme=dark]) #hreq .hreqt .ico{color:#fff}
@@ -2100,7 +2105,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-12.288";
+const APP_VERSION="2026-11-12.289";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
