@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v56';
+const NOTIFY_VER = 'v57';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -896,9 +896,21 @@ function slackPull(force, opt){
               return;
             }
             if(!cur && blocks.length === 1){   // 233: 같은 Slack 글로 이미 만든 요청이 있으면 새로 만들지 않음 — 글을 고친 뒤 다시 읽으면 요청사항이 달라져 id 가 바뀌던 것
-              const near = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(at-10*60000)+'&endAt='+(at+10*60000)) || {};
+              const near = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(at-15*60000)+'&endAt='+(at+15*60000)) || {};
               const same = Object.keys(near).filter(function(k){ return near[k] && near[k].ts === m.ts && k !== id; })[0];
               if(same){ dbPatch_('talk/slack/req/'+same, {t:b.slice(0,4000), f:f}); return; }   // 고친 내용으로 칸만 바꿈(상태는 그대로)
+              // 287: CSO 가 같은 요청 글을 handover·#group-sysmex-talk 두 채널에 올리면 양식을 읽은 결과가 달라(id 가 다름) 요청이 둘로 생기던 것 →
+              //  15분 안에 다른 채널에서 같은 병원·장비(slkSibKey_)의 CSO 요청이 이미 있으면 새로 만들지 않음. 새 글이 handover 면 요청을 그 글로 옮김(✅ 는 handover 에서)
+              const kd = (C.k === 'talk' ? 'cso' : C.k);
+              if(kd === 'cso'){
+                const sk = slkSibKey_({f:f});
+                const twin = sk && Object.keys(near).filter(function(k){ const o = near[k]; return o && k !== id && !o.multi && o.kind === 'cso' && o.ch && o.ch !== ch && slkSibKey_(o) === sk && Math.abs((+o.at||0) - at) <= 15*60000; })[0];
+                if(twin){
+                  const o = near[twin];
+                  if(C.type === 'req' && SLACK_CH[o.ch] && SLACK_CH[o.ch].type !== 'req' && !o.ack) dbPatch_('talk/slack/req/'+twin, {ch:ch, ts:m.ts, lr:null});
+                  return;
+                }
+              }
             }
             const base = {ch:ch, ts:m.ts, kind:(C.k === 'talk' ? 'cso' : C.k), by:slkPerson_(who), at:(cur&&cur.at)||at, t:b.slice(0,4000), f:f, mention:mention||null, multi:blocks.length>1||null};
             if(!cur){ base.st = 'new'; added++; }
@@ -933,6 +945,7 @@ function slackPull(force, opt){
     if(!PR.SLK_RESCAN_227) props.setProperty('SLK_RESCAN_227','1');
     if(!PR.SLK_DEDUP_232){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_REQDUP_233){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
+    if(!PR.SLK_MERGE_287){ try{ slkMerge287_(); props.setProperty('SLK_MERGE_287','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_LINK_229){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!PR.SLK_ACKDONE_266){ try{ slkAckDone266_(); props.setProperty('SLK_ACKDONE_266','1'); }catch(e){ meta.err = '확인 완료 정리: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!PR.SLK_MIG_224){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
@@ -1172,6 +1185,21 @@ function slkDedup232_(){   // 한 번 — 팀 방에 두 번 들어간 같은 Sl
       .sort(function(a,b){ return (+all[a].ts||0)-(+all[b].ts||0); })
       .forEach(function(k){ const v = all[k], h = (v.name||'')+'|'+String(v.text||'').replace(/\s+/g,'');
         if(seen[h] && (+v.ts||0) - seen[h] < 15*60*1000){ dbDelete_('talk/msgs/'+room+'/'+k); n++; } else seen[h] = +v.ts||0; });
+  });
+  return n;
+}
+function slkMerge287_(){   // 한 번 — 같은 CSO 글이 handover·#group-sysmex-talk 두 채널에서 두 요청으로 생긴 것 정리: handover 쪽을 남기고 talk 쪽 지움
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-7*864e5)) || {};
+  const isReq = function(r){ return SLACK_CH[r.ch] && SLACK_CH[r.ch].type === 'req'; };
+  let n = 0;
+  Object.keys(all).forEach(function(k){
+    const r = all[k]; if(!r || r.multi || r.kind !== 'cso' || !r.ch || isReq(r) || /^p_/.test(k)) return;   // talk 채널 글로 만든 CSO 요청만
+    if(r.fin || r.mv || r.doneBy && !(r.ack && r.ack.via) && !r.ackDone) return;   // 현장 글·관리자 완료로 진행된 것은 그대로
+    const sk = slkSibKey_(r); if(!sk) return;
+    const keep = Object.keys(all).filter(function(x){ const o = all[x]; return o && x !== k && !o.multi && o.kind === 'cso' && isReq(o) && slkSibKey_(o) === sk && Math.abs((+o.at||0) - (+r.at||0)) <= 15*60000; })[0];
+    if(!keep) return;
+    if(r.rr && !all[keep].rr) dbPatch_('talk/slack/req/'+keep, {rr:r.rr, rrAt:r.rrAt||null});
+    dbDelete_('talk/slack/req/'+k); delete all[k]; n++;
   });
   return n;
 }
