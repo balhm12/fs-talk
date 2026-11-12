@@ -1665,6 +1665,18 @@ function slkStatEq_(f){
   if(/^XN-?L\b|^XN-?(3|4|5)\d0\b/.test(raw)) return 'XN-L';
   const m = /^([A-Z]+)/.exec(raw); return m ? m[1] : '-';
 }
+/* 291: 학술요청 분야 — 장비군으로 정하고, 장비가 없으면 글에 적힌 분야 말로(혈액·응고·면역·뇨화학). 모르면 '미분류' */
+const SLK_FLD = {XN:'혈액','XN-L':'혈액',XR:'혈액',XS:'혈액',XE:'혈액',XT:'혈액',XP:'혈액',KX:'혈액',POCH:'혈액',SP:'혈액',DI:'혈액',RET:'혈액',
+  CS:'응고',CA:'응고',CN:'응고',HISCL:'면역',HI:'면역',UF:'뇨화학',UC:'뇨화학',UD:'뇨화학',AX:'뇨화학',UX:'뇨화학'};
+function slkStatFld_(e, b){
+  if(SLK_FLD[e]) return SLK_FLD[e];
+  const t = String(b||'');
+  if(/응고|PT\b|APTT|INR|D-?dimer|피브리노겐|fibrinogen/i.test(t)) return '응고';
+  if(/면역|HISCL|종양표지|갑상선|감염|호르몬/i.test(t)) return '면역';
+  if(/뇨|소변|요침사|urine|요화학/i.test(t)) return '뇨화학';
+  if(/혈액|CBC|WBC|RBC|PLT|HGB|백혈구|적혈구|혈소판|도말|slide/i.test(t)) return '혈액';
+  return '미분류';
+}
 function slackStats_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid);
@@ -1672,7 +1684,7 @@ function slackStats_(req){
   if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'스크립트 속성 SLACK_BOT_TOKEN 이 없습니다',ver:NOTIFY_VER};
   const days = Math.max(1, Math.min(90, +req.days || 28)), t0 = Date.now() - days*864e5;
   const z = function(){ return {wd:0, wn:0, we:0}; };
-  const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, eqB:{}, week:{}, ver:NOTIFY_VER};
+  const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, eqB:{}, fld:{}, week:{}, ver:NOTIFY_VER};
   Object.keys(SLACK_CH).forEach(function(ch){
     const C = SLACK_CH[ch]; if(C.type !== 'req') return;
     const R = {name:C.name, k:C.k, msgs:0, blocks:0, acad:z(), tech:z(), etc:z(), fwd:0, more:false};
@@ -1695,6 +1707,7 @@ function slackStats_(req){
             if(!multi && slkHeadTeam_(raw, text)) R.fwd++;
             const e = slkStatEq_(slkParse_(b));   // 291: 장비군별·시간대별
             const E = out.eqB[e] || (out.eqB[e] = {wd:0, wn:0, we:0}); E[band]++;
+            const fd = slkStatFld_(e, b), F = out.fld[fd] || (out.fld[fd] = {wd:0, wn:0, we:0}); F[band]++;   // 291: 분야별(혈액·응고·면역·뇨화학)
             if(e !== '-') out.eq[e] = (out.eq[e]||0) + 1;
             const W = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0});
             W.acad++; if(band !== 'wd') W.night++;

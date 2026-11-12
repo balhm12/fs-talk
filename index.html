@@ -4641,8 +4641,16 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
     ["acad","tech","etc"].forEach(k=>{const v=R[k],tr=el("tr",k==="acad"?"slkstA":null);tr.appendChild(el("td",null,KN[k]+(k==="acad"&&R.fwd?" (FS 로 다시 넘김 "+R.fwd+")":"")));
       [v.wd,v.wn,v.we,v.wd+v.wn+v.we].forEach((n,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(n))));tb.appendChild(tr);});});
   tbl.appendChild(tb);c.appendChild(tbl);
+  /* 291: 학술요청 분야별 — 혈액·응고·면역·뇨화학(장비군으로, 장비가 없으면 글의 분야 말로), 모르면 미분류 */
+  const tot=v=>v.wd+v.wn+v.we,FB=j.fld||{},FO=["혈액","응고","면역","뇨화학","미분류"],fr=FO.filter(k=>FB[k]&&tot(FB[k]));
+  if(fr.length){c.appendChild(el("h4","slksth","학술요청 분야별"));
+    const t3=el("table","kpt slkst"),h3=el("tr");["분야","평일 주간","평일 야간","주말","합계","업무 시간 밖"].forEach((h,i)=>{const th=el("th",i?"num":null,h);th.scope="col";h3.appendChild(th);});
+    const th3=el("thead");th3.appendChild(h3);t3.appendChild(th3);const tb3=el("tbody");
+    fr.forEach(k=>{const v=FB[k],tr=el("tr"),n=tot(v),o=v.wn+v.we;tr.appendChild(el("td",null,k));[v.wd,v.wn,v.we,n].forEach((x,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(x))));
+      tr.appendChild(el("td","num",n?Math.round(o*100/n)+"%":"–"));tb3.appendChild(tr);});
+    t3.appendChild(tb3);c.appendChild(t3);}
   /* 291: 학술요청 장비별 — 장비군 × 시간대 표(많은 순, 10개 넘으면 나머지는 「그 밖」, 장비 칸이 없으면 「장비 미기재」) */
-  const EB=j.eqB||{},tot=v=>v.wd+v.wn+v.we;let er=Object.entries(EB).filter(([k])=>k!=="-").sort((a,b)=>tot(b[1])-tot(a[1])||a[0].localeCompare(b[0]));
+  const EB=j.eqB||{};let er=Object.entries(EB).filter(([k])=>k!=="-").sort((a,b)=>tot(b[1])-tot(a[1])||a[0].localeCompare(b[0]));
   if(er.length>10){const rest={wd:0,wn:0,we:0};er.slice(10).forEach(([,v])=>{rest.wd+=v.wd;rest.wn+=v.wn;rest.we+=v.we;});er=er.slice(0,10).concat([["그 밖 "+(er.length-10)+"종",rest]]);}
   if(EB["-"])er.push(["장비 미기재",EB["-"]]);
   if(er.length){c.appendChild(el("h4","slksth","학술요청 장비별"));
@@ -4655,7 +4663,7 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
   else{const eq=Object.entries(j.eq||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);if(eq.length)c.appendChild(el("p","hp","학술요청 장비: "+eq.map(([k,n])=>k+" "+n).join(" · ")));}
   const wk=Object.entries(j.week||{}).sort((a,b)=>a[0].localeCompare(b[0]));
   if(wk.length>1)c.appendChild(el("p","hp","주별 학술요청(업무 시간 밖): "+wk.map(([k,w])=>k+"~ "+w.acad+"("+w.night+")").join(" · ")));
-  c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
+  c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 분야 = 장비군(XN·XR·SP·DI → 혈액, CS·CA·CN → 응고, HISCL → 면역, UF·UC → 뇨화학), 장비가 없으면 글의 분야 말로. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
   $("pOv").hidden=false;}
 async function slkTest(){toast("Slack 연결 확인 중…");
   try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackTest",idToken,pull:true})});

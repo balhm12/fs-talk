@@ -31,4 +31,5 @@ assert.strictEqual(r.eq.XN,3,'장비 XN 3 '+JSON.stringify(r.eq));assert.strictE
 assert.deepStrictEqual(r.eqB.XN,{wd:1,wn:2,we:0},'XN 시간대 '+JSON.stringify(r.eqB));assert.deepStrictEqual(r.eqB['XN-L'],{wd:0,wn:0,we:1});assert.deepStrictEqual(r.eqB.CN,{wd:0,wn:0,we:1});
 assert(!JSON.stringify(r).includes('테스트병원'),'병원 이름 안 돌려줌');assert(!JSON.stringify(r).includes('테스트1'),'이름 안 돌려줌');
 const W=Object.values(r.week).reduce((a,w)=>a+w.acad,0);assert.strictEqual(W,5,'주별 학술 합 5');
+assert.deepStrictEqual(r.fld['혈액'],{wd:1,wn:2,we:1},'혈액 '+JSON.stringify(r.fld));assert.deepStrictEqual(r.fld['응고'],{wd:0,wn:0,we:1});
 console.log('slack_stats ok');
