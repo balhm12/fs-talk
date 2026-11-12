@@ -32,4 +32,23 @@ assert.deepStrictEqual(r.eqB.XN,{wd:1,wn:2,we:0},'XN 시간대 '+JSON.stringify(
 assert(!JSON.stringify(r).includes('테스트병원'),'병원 이름 안 돌려줌');assert(!JSON.stringify(r).includes('테스트1'),'이름 안 돌려줌');
 const W=Object.values(r.week).reduce((a,w)=>a+w.acad,0);assert.strictEqual(W,5,'주별 학술 합 5');
 assert.deepStrictEqual(r.fld['혈액'],{wd:1,wn:2,we:1},'혈액 '+JSON.stringify(r.fld));assert.deepStrictEqual(r.fld['응고'],{wd:0,wn:0,we:1});
+// 291: 미분류 목록·직접 정한 분야
+hist.C0AT8RP3QDN.push({ts:kst(4,21).toFixed(6),user:'U1',text:'&lt;학술요청&gt;&lt;인계 : CSO&gt;\n1) 기 관 명 : 테스트의원\n3) 요청사항 : 참고치 문의 010-1234-5678'});
+r=g.slackStats_({idToken:'tok-uA',days:28});
+const u=r.unk.find(x=>/참고치/.test(x.req)&&x.hosp==='테스트의원');assert(u,'미분류 목록에 나옴 '+JSON.stringify(r.unk));assert(!/5678/.test(u.req)||/\*\*\*\*/.test(u.req),'전화번호 가림 '+u.req);
+const un0=r.fld['미분류']?r.fld['미분류'].wn:0;
+db.talk.slack.acadfld={[u.k]:'면역'};r=g.slackStats_({idToken:'tok-uA',days:28});
+assert.strictEqual((r.fld['미분류']||{wn:0}).wn,un0-1,'직접 정하면 미분류에서 빠짐');assert.strictEqual(r.fld['면역'].wn,1,'면역으로');assert.strictEqual(r.manual,1);
+assert(r.unk.find(x=>x.k===u.k&&x.fld==='면역'),'직접 정한 것도 목록에(바꿀 수 있게)');
+// 292: 야간 접수 지역 × 수탁기관·병원
+{const N=Date.now();db.talk.slack.req={
+ night_n1:{kind:'night',at:N-3600e3,f:{hosp:'GC녹십자의료재단',area:'경기'},mv:{n:'테스트2',at:N}},
+ night_n2:{kind:'night',at:N-3600e3,f:{hosp:'테스트병원 (부산)'}},
+ night_n3:{kind:'night',at:N-3600e3,f:{hosp:'씨젠의료재단',area:'대전'},autoFin:true},
+ night_n4:{kind:'night',at:N-3600e3,f:{hosp:'테스트의원'}},
+ cso_c1:{kind:'cso',at:N-3600e3,f:{hosp:'테스트병원'}}};
+ r=g.slackStats_({idToken:'tok-uA',days:28});const Ng=r.night;
+ assert.deepStrictEqual(Ng.ew,{lab:{n:1,v:1},hosp:{n:0,v:0}},'수도권 수탁 '+JSON.stringify(Ng));
+ assert.deepStrictEqual(Ng.central.lab,{n:1,v:1});assert.deepStrictEqual(Ng.south.hosp,{n:1,v:0});assert.deepStrictEqual(Ng['-'].hosp,{n:1,v:0});
+ assert(!JSON.stringify(Ng).includes('cso'),'CSO 제외');}
 console.log('slack_stats ok');

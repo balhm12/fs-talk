@@ -131,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v59';
+const NOTIFY_VER = 'v60';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1677,6 +1677,21 @@ function slkStatFld_(e, b){
   if(/혈액|CBC|WBC|RBC|PLT|HGB|백혈구|적혈구|혈소판|도말|slide/i.test(t)) return '혈액';
   return '미분류';
 }
+/* 292: 야간 접수(CS쉐어링 요청)를 지역 × 기관 유형(수탁기관·병원)으로 — 요청함 자료(talk/slack/req) 기준.
+ *  지역 = 기관명 (지역)(slkNightRegion_: 수도권·강원·제주 / CENTRAL / SOUTH), 수탁기관 = 의료재단·녹십자·이원·씨젠·삼광·서울의과학연구소 등,
+ *  방문 = 담당·확인자의 현장 「이동」(mv) 또는 「마칩니다」 자동 완료(autoFin) 글이 있는 건(현장 글 기준이라 실제보다 적을 수 있음) */
+const SLK_LAB_RE = /의료재단|녹십자|씨젠|삼광|서울의과학연구소|\bSCL\b|랩지노믹스|이원\s*의료|수탁/i;
+function slkNightStats_(t0){
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+t0) || {}, out = {};
+  Object.keys(all).forEach(function(id){
+    const r = all[id]; if(!r || r.kind !== 'night' || !r.f) return;
+    const f = r.f, a = f.area || ((/\(([^)]+)\)\s*$/.exec(f.hosp||'') || [])[1]) || '';
+    const g = slkNightRegion_(a) || '-', ty = SLK_LAB_RE.test(String(f.hosp||'')) ? 'lab' : 'hosp';
+    const R = out[g] || (out[g] = {lab:{n:0, v:0}, hosp:{n:0, v:0}});
+    R[ty].n++; if(r.mv || r.autoFin) R[ty].v++;
+  });
+  return out;
+}
 function slackStats_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid);
@@ -1685,6 +1700,9 @@ function slackStats_(req){
   const days = Math.max(1, Math.min(90, +req.days || 28)), t0 = Date.now() - days*864e5;
   const z = function(){ return {wd:0, wn:0, we:0}; };
   const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, eqB:{}, fld:{}, week:{}, ver:NOTIFY_VER};
+  const ov = db_('talk/slack/acadfld') || {};   // 291: 관리자가 직접 정한 분야(미분류 → 혈액·응고·면역·뇨화학)
+  out.unk = []; out.manual = 0;
+  try{ out.night = slkNightStats_(t0); }catch(e){ out.nightErr = String(e.message||e).slice(0,120); }
   Object.keys(SLACK_CH).forEach(function(ch){
     const C = SLACK_CH[ch]; if(C.type !== 'req') return;
     const R = {name:C.name, k:C.k, msgs:0, blocks:0, acad:z(), tech:z(), etc:z(), fwd:0, more:false};
@@ -1701,13 +1719,20 @@ function slackStats_(req){
         const multi = (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1;
         const blocks = multi ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
         const band = slkStatBand_(ms), wk = Utilities.formatDate(new Date(ms - ((new Date(ms + 9*3600e3).getUTCDay()+6)%7)*864e5), 'Asia/Seoul', 'MM/dd');
-        blocks.forEach(function(b){
+        blocks.forEach(function(b, bi){
+          const sk = C.k + '_' + String(m.ts).replace('.', '') + (multi ? '_' + bi : '');
           const kd = slkStatKind_(b); R.blocks++; R[kd][band]++;
           if(kd === 'acad'){
             if(!multi && slkHeadTeam_(raw, text)) R.fwd++;
             const e = slkStatEq_(slkParse_(b));   // 291: 장비군별·시간대별
             const E = out.eqB[e] || (out.eqB[e] = {wd:0, wn:0, we:0}); E[band]++;
-            const fd = slkStatFld_(e, b), F = out.fld[fd] || (out.fld[fd] = {wd:0, wn:0, we:0}); F[band]++;   // 291: 분야별(혈액·응고·면역·뇨화학)
+            const auto = slkStatFld_(e, b), man = /^(혈액|응고|면역|뇨화학)$/.test(ov[sk]||'') ? ov[sk] : '';
+            const fd = man || auto, F = out.fld[fd] || (out.fld[fd] = {wd:0, wn:0, we:0}); F[band]++;   // 291: 분야별(혈액·응고·면역·뇨화학)
+            if(man) out.manual++;
+            if((auto === '미분류' || man) && out.unk.length < 200){   // 291: 분야를 직접 정할 목록(미분류 + 직접 정한 것) — 전화번호는 가림, 글쓴이 이름은 안 돌려줌
+              const pf = slkParse_(b) || {}, mask = function(x){ return String(x||'').replace(/(\d{2,4})[-. ]?(\d{3,4})[-. ]?(\d{4})/g, '$1-****-$3').slice(0,160); };
+              out.unk.push({k:sk, at:ms, src:C.k, hosp:mask(pf.hosp), eq:mask(pf.eq), req:mask(pf.req || pf.sym || text.replace(/\s+/g,' ')), fld:man});
+            }
             if(e !== '-') out.eq[e] = (out.eq[e]||0) + 1;
             const W = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0});
             W.acad++; if(band !== 'wd') W.night++;

@@ -1879,6 +1879,9 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 .kpt.slkst tr.slkstA td{color:#005BAC;font-weight:600}html[data-theme=dark] .kpt.slkst tr.slkstA td{color:#8CC4F5}
 .slkstn{font-size:12px!important}
 .slksth{margin:14px 0 4px;font-size:14px;color:var(--strong)}
+.slkunkb{margin:8px 0 4px;min-height:40px}.slkunk{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px}
+.slkunkr{border:1px solid var(--line);border-radius:10px;padding:8px 10px}.slkunkm{font-size:12px;color:var(--sub)}.slkunkt{font-size:14px;margin:2px 0 6px;word-break:keep-all}
+.slkunkc{display:flex;gap:6px;flex-wrap:wrap}.slkunkc .chip.on,.slkstp .chip.on{background:#005BAC!important;border-color:#005BAC!important;color:#fff!important}.slkunkc .chip{min-height:36px;min-width:56px}@media (pointer:coarse){.slkunkc .chip{min-height:44px}}
 </style>
 
 </head>
@@ -2113,7 +2116,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-13.291";
+const APP_VERSION="2026-11-13.292";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4641,6 +4644,17 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
     ["acad","tech","etc"].forEach(k=>{const v=R[k],tr=el("tr",k==="acad"?"slkstA":null);tr.appendChild(el("td",null,KN[k]+(k==="acad"&&R.fwd?" (FS 로 다시 넘김 "+R.fwd+")":"")));
       [v.wd,v.wn,v.we,v.wd+v.wn+v.we].forEach((n,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(n))));tb.appendChild(tr);});});
   tbl.appendChild(tb);c.appendChild(tbl);
+  /* 292: 야간 접수(CS쉐어링) 지역별 — 수탁기관(의료재단 등)·병원으로 나눠 접수·방문 */
+  const NG=j.night||{},NR=[["ew","수도권·강원·제주"],["central","CENTRAL (대전·광주)"],["south","SOUTH (부산·대구)"],["-","지역 미상"]].filter(([k])=>NG[k]);
+  if(NR.length){c.appendChild(el("h4","slksth","야간 접수 지역별 — 수탁기관·병원"));
+    const t4=el("table","kpt slkst"),h4=el("tr");["지역","수탁기관 접수","방문","병원 접수","방문","합계"].forEach((h,i)=>{const th=el("th",i?"num":null,h);th.scope="col";h4.appendChild(th);});
+    const th4=el("thead");th4.appendChild(h4);t4.appendChild(th4);const tb4=el("tbody"),S={ln:0,lv:0,hn:0,hv:0};
+    NR.forEach(([k,lb])=>{const v=NG[k],tr=el("tr");tr.appendChild(el("td",null,lb));[v.lab.n,v.lab.v,v.hosp.n,v.hosp.v,v.lab.n+v.hosp.n].forEach((x,i)=>tr.appendChild(el("td","num"+(i===4?" b":""),String(x))));
+      S.ln+=v.lab.n;S.lv+=v.lab.v;S.hn+=v.hosp.n;S.hv+=v.hosp.v;tb4.appendChild(tr);});
+    const tt=el("tr","slkstg");tt.appendChild(el("td",null,"합계"));[S.ln,S.lv,S.hn,S.hv,S.ln+S.hn].forEach(x=>tt.appendChild(el("td","num b",String(x))));tb4.appendChild(tt);
+    t4.appendChild(tb4);c.appendChild(t4);
+    c.appendChild(el("p","hp slkstn","CS쉐어링 요청(학술요청 제외) 기준. 수탁기관 = 의료재단(녹십자·이원·씨젠·삼광 등)·서울의과학연구소 등. 방문 = 담당·접수자가 Slack 에 「○○ 이동」 또는 「마칩니다」 글을 쓴 건이라 실제보다 적을 수 있습니다."));}
+  else if(j.nightErr)c.appendChild(el("p","hp","야간 접수 지역별: 읽지 못했습니다 ("+j.nightErr+")"));
   /* 291: 학술요청 분야별 — 혈액·응고·면역·뇨화학(장비군으로, 장비가 없으면 글의 분야 말로), 모르면 미분류 */
   const tot=v=>v.wd+v.wn+v.we,FB=j.fld||{},FO=["혈액","응고","면역","뇨화학","미분류"],fr=FO.filter(k=>FB[k]&&tot(FB[k]));
   if(fr.length){c.appendChild(el("h4","slksth","학술요청 분야별"));
@@ -4649,6 +4663,19 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
     fr.forEach(k=>{const v=FB[k],tr=el("tr"),n=tot(v),o=v.wn+v.we;tr.appendChild(el("td",null,k));[v.wd,v.wn,v.we,n].forEach((x,i)=>tr.appendChild(el("td","num"+(i===3?" b":""),String(x))));
       tr.appendChild(el("td","num",n?Math.round(o*100/n)+"%":"–"));tb3.appendChild(tr);});
     t3.appendChild(tb3);c.appendChild(t3);}
+  /* 291: 미분류 학술요청 분야 정하기(관리자) — talk/slack/acadfld/{키} = 분야, 다음 집계부터 반영. 직접 정한 것도 여기서 바꾸거나 되돌림 */
+  const U=j.unk||[];if(U.length){const nU=U.filter(u=>!u.fld).length;
+    const ub=el("button","btn slkunkb",(nU?"미분류 "+nU+"건 분야 정하기":"직접 정한 분야 보기")+(j.manual?" · 직접 정함 "+j.manual+"건":""));ub.setAttribute("aria-expanded","false");c.appendChild(ub);
+    const box=el("div","slkunk");box.hidden=true;c.appendChild(box);
+    ub.onclick=()=>{box.hidden=!box.hidden;ub.setAttribute("aria-expanded",box.hidden?"false":"true");if(!box.hidden&&!box.firstChild)drawUnk();};
+    const drawUnk=()=>{box.textContent="";box.appendChild(el("p","hp","분야를 고르면 바로 저장되고, 「다시 집계」하면 표에 반영됩니다. 같은 칩을 다시 누르면 미분류로 되돌립니다."));
+      U.forEach(u=>{const row=el("div","slkunkr"),d=new Date(u.at);
+        row.appendChild(el("div","slkunkm",(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+" · "+(u.src==="night"?"CS쉐어링":"CSO")+(u.hosp?" · "+u.hosp:"")+(u.eq?" · "+u.eq:"")));
+        row.appendChild(el("div","slkunkt",u.req||"(내용 없음)"));
+        const cs=el("div","chips slkunkc");["혈액","응고","면역","뇨화학"].forEach(f=>{const b=el("button","chip"+(u.fld===f?" on":""),f);b.setAttribute("aria-pressed",u.fld===f?"true":"false");
+          b.onclick=async()=>{const nv=u.fld===f?null:f;try{await db.ref("talk/slack/acadfld/"+u.k).set(nv);u.fld=nv||"";track("slk_acadfld");drawUnk();toast(nv?"「"+f+"」로 정했습니다":"미분류로 되돌렸습니다");}catch(e){toast("저장하지 못했습니다: "+(e.message||e));}};cs.appendChild(b);});
+        row.appendChild(cs);box.appendChild(row);});
+      const rb=el("button","btn","다시 집계");rb.onclick=()=>slkAcadStats(days);box.appendChild(rb);};}
   /* 291: 학술요청 장비별 — 장비군 × 시간대 표(많은 순, 10개 넘으면 나머지는 「그 밖」, 장비 칸이 없으면 「장비 미기재」) */
   const EB=j.eqB||{};let er=Object.entries(EB).filter(([k])=>k!=="-").sort((a,b)=>tot(b[1])-tot(a[1])||a[0].localeCompare(b[0]));
   if(er.length>10){const rest={wd:0,wn:0,we:0};er.slice(10).forEach(([,v])=>{rest.wd+=v.wd;rest.wn+=v.wn;rest.we+=v.we;});er=er.slice(0,10).concat([["그 밖 "+(er.length-10)+"종",rest]]);}
@@ -4890,7 +4917,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={slk_stats:"학술요청 집계(관리자)",sil_check:"실마리 연결 점검",av_zoom:"프로필 사진 크게 보기",home_inst:"홈 설치일정 버튼",home_work:"홈 근무일정 버튼",room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
+const TRK={slk_stats:"학술요청 집계(관리자)",slk_acadfld:"학술요청 분야 정하기(관리자)",sil_check:"실마리 연결 점검",av_zoom:"프로필 사진 크게 보기",home_inst:"홈 설치일정 버튼",home_work:"홈 근무일정 버튼",room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
