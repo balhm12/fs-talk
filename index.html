@@ -1856,6 +1856,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 .silck{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
 .silckh{font-size:12px;color:var(--sub)}.silckt{font-size:14px;margin:4px 0 6px;white-space:pre-wrap;word-break:break-word}
 .silckl{font-size:12.5px;display:flex;gap:8px;line-height:1.5}.silckl b{flex:0 0 32px}.silckl.old span{color:var(--sub)}.silckb{display:flex;justify-content:flex-end;margin-top:12px}.silckl.new b{color:#005BAC}
+.slkdiag{font-size:12px;line-height:1.5;background:var(--soft);border-radius:8px;padding:10px;max-height:46vh;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:6px 0 10px}
 </style>
 
 </head>
@@ -2090,7 +2091,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-12.284";
+const APP_VERSION="2026-11-12.285";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4598,7 +4599,11 @@ async function slkTest(){toast("Slack 연결 확인 중…");
     const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);c.appendChild(el("h3",null,"Slack 연결 시험"));
     if(!j||!j.ok){c.appendChild(el("p","hp",(j&&j.err)||"서버 응답이 없습니다."));c.appendChild(el("p","hp","Slack 앱을 만들고 Apps Script 스크립트 속성 SLACK_BOT_TOKEN 을 넣은 뒤 다시 시험하세요."));}
     else{c.appendChild(el("p","hp","워크스페이스 "+j.team+" · 봇 "+j.bot+" · 1분 가져오기 "+(j.trigger?"켜짐":"꺼짐 (Apps Script에서 installSlackTrigger 실행)")));
-      (j.chans||[]).forEach(ch=>{const d=el("div","bdr");d.appendChild(el("span","bdk","#"+ch.name));d.appendChild(el("span","bdv",ch.member?"초대됨":"초대 필요 — 채널에서 /invite @fs-portal"));c.appendChild(d);});}
+      (j.chans||[]).forEach(ch=>{const d=el("div","bdr");d.appendChild(el("span","bdk","#"+ch.name));d.appendChild(el("span","bdv",ch.member?"초대됨":"초대 필요 — 채널에서 /invite @fs-portal"));c.appendChild(d);});
+      if(Array.isArray(j.diag)){const ttl=el("p","hp","확인(✅) 안 된 최근 요청 진단 "+j.diag.length+"건 · 서버 "+(j.ver||""));c.appendChild(ttl);   // 285
+        const L=j.diag.map(d=>d.err?"오류: "+d.err:[d.id+" ["+d.st+"]","  연결 글: #"+d.ch+" "+d.ts+" → "+d.rx,"  병원·장비: "+d.key].concat((d.near||[]).length?d.near.map(n=>"  같은 건 글: #"+n.ch+" "+n.ts+(n.sub?" ("+n.sub+")":"")+" → "+n.rx+(n.linked?" · 연결된 요청 "+n.linked:"")):["  같은 건 다른 글: 없음"]).join("\n")).join("\n\n");
+        const pr=el("pre","slkdiag",L||"없음");c.appendChild(pr);
+        const cp=el("button","btn","진단 내용 복사");cp.onclick=()=>{try{navigator.clipboard.writeText(L);toast("복사했습니다");}catch(e){}};c.appendChild(cp);}}
     $("pOv").hidden=false;}
   catch(e){toast("연결하지 못했습니다.");}}
 function kptwSync(w){if(w&&w.isConnected)w.classList.toggle("end",w.scrollLeft+w.clientWidth>=w.scrollWidth-4);}

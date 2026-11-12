@@ -130,7 +130,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v54';
+const NOTIFY_VER = 'v55';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1577,7 +1577,37 @@ function slackTest_(req){
   });
   const trig = ScriptApp.getProjectTriggers().some(function(t){ return t.getHandlerFunction() === 'slackPull'; });
   if(req.pull) slackPull(true);
-  return {ok:true, team:a.team, bot:a.user, chans:chans, trigger:trig, ver:NOTIFY_VER};
+  let diag = null; try{ diag = slkDiag_(); }catch(e){ diag = [{err:String(e.message||e).slice(0,200)}]; }
+  return {ok:true, team:a.team, bot:a.user, chans:chans, trigger:trig, diag:diag, ver:NOTIFY_VER};
+}
+/* 285: 「연결 시험」 진단 — 아직 ✅ 확인이 안 된 최근 요청(2일, 6건까지)마다 연결된 Slack 글이 기록에 있는지·그 글의 반응,
+ *  같은 병원·장비로 2시간 안에 올라온 요청 채널 글과 그 반응을 돌려줌(저장 없음). 이름·본문은 돌려주지 않음 */
+function slkDiag_(){
+  const t0 = Date.now() - 2*864e5;
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+t0) || {};
+  const ids = Object.keys(all).filter(function(id){ const r = all[id]; return r && !r.ack && r.st !== 'done' && !r.multi; })
+    .sort(function(a,b){ return (+all[b].at||0) - (+all[a].at||0); }).slice(0,6);
+  if(!ids.length) return [];
+  const hist = {}, oldest = String(t0/1000 - 3600);
+  Object.keys(SLACK_CH).forEach(function(ch){
+    if(SLACK_CH[ch].type !== 'req') return;
+    let cursor = '', page = 0;
+    do{ const prm = {channel:ch, oldest:oldest, limit:200}; if(cursor) prm.cursor = cursor;
+      const j = slackApi_('conversations.history', prm); (j.messages||[]).forEach(function(m){ hist[ch+'|'+m.ts] = m; });
+      cursor = j.response_metadata && j.response_metadata.next_cursor || ''; }while(cursor && ++page < 3);
+  });
+  const rxOf = function(m){ return m ? ((m.reactions||[]).map(function(x){ return x.name+'×'+(x.users||[]).length; }).join(', ') || '반응 없음') : '기록에 없음'; };
+  const chn = function(ch){ return SLACK_CH[ch] ? SLACK_CH[ch].name : String(ch||'-'); };
+  return ids.map(function(id){
+    const r = all[id], key = slkSibKey_(r);
+    const near = Object.keys(hist).filter(function(k){
+      const m = hist[k]; if(Math.abs(+m.ts - +r.ts) > 7200 || k === r.ch+'|'+r.ts) return false;
+      const f = slkParse_(slkClean_(String(m.text||''))); return !!(f && key && slkSibKey_({f:f}) === key);
+    }).map(function(k){ const ch = k.split('|')[0], ts = k.split('|')[1];
+      const o = Object.keys(all).filter(function(x){ return all[x] && all[x].ch === ch && all[x].ts === ts; })[0] || '';
+      return {ch:chn(ch), ts:ts, rx:rxOf(hist[k]), sub:hist[k].subtype||'', linked:o}; });
+    return {id:id, ch:chn(r.ch), ts:r.ts, st:r.st, key:key || '(병원·장비 없음)', rx:rxOf(hist[r.ch+'|'+r.ts]), near:near};
+  });
 }
 function installSlackTrigger(){
   ScriptApp.getProjectTriggers().forEach(function(t){ if(t.getHandlerFunction() === 'slackPull') ScriptApp.deleteTrigger(t); });
