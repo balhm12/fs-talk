@@ -819,6 +819,7 @@ function openTalkStats(){
   if(tsPer==="all"){const yk=Object.keys(R.yr).sort();
     h+='<h2 class="sec">연도별</h2><div class="tswrap"><table class="au"><tr><th>연도</th><th class="n">학술</th><th class="n">전화 기술</th><th class="n">야간 방문</th><th class="n">수탁기관</th><th class="n">비율</th></tr>'+
       yk.map(y=>{const Y=R.yr[y],vv=Y.lab+Y.hosp;return '<tr><td>'+y+'</td><td class="n">'+N(Y.acad)+'</td><td class="n">'+N(Y.tel)+'</td><td class="n">'+N(vv)+'</td><td class="n">'+N(Y.lab)+'</td><td class="n">'+pc(Y.lab,vv)+'</td></tr>';}).join("")+'</table></div>';}
+  h+='<p><button class="btn" id="tsExp">KPI용 내보내기 (학술 글 수 · 날짜·시간별)</button> <span class="note">KPI 대시보드 Workload 「학술 응대」용 — 이름·본문 없이 숫자만 담긴 파일을 받습니다. KPI 관리자 화면 「업무부하 학술 자료」 칸에 올려 주세요.</span></p>';
   h+='<h2 class="sec">표본 — 최근 글 (누르면 대화 상세)</h2>';
   [["acad","학술"],["tel","전화 기술"],["lab","야간 방문 · 수탁기관"],["hosp","야간 방문 · 병원"]].forEach(([k,n])=>{const L=R.samp[k];if(!L.length)return;
     h+='<details><summary>'+n+' '+L.length+'건</summary><ul class="tssm">'+L.map(([c,i],j)=>'<li><button data-s="'+k+'" data-j="'+j+'"><b>'+fmtDate(c.ts[i]).slice(0,16)+'</b>'+esc(txtAt(c,i).replace(/\s+/g," ").slice(0,120))+'</button></li>').join("")+'</ul></details>';});
@@ -826,7 +827,17 @@ function openTalkStats(){
   $("#tsB").innerHTML=h;$("#tstat").classList.add("on");
   $("#tsB").querySelectorAll(".tsper .chip").forEach(b=>b.onclick=()=>{tsPer=b.dataset.p;openTalkStats();});
   $("#tsB").querySelectorAll(".tssm button").forEach(b=>b.onclick=()=>{const [c,i]=R.samp[b.dataset.s][+b.dataset.j];openDetail(c,i);});
+  $("#tsExp").onclick=()=>tsExport();
   $("#tsBack").focus();
+}
+/* 293+: KPI Workload 용 — 「학술」 글 수를 날짜(한국 시간)·시간별로. 이름·본문·방은 넣지 않음. 전체 기간(기간 칩과 무관) */
+function tsExport(){
+  if(CH.length<META.chunks.length){alert("자료를 다 받은 뒤 다시 눌러 주세요.");return;}
+  const days={};let from=null,to=null,n=0;
+  for(const c of CH)for(let i=0;i<c.n;i++){if(c.ty[i]===NZ)continue;const t=txtAt(c,i);if(!TS_ACAD.test(t))continue;
+    const d=dObj(c.ts[i]),k=d.toISOString().slice(0,10);(days[k]||(days[k]=new Array(24).fill(0)))[d.getUTCHours()]++;n++;if(!from||k<from)from=k;if(!to||k>to)to=k;}
+  const o={kind:"fsportal-acad",src:"talk",v:1,made:new Date().toISOString().slice(0,10),from,to,total:n,rule:"글에 「학술」이 들어간 Sysmex Talk 업무 방 글 수(검색 제외 글 빼고)",days};
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:"application/json"}));a.download="fsportal_acad_talk_"+o.made+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
 }
 
 /* ---------- 데이터 정보(적재 검증) ---------- */

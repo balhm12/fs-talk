@@ -2116,7 +2116,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-13.293";
+const APP_VERSION="2026-11-13.294";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4691,8 +4691,18 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (처음 한 
   else{const eq=Object.entries(j.eq||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);if(eq.length)c.appendChild(el("p","hp","학술요청 장비: "+eq.map(([k,n])=>k+" "+n).join(" · ")));}
   const wk=Object.entries(j.week||{}).sort((a,b)=>a[0].localeCompare(b[0]));
   if(wk.length>1)c.appendChild(el("p","hp",(j.per==="m"?"월별":"주별")+" 학술요청(업무 시간 밖): "+wk.map(([k,w])=>k+(j.per==="m"?" ":"~ ")+w.acad+"("+w.night+")").join(" · ")));
+  {const xb=el("button","btn","KPI용 내보내기 (학술요청 · 날짜·시간별)");xb.onclick=()=>slkAcadExport();c.appendChild(xb);c.appendChild(el("p","hp","KPI 대시보드 Workload 「학술 응대」용 — 포털에 쌓인 학술요청 접수 건을 이름·병원명 없이 숫자만 파일로 받습니다. KPI 관리자 화면 「업무부하 학술 자료」 칸에 올려 주세요."));}
   c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 분야 = 장비군(XN·XR·SP·DI → 혈액, CS·CA·CN → 응고, HISCL → 면역, UF·UC → 뇨화학), 장비가 없으면 글의 검사 코드·분야 말로 유추(PT·APTT·D-dimer → 응고, HBsAg·TSH·CEA → 면역, 요침사·KET·BLD → 뇨화학, WBC·PLT·RET → 혈액). 학술요청은 전화 응대라 지역은 나누지 않습니다. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
   $("pOv").hidden=false;}
+/* 293+: KPI Workload 용 학술요청 내보내기 — talk/slack/stat(누적 기록)에서 학술(k=a) 접수 건을 날짜(한국 시간)·시간별로. 이름·병원명·본문은 넣지 않음 */
+async function slkAcadExport(){toast("기록을 읽는 중…");
+  try{const snap=await db.ref("talk/slack/stat").orderByChild("t").once("value");const v=snap.val()||{};const days={};let n=0,from=null,to=null;
+    Object.keys(v).forEach(k=>{const r=v[k];if(!r||r.k!=="a"||!r.t)return;const d=new Date(+r.t+9*3600e3),day=d.toISOString().slice(0,10);(days[day]||(days[day]=new Array(24).fill(0)))[d.getUTCHours()]++;n++;if(!from||day<from)from=day;if(!to||day>to)to=day;});
+    if(!n){toast("쌓인 학술요청 기록이 없습니다. 「학술요청 집계」를 한 번 열면 Slack 기록을 저장합니다.");return;}
+    const o={kind:"fsportal-acad",src:"slack",v:1,made:new Date().toISOString().slice(0,10),from,to,total:n,rule:"Slack 요청 채널(CSO·CS쉐어링) 학술요청 접수 건(묶음 글은 건마다)",days};
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:"application/json"}));a.download="fsportal_acad_slack_"+o.made+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+    track("slk_stats");toast("학술요청 "+n+"건("+from+" ~ "+to+")을 내보냈습니다");}
+  catch(e){toast("내보내지 못했습니다: "+(e.message||e));}}
 async function slkTest(){toast("Slack 연결 확인 중…");
   try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackTest",idToken,pull:true})});
     const j=await res.json().catch(()=>null);const c=$("pCard");c.textContent="";c.classList.remove("drawer","wide");
