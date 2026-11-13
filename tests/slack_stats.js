@@ -1,6 +1,6 @@
 // 290: 학술요청 집계 — 종류(학술·기술·그 밖)·시간대(평일 주간·평일 야간·주말)·CS쉐어링 묶음 글·머리말 전달·관리자만
 const assert=require('assert');const t=require('./slack_pull.js');t.cache.at='tok';
-const {g,db,hist}=t;
+const {g,db,hist,props}=t;
 db.talk.users=db.talk.users||{};db.talk.admins=db.talk.admins||{};
 db.talk.users.uA={name:'테스트1',team:'FSS Team',status:'approved'};db.talk.admins.uA=true;
 db.talk.users.uB={name:'테스트2',team:'FS WEST',status:'approved'};
@@ -33,6 +33,7 @@ assert(!JSON.stringify(r).includes('테스트병원'),'병원 이름 안 돌려�
 const W=Object.values(r.week).reduce((a,w)=>a+w.acad,0);assert.strictEqual(W,5,'주별 학술 합 5');
 assert.deepStrictEqual(r.fld['혈액'],{wd:1,wn:2,we:1},'혈액 '+JSON.stringify(r.fld));assert.deepStrictEqual(r.fld['응고'],{wd:0,wn:0,we:1});
 // 291: 미분류 목록·직접 정한 분야
+delete props.SLK_STAT_BF;   // 새 글이 7일보다 앞일 수 있어 다시 채움
 hist.C0AT8RP3QDN.push({ts:kst(4,21).toFixed(6),user:'U1',text:'&lt;학술요청&gt;&lt;인계 : CSO&gt;\n1) 기 관 명 : 테스트의원\n3) 요청사항 : 참고치 문의 010-1234-5678'});
 r=g.slackStats_({idToken:'tok-uA',days:28});
 const u=r.unk.find(x=>/참고치/.test(x.req)&&x.hosp==='테스트의원');assert(u,'미분류 목록에 나옴 '+JSON.stringify(r.unk));assert(!/5678/.test(u.req)||/\*\*\*\*/.test(u.req),'전화번호 가림 '+u.req);
@@ -51,4 +52,25 @@ assert(r.unk.find(x=>x.k===u.k&&x.fld==='면역'),'직접 정한 것도 목록�
  assert.deepStrictEqual(Ng.ew,{lab:{n:1,v:1},hosp:{n:0,v:0}},'수도권 수탁 '+JSON.stringify(Ng));
  assert.deepStrictEqual(Ng.central.lab,{n:1,v:1});assert.deepStrictEqual(Ng.south.hosp,{n:1,v:0});assert.deepStrictEqual(Ng['-'].hosp,{n:1,v:0});
  assert(!JSON.stringify(Ng).includes('cso'),'CSO 제외');}
+// 293: 검사 코드로 분야 유추(장비 없는 글)
+const F=g.slkStatFld_;
+assert.strictEqual(F('-','PT, APTT 참고치 문의'),'응고');assert.strictEqual(F('-','혈액응고 검사 결과'),'응고','혈액응고 = 응고');
+assert.strictEqual(F('-','HBsAg 결과 해석'),'면역');assert.strictEqual(F('-','TSH, FT4 값 차이'),'면역');
+assert.strictEqual(F('-','요침사 RBC 결과'),'뇨화학','요침사 + RBC → 뇨화학');assert.strictEqual(F('-','KET, BLD 양성'),'뇨화학');
+assert.strictEqual(F('-','WBC, PLT 낮게 나옴'),'혈액');assert.strictEqual(F('-','D-dimer 상승'),'응고');
+assert.strictEqual(F('-','참고치 문의'),'미분류');assert.strictEqual(F('CN','WBC'),'응고','장비가 있으면 장비군');
+assert.strictEqual(F('-','APPT 확인'),'미분류','오타는 모름');
+// 293: 쌓아 두기 — Slack 기록에서 사라져도 포털 DB 의 기록으로 셈
+const st=db.talk.slack.stat||{};assert(Object.keys(st).length>=9,'stat 기록 '+Object.keys(st).length);
+const one=Object.values(st).find(v=>v.k==='a'&&/010-/.test(v.q));assert(one&&/\*\*\*\*/.test(one.q)&&!/1234/.test(one.q),'기록의 전화번호 가림');
+assert(!Object.values(st).some(v=>v.k!=='a'&&(v.q||v.h)),'학술 아닌 글은 본문 안 남김');
+const before=g.slackStats_({idToken:'tok-uA',days:28});
+hist.C0AT8RP3QDN=[];hist.C0AHFJGKMTL=[];
+r=g.slackStats_({idToken:'tok-uA',days:28});
+assert.deepStrictEqual(r.ch.cso.acad,before.ch.cso.acad,'Slack 에서 사라져도 그대로');assert.strictEqual(r.ch.night.blocks,before.ch.night.blocks);
+r=g.slackStats_({idToken:'tok-uA',days:0});assert(r.ok&&r.days===0&&r.since,'전체 기간·누적 시작 '+r.since);
+// 293: slackPull 이 새 글마다 기록을 남김
+{const ts=(Date.now()/1000-30).toFixed(6);hist.C0AT8RP3QDN=[{ts,user:'U1',text:'&lt;학술요청&gt;&lt;인계 : CSO&gt;\n1) 기 관 명 : 테스트삼병원\n3) 요청사항 : PT 결과 문의'}];
+ g.slackPull(true);const k='cso_'+ts.replace('.','');assert(db.talk.slack.stat[k]&&db.talk.slack.stat[k].k==='a','slackPull 기록 '+k);
+ r=g.slackStats_({idToken:'tok-uA',days:7});assert.strictEqual(r.fld['응고'].wd+r.fld['응고'].wn+r.fld['응고'].we>=1,true,'검사 코드 PT → 응고');}
 console.log('slack_stats ok');

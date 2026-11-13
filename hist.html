@@ -79,6 +79,7 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px}
 .tip{font-size:12.5px;color:var(--sub);background:var(--soft);border-radius:10px;padding:8px 12px;margin:8px 0}
 .full{position:fixed;inset:0;background:var(--bg);z-index:20;display:none;flex-direction:column}
 .full.on{display:flex}
+#detail{z-index:22}
 .full .hd{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:700;color:var(--pri)}
 .full .hd .btn{min-height:36px;padding:6px 12px}
 .full .bd{overflow:auto;padding:10px 14px 40px;max-width:900px;width:100%;margin:0 auto}
@@ -95,6 +96,19 @@ table.au{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 14px}
 table.au th,table.au td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
 table.au th{color:var(--sub);font-weight:600;background:var(--card)}
 table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.au th.n{text-align:right}
+table.au tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+.tswrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tswrap table.au th,.tswrap table.au td{white-space:nowrap;padding:6px 7px}
+.tsper{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px}
+.tsper .chip{flex:0 0 auto;min-height:36px}
+.tshl{font-size:15px;font-weight:700;margin:4px 0 2px;line-height:1.5}
+.tssm{list-style:none;margin:6px 0 14px;padding:0}
+.tssm li{border-bottom:1px solid var(--line)}
+.tssm button{all:unset;display:block;width:100%;box-sizing:border-box;padding:9px 4px;cursor:pointer;font-size:13px;line-height:1.45}
+.tssm button:focus-visible{outline:2px solid var(--accent,#005BAC);outline-offset:-2px}
+.tssm b{font-weight:600;color:var(--sub);margin-right:6px;font-variant-numeric:tabular-nums}
+@media (pointer:coarse){.tsper .chip{min-height:44px}}
 .ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
 .note{font-size:12.5px;color:var(--sub);margin:4px 0}
 .gate{max-width:420px;margin:60px auto;text-align:center;color:var(--sub)}
@@ -156,6 +170,7 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
   <div id="app" style="display:none">
     <nav>
       <span class="sp"></span>
+      <button class="lnk" id="nStat" style="display:none">집계</button>
       <button class="lnk" id="nAudit">데이터 정보</button>
     </nav>
     <div class="prog" id="prog" style="display:none"><i id="progb"></i></div>
@@ -200,6 +215,11 @@ table.au td.n{text-align:right;font-variant-numeric:tabular-nums}
 <div class="full" id="detail">
   <div class="hd"><button class="btn" id="dBack">뒤로</button><span id="dT">대화 상세</span><span style="flex:1"></span><button class="btn" id="dLink">링크 복사</button></div>
   <div class="bd" id="dB"></div>
+</div>
+<!-- 293: 집계(관리자) — 전화 처리(학술·기술)·야간 방문 수탁기관/병원 -->
+<div class="full" id="tstat" role="dialog" aria-modal="true" aria-labelledby="tsT">
+  <div class="hd"><button class="btn" id="tsBack">닫기</button><span id="tsT">Sysmex Talk 집계</span></div>
+  <div class="bd" id="tsB"></div>
 </div>
 <!-- 데이터 정보 -->
 <div class="full" id="audit">
@@ -751,6 +771,64 @@ function openDetail(c,i,before,after){
   $("#dLink").style.display=c.id[i]?"":"none";
 }
 
+/* ---------- 293: 집계(관리자) ----------
+ * 목적(사용자): 전화로 기술·학술을 얼마나 처리했는지, 야간 방문 중 수탁기관과 일반 병원의 비율.
+ *  학술 = 글에 「학술」이 있는 것(학술은 전화로 응대 — 사용자 확인).
+ *  전화 기술 = 학술이 아닌 글 중 「유선·전화로·통화 후·원격」 같은 말이 있고 「방문·출동·이동」 말이 없는 것.
+ *  야간 방문 = 「마무리」 유형 글이 평일 18~09시·주말에 올라온 것(보고 시각 기준 — 실제 방문 시각과 다를 수 있음).
+ *  수탁기관 = 의료재단·녹십자·씨젠·삼광·이원 의료·서울의과학연구소·SCL·랩지노믹스, 나머지는 병원. 글자 규칙이라 표본으로 확인 */
+const TS_LAB=[["녹십자",/녹십자|GC\s*(?:랩|의료|녹십자)/i],["씨젠",/씨젠|seegene/i],["삼광",/삼광/],["이원",/이원\s*의료|이원의료/],["서울의과학연구소",/서울의과학연구소|\bSCL\b/i],["랩지노믹스",/랩지노믹스/],["그 밖 의료재단",/의료재단|수탁/]];
+const TS_ACAD=/학술/, TS_PHONE=/유선|전화\s*(?:로|상|처리|조치|안내|응대|대응|드렸|드림|완료|해결)|통화\s*(?:로|후|하여|해서|완료)|원격\s*(?:으로|지원|조치|접속|처리|제어)|팀뷰어|teamviewer|anydesk/i, TS_VISIT=/방문|출동|이동|도착|현장/;
+function tsBand(m){const d=dObj(m),wd=d.getUTCDay(),h=d.getUTCHours();if(wd===0||wd===6)return "we";return h>=9&&h<18?"wd":"wn";}
+function tsLab(t){for(const [n,re] of TS_LAB)if(re.test(t))return n;return "";}
+function talkStats(chs,from,to,typ){
+  const fin=typ.findIndex(n=>/마무리/.test(n||"")),z=()=>({wd:0,wn:0,we:0});
+  const R={acad:z(),tel:z(),visit:{lab:0,hosp:0},labs:{},yr:{},samp:{acad:[],tel:[],lab:[],hosp:[]},tot:0,fin:fin};
+  for(const c of chs)for(let i=0;i<c.n;i++){
+    const m=c.ts[i];if(c.ty[i]===NZ||(from!=null&&m<from)||(to!=null&&m>=to))continue;R.tot++;
+    const t=txtAt(c,i),b=tsBand(m),y=dObj(m).getUTCFullYear(),Y=R.yr[y]||(R.yr[y]={acad:0,tel:0,lab:0,hosp:0,all:0});Y.all++;
+    let k="";
+    if(TS_ACAD.test(t))k="acad";else if(TS_PHONE.test(t)&&!TS_VISIT.test(t))k="tel";
+    if(k){R[k][b]++;Y[k]++;R.samp[k].push([c,i]);}
+    if(fin>0&&c.ty[i]===fin&&b!=="wd"&&!k){const l=tsLab(t),w=l?"lab":"hosp";R.visit[w]++;Y[w]++;if(l)R.labs[l]=(R.labs[l]||0)+1;R.samp[w].push([c,i]);}
+  }
+  for(const k in R.samp)R.samp[k].sort((a,b)=>b[0].ts[b[1]]-a[0].ts[a[1]]),R.samp[k]=R.samp[k].slice(0,30);
+  return R;
+}
+let tsPer="all";
+function openTalkStats(){
+  if(!CH.length){$("#tsB").innerHTML='<p class="note">자료를 불러오는 중입니다. 다 받은 뒤 다시 눌러 주세요.</p>';$("#tstat").classList.add("on");return;}
+  const ys=[...new Set(CH.map(c=>c.y))].sort();
+  let from=null,to=null,lab="전체 기간";
+  if(tsPer!=="all"){from=dateToMin(tsPer+"-01-01");to=dateToMin((+tsPer+1)+"-01-01");lab=tsPer+"년";}
+  const R=talkStats(CH,from,to,META.typ||[]),sum=v=>v.wd+v.wn+v.we,pc=(a,b)=>b?Math.round(a*100/b)+"%":"–";
+  let h='<div class="tsper" role="group" aria-label="기간">'+[["all","전체"]].concat(ys.map(y=>[String(y),y+"년"])).map(([k,n])=>'<button class="chip'+(k===tsPer?" on":"")+'" data-p="'+k+'" aria-pressed="'+(k===tsPer)+'">'+n+'</button>').join("")+'</div>';
+  if(CH.length<META.chunks.length)h+='<p class="note">아직 일부 자료만 불러왔습니다('+CH.length+'/'+META.chunks.length+'). 다 받은 뒤 다시 열면 전체가 셉니다.</p>';
+  const a=sum(R.acad),t=sum(R.tel),v=R.visit.lab+R.visit.hosp;
+  h+='<p class="tshl">'+lab+' · 전화 처리 '+N(a+t)+'건(학술 '+N(a)+' · 기술 '+N(t)+')'+(R.fin>0?' · 야간·주말 방문 '+N(v)+'건 중 수탁기관 '+N(R.visit.lab)+'건 ('+pc(R.visit.lab,v)+')':'')+'</p>';
+  h+='<p class="note">검색 대상 글 '+N(R.tot)+'건 기준. 글자 규칙으로 고른 것이라 아래 표본으로 맞는지 확인해 주세요.</p>';
+  h+='<h2 class="sec">전화 처리 — 시간대별</h2><div class="tswrap"><table class="au"><tr><th>구분</th><th class="n">평일 주간</th><th class="n">평일 야간</th><th class="n">주말</th><th class="n">합계</th><th class="n">시간 밖</th></tr>'+
+    [["학술",R.acad],["기술",R.tel]].map(([n,x])=>'<tr><td>'+n+'</td><td class="n">'+N(x.wd)+'</td><td class="n">'+N(x.wn)+'</td><td class="n">'+N(x.we)+'</td><td class="n"><b>'+N(sum(x))+'</b></td><td class="n">'+pc(x.wn+x.we,sum(x))+'</td></tr>').join("")+'</table></div>';
+  if(R.fin>0){
+    h+='<h2 class="sec">야간·주말 방문 — 수탁기관·병원</h2><div class="tswrap"><table class="au"><tr><th>기관 유형</th><th class="n">건수</th><th class="n">비율</th></tr>'+
+      '<tr><td>수탁기관</td><td class="n">'+N(R.visit.lab)+'</td><td class="n">'+pc(R.visit.lab,v)+'</td></tr><tr><td>병원</td><td class="n">'+N(R.visit.hosp)+'</td><td class="n">'+pc(R.visit.hosp,v)+'</td></tr>'+
+      '<tr class="tot"><td>합계</td><td class="n">'+N(v)+'</td><td class="n">'+(v?"100%":"–")+'</td></tr></table></div>';
+    const lb=Object.entries(R.labs).sort((x,y)=>y[1]-x[1]);
+    if(lb.length)h+='<div class="tswrap"><table class="au"><tr><th>수탁기관</th><th class="n">야간·주말 방문</th></tr>'+lb.map(([n,x])=>'<tr><td>'+esc(n)+'</td><td class="n">'+N(x)+'</td></tr>').join("")+'</table></div>';
+  }else h+='<p class="note">이 자료에는 「마무리」 유형이 없어 야간 방문을 셀 수 없습니다.</p>';
+  if(tsPer==="all"){const yk=Object.keys(R.yr).sort();
+    h+='<h2 class="sec">연도별</h2><div class="tswrap"><table class="au"><tr><th>연도</th><th class="n">학술</th><th class="n">전화 기술</th><th class="n">야간 방문</th><th class="n">수탁기관</th><th class="n">비율</th></tr>'+
+      yk.map(y=>{const Y=R.yr[y],vv=Y.lab+Y.hosp;return '<tr><td>'+y+'</td><td class="n">'+N(Y.acad)+'</td><td class="n">'+N(Y.tel)+'</td><td class="n">'+N(vv)+'</td><td class="n">'+N(Y.lab)+'</td><td class="n">'+pc(Y.lab,vv)+'</td></tr>';}).join("")+'</table></div>';}
+  h+='<h2 class="sec">표본 — 최근 글 (누르면 대화 상세)</h2>';
+  [["acad","학술"],["tel","전화 기술"],["lab","야간 방문 · 수탁기관"],["hosp","야간 방문 · 병원"]].forEach(([k,n])=>{const L=R.samp[k];if(!L.length)return;
+    h+='<details><summary>'+n+' '+L.length+'건</summary><ul class="tssm">'+L.map(([c,i],j)=>'<li><button data-s="'+k+'" data-j="'+j+'"><b>'+fmtDate(c.ts[i]).slice(0,16)+'</b>'+esc(txtAt(c,i).replace(/\s+/g," ").slice(0,120))+'</button></li>').join("")+'</ul></details>';});
+  h+='<p class="note">기준: 시각은 글을 올린 한국 시간, 평일 주간 = 월~금 09~18시(공휴일은 평일로 셈). 학술 = 「학술」이 들어간 글. 전화 기술 = 학술이 아닌 글 중 「유선·전화로·통화 후·원격」 같은 말이 있고 「방문·출동·이동」 말이 없는 글. 야간 방문 = 「마무리」 유형 글을 평일 18~09시·주말에 올린 것(보고 시각 기준이라 실제 방문 시각과 다를 수 있음). 수탁기관 = 녹십자·씨젠·삼광·이원 의료재단·서울의과학연구소(SCL)·랩지노믹스 등 의료재단, 그 밖은 병원. 같은 건에 글이 여러 개면 여러 번 셉니다.</p>';
+  $("#tsB").innerHTML=h;$("#tstat").classList.add("on");
+  $("#tsB").querySelectorAll(".tsper .chip").forEach(b=>b.onclick=()=>{tsPer=b.dataset.p;openTalkStats();});
+  $("#tsB").querySelectorAll(".tssm button").forEach(b=>b.onclick=()=>{const [c,i]=R.samp[b.dataset.s][+b.dataset.j];openDetail(c,i);});
+  $("#tsBack").focus();
+}
+
 /* ---------- 데이터 정보(적재 검증) ---------- */
 function openAudit(){
   const A=META.audit;let h="";
@@ -798,8 +876,9 @@ function applyHash(fromLoad){
 }
 function initStatic(){
   $("#nAudit").onclick=openAudit;$("#aBack").onclick=()=>$("#audit").classList.remove("on");
+  if(isAdmin||E){$("#nStat").style.display="";$("#nStat").onclick=openTalkStats;}$("#tsBack").onclick=()=>$("#tstat").classList.remove("on");   // 293: 집계는 관리자(독립 HTML 은 그대로)
   $("#dBack").onclick=()=>$("#detail").classList.remove("on");
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("#detail").classList.remove("on");$("#audit").classList.remove("on");}});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("#detail").classList.contains("on")){$("#detail").classList.remove("on");return;}$("#audit").classList.remove("on");$("#tstat").classList.remove("on");}});
   window.addEventListener("hashchange",()=>applyHash());
   $("#hRecentClr").onclick=()=>{lsSet("fs-hist-recent",[]);drawHome();};
   $("#q").addEventListener("input",e=>{state.q=e.target.value;state.yr=null;scheduleSearch();});

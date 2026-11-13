@@ -2116,7 +2116,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-13.292";
+const APP_VERSION="2026-11-13.293";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4625,17 +4625,18 @@ function openSlkPaste(){if(!isAdmin)return;track("slk_paste");
   $("pOv").hidden=false;setTimeout(()=>ta.focus(),30);
 }
 /* 290: 요청 채널 글 집계(관리자) — 학술요청이 평일 야간·주말에 얼마나 오는지. 서버 slackStats_ 가 Slack 기록을 읽어 숫자만 돌려줌(저장 없음) */
-async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30초)");track("slk_stats");
+async function slkAcadStats(days){toast("Slack 기록 집계 중… (처음 한 번은 1년치를 저장해 1~2분 걸릴 수 있습니다)");track("slk_stats");
   let j=null;try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackStats",idToken,days})});j=await res.json().catch(()=>null);}catch(e){}
   const c=$("pCard");c.textContent="";c.classList.remove("drawer");c.classList.add("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);c.appendChild(el("h3",null,"요청 채널 집계 — 학술요청"));
-  const pr=el("div","chips slkstp");[7,28,60].forEach(d=>{const b=el("button","chip"+(d===days?" on":""),"최근 "+d+"일");b.setAttribute("aria-pressed",d===days?"true":"false");b.onclick=()=>slkAcadStats(d);pr.appendChild(b);});c.appendChild(pr);
+  const pr=el("div","chips slkstp");[[7,"최근 7일"],[28,"최근 28일"],[90,"최근 90일"],[365,"최근 1년"],[0,"전체"]].forEach(([d,lb])=>{const b=el("button","chip"+(d===days?" on":""),lb);b.setAttribute("aria-pressed",d===days?"true":"false");b.onclick=()=>slkAcadStats(d);pr.appendChild(b);});c.appendChild(pr);
   if(!j||!j.ok){c.appendChild(el("p","hp",(j&&j.err)||"서버 응답이 없습니다. 잠시 뒤 다시 해 보세요."));$("pOv").hidden=false;return;}
-  const fd=d=>{const t=new Date(d);return (t.getMonth()+1)+"/"+t.getDate();};
+  const fd=d=>{const t=new Date(d);return (t.getFullYear()!==new Date().getFullYear()?t.getFullYear()+"/":"")+(t.getMonth()+1)+"/"+t.getDate();};
   const S=k=>Object.values(j.ch).reduce((a,R)=>a+R.acad[k],0),aw=S("wd"),an=S("wn"),ae=S("we"),at=aw+an+ae,off=an+ae;
   const allN=Object.values(j.ch).reduce((a,R)=>a+["acad","tech","etc"].reduce((b,k)=>b+R[k].wd+R[k].wn+R[k].we,0),0);
   c.appendChild(el("p","slksthl",at?"학술요청 "+at+"건 중 업무 시간 밖(평일 18시~09시·주말) "+off+"건 ("+Math.round(off*100/at)+"%)":"학술요청이 없습니다"));
-  c.appendChild(el("p","hp",fd(j.from)+" ~ "+fd(j.to)+" · 요청 채널 글 "+allN+"건(접수 건 기준) · 서버 "+(j.ver||"")));
+  c.appendChild(el("p","hp",(j.from?fd(j.from):(j.since?fd(j.since):"처음"))+" ~ "+fd(j.to)+" · 요청 채널 글 "+allN+"건(접수 건 기준) · 서버 "+(j.ver||"")));
+  c.appendChild(el("p","hp","포털에 쌓인 기록"+(j.since?" "+fd(j.since)+"부터":"")+" — Slack 에서 글이 지워지거나 오래돼 안 보여도 집계는 남습니다"+(j.firstFill?" · 이번에 Slack 기록 "+(j.scanned||0)+"건을 처음 저장":"")+(j.scanErr?" · Slack 다시 읽기 실패: "+j.scanErr:"")));
   const tbl=el("table","kpt slkst"),hd=el("tr");["채널 · 종류","평일 주간","평일 야간","주말","합계"].forEach((h,i)=>{const th=el("th",i?"num":null,h);th.scope="col";hd.appendChild(th);});
   const th=el("thead");th.appendChild(hd);tbl.appendChild(th);const tb=el("tbody");
   const KN={acad:"학술요청",tech:"기술요청·접수",etc:"그 밖(완료·안내)"},CN={cso:"CSO · 평일",night:"CS쉐어링 · 야간·휴일"};
@@ -4664,7 +4665,7 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
       tr.appendChild(el("td","num",n?Math.round(o*100/n)+"%":"–"));tb3.appendChild(tr);});
     t3.appendChild(tb3);c.appendChild(t3);}
   /* 291: 미분류 학술요청 분야 정하기(관리자) — talk/slack/acadfld/{키} = 분야, 다음 집계부터 반영. 직접 정한 것도 여기서 바꾸거나 되돌림 */
-  const U=j.unk||[];if(U.length){const nU=U.filter(u=>!u.fld).length;
+  const U=j.unk||[];if(U.length){const nU=j.unkN!=null?j.unkN:U.filter(u=>!u.fld).length;
     const ub=el("button","btn slkunkb",(nU?"미분류 "+nU+"건 분야 정하기":"직접 정한 분야 보기")+(j.manual?" · 직접 정함 "+j.manual+"건":""));ub.setAttribute("aria-expanded","false");c.appendChild(ub);
     const box=el("div","slkunk");box.hidden=true;c.appendChild(box);
     ub.onclick=()=>{box.hidden=!box.hidden;ub.setAttribute("aria-expanded",box.hidden?"false":"true");if(!box.hidden&&!box.firstChild)drawUnk();};
@@ -4689,8 +4690,8 @@ async function slkAcadStats(days){toast("Slack 기록 집계 중… (최대 30�
   else if(j.eqB)c.appendChild(el("p","hp","학술요청에 장비가 적힌 건이 없습니다."));
   else{const eq=Object.entries(j.eq||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);if(eq.length)c.appendChild(el("p","hp","학술요청 장비: "+eq.map(([k,n])=>k+" "+n).join(" · ")));}
   const wk=Object.entries(j.week||{}).sort((a,b)=>a[0].localeCompare(b[0]));
-  if(wk.length>1)c.appendChild(el("p","hp","주별 학술요청(업무 시간 밖): "+wk.map(([k,w])=>k+"~ "+w.acad+"("+w.night+")").join(" · ")));
-  c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 분야 = 장비군(XN·XR·SP·DI → 혈액, CS·CA·CN → 응고, HISCL → 면역, UF·UC → 뇨화학), 장비가 없으면 글의 분야 말로. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
+  if(wk.length>1)c.appendChild(el("p","hp",(j.per==="m"?"월별":"주별")+" 학술요청(업무 시간 밖): "+wk.map(([k,w])=>k+(j.per==="m"?" ":"~ ")+w.acad+"("+w.night+")").join(" · ")));
+  c.appendChild(el("p","hp slkstn","기준: 한국 시간, 평일 주간 = 월~금 09~18시, 맨 위 글만(스레드 답글 제외), CS쉐어링 묶음 글은 접수 건마다. 학술요청 = 양식 <학술요청> 또는 「학술 요청·학술 문의」가 적힌 접수. 분야 = 장비군(XN·XR·SP·DI → 혈액, CS·CA·CN → 응고, HISCL → 면역, UF·UC → 뇨화학), 장비가 없으면 글의 검사 코드·분야 말로 유추(PT·APTT·D-dimer → 응고, HBsAg·TSH·CEA → 면역, 요침사·KET·BLD → 뇨화학, WBC·PLT·RET → 혈액). 학술요청은 전화 응대라 지역은 나누지 않습니다. 공휴일은 평일로 셉니다(CS쉐어링의 평일 09~18시 글은 대개 공휴일). #group-sysmex-talk 는 같은 글이 겹쳐 빼고 셉니다."));
   $("pOv").hidden=false;}
 async function slkTest(){toast("Slack 연결 확인 중…");
   try{const idToken=await auth.currentUser.getIdToken();const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slackTest",idToken,pull:true})});

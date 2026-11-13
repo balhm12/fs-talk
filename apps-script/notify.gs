@@ -59,7 +59,7 @@ function doPost0_(e){
     if(req.type === 'slack') return out_(slackAct_(req));
     if(req.type === 'slackSend') return out_(slackSend_(req));
     if(req.type === 'slackTest') return out_(slackTest_(req));
-    if(req.type === 'slackStats') return out_(slackStats_(req));   // 290: 학술요청 집계(관리자, 저장 없음)
+    if(req.type === 'slackStats') return out_(slackStats_(req));   // 290: 학술요청 집계(관리자) · 293: talk/slack/stat 에 쌓아 둔 기록으로
     if(req.type === 'slackBulk') return out_(slackBulk_(req));
     const room = String(req.room||''), msgId = String(req.msgId||'');
     const isDm = /^dm_[^\/.#$\[\]]+__[^\/.#$\[\]]+$/.test(room);
@@ -131,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v60';
+const NOTIFY_VER = 'v61';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -849,6 +849,7 @@ function slackPull(force, opt){
       function slkOne_(m){
           if(+m.ts <= +last) return;
           if(+m.ts > +maxTs) maxTs = m.ts;
+          if(C.type === 'req' && +m.ts > +oldLast) slkStatRecs_(C, m).forEach(function(x){ slkBatchSet_('slack/stat/'+x.k, x.v); });   // 293: 집계용 기록 쌓기
           if(m.subtype && ['bot_message','thread_broadcast'].concat(C.type === 'feed' ? ['file_share'] : []).indexOf(m.subtype) < 0) return;   // 들어옴·나감 등
           if(m.bot_id && m.app_id && m.username && /FS (?:포털|Portal)/.test(m.username)) return;          // 우리가 보낸 글
           const raw = String(m.text||''), text = slkClean_(raw);
@@ -1665,17 +1666,28 @@ function slkStatEq_(f){
   if(/^XN-?L\b|^XN-?(3|4|5)\d0\b/.test(raw)) return 'XN-L';
   const m = /^([A-Z]+)/.exec(raw); return m ? m[1] : '-';
 }
-/* 291: 학술요청 분야 — 장비군으로 정하고, 장비가 없으면 글에 적힌 분야 말로(혈액·응고·면역·뇨화학). 모르면 '미분류' */
+/* 291: 학술요청 분야 — 장비군으로 정하고, 모르면 '미분류'.
+ * 293: 장비가 없으면 글의 분야 말(2점)과 검사 코드(1점)를 세어 가장 많은 분야로(사용자 지시 「검사코드로 유추」). 같으면 응고 > 면역 > 뇨화학 > 혈액 */
 const SLK_FLD = {XN:'혈액','XN-L':'혈액',XR:'혈액',XS:'혈액',XE:'혈액',XT:'혈액',XP:'혈액',KX:'혈액',POCH:'혈액',SP:'혈액',DI:'혈액',RET:'혈액',
   CS:'응고',CA:'응고',CN:'응고',HISCL:'면역',HI:'면역',UF:'뇨화학',UC:'뇨화학',UD:'뇨화학',AX:'뇨화학',UX:'뇨화학'};
+const SLK_FLD_RE = [
+  ['응고', /응고|fibrinogen|피브리노겐|안티트롬빈|루푸스|D-?다이머/gi,
+           /\bPT\b|\bPT-?INR\b|\bA?PTT\b|\bINR\b|\bFBG\b|\bFIB\b|\bD-?DIMER\b|\bDD\b|\bFDP\b|\bAT-?(?:III|3)\b|\bLA\b|\bF(?:VIII|IX|8|9)\b|\bvWF\b|\bTT\b/gi],
+  ['면역', /면역|HISCL|종양\s*표지|갑상선|감염|호르몬|매독|페리틴|트로포닌|프로칼시토닌|인슐린|코티솔/gi,
+           /\bHBS?AG\b|\bANTI-?HB[SCE]\b|\bHB[SE]AB\b|\bHCV\b|\bHIV\b|\bHTLV\b|\bTP-?AB\b|\bTSH\b|\bF?T[34]\b|\bCEA\b|\bAFP\b|\bPSA\b|\bCA\s?(?:19-?9|125|15-?3)\b|\bPIVKA|\bFERRITIN\b|\bTROPONIN|\bTN[IT]\b|\b(?:NT-?PRO)?BNP\b|\bKL-?6\b|\bPROGRP\b|\bPCT\b/gi],
+  ['뇨화학', /뇨|소변|요\s*침사|요\s*화학|요\s*비중|요\s*단백|요\s*당|잠혈|케톤|아질산|유로빌리|원주|urine/gi,
+           /\bS\.?G\b|\bKET\b|\bBLD\b|\bURO\b|\bNIT\b|\bCAST\b|\bBACT\b|\bYLC\b|\bUACR\b/gi],
+  ['혈액', /혈액|백혈구|적혈구|혈소판|혈색소|망상|도말|감별/gi,
+           /\bCBC\b|\bWBC\b|\bRBC\b|\bPLT(?:-?F)?\b|\bHGB\b|\bHB\b|\bHCT\b|\bMCV\b|\bMCHC?\b|\bRDW\b|\bMPV\b|\bNEUT|\bLYMPH|\bMONO\b|\bEO\b|\bBASO\b|\bRET\b|\bIRF\b|\bIPF\b|\bNRBC\b|\bIG\b|\bWPC\b|\bDIFF\b|\bSLIDE\b/gi]];
 function slkStatFld_(e, b){
   if(SLK_FLD[e]) return SLK_FLD[e];
-  const t = String(b||'');
-  if(/응고|PT\b|APTT|INR|D-?dimer|피브리노겐|fibrinogen/i.test(t)) return '응고';
-  if(/면역|HISCL|종양표지|갑상선|감염|호르몬/i.test(t)) return '면역';
-  if(/뇨|소변|요침사|urine|요화학/i.test(t)) return '뇨화학';
-  if(/혈액|CBC|WBC|RBC|PLT|HGB|백혈구|적혈구|혈소판|도말|slide/i.test(t)) return '혈액';
-  return '미분류';
+  const t = String(b||'').replace(/혈액\s*응고/g, '응고');   // 「혈액응고」는 응고
+  let best = '미분류', bs = 0;
+  SLK_FLD_RE.forEach(function(x){
+    const sc = 2*((t.match(x[1])||[]).length) + ((t.match(x[2])||[]).length);
+    if(sc > bs){ bs = sc; best = x[0]; }
+  });
+  return best;
 }
 /* 292: 야간 접수(CS쉐어링 요청)를 지역 × 기관 유형(수탁기관·병원)으로 — 요청함 자료(talk/slack/req) 기준.
  *  지역 = 기관명 (지역)(slkNightRegion_: 수도권·강원·제주 / CENTRAL / SOUTH), 수탁기관 = 의료재단·녹십자·이원·씨젠·삼광·서울의과학연구소 등,
@@ -1692,59 +1704,95 @@ function slkNightStats_(t0){
   });
   return out;
 }
+/* 293: 요청 채널 집계를 포털 DB 에 계속 쌓기(사용자 요청 「Slack 데이터를 계속 누적」) — Slack 기록은 오래 두면 볼 수 없게 될 수 있어
+ *  글(접수 건)마다 작은 기록을 talk/slack/stat/{채널_ts[_묶음 순번]} 에 둠: t 시각 · c 채널(cso|night) · k 종류(a 학술·t 기술·e 그 밖) · m 묶음 글.
+ *  학술요청만 e 장비군 · fw 머리말 전달 · h 기관명 · r 장비 칸 · q 글(전화번호 가림, 600자 — 분야를 나중 규칙으로 다시 정할 수 있게).
+ *  쌓는 곳 = slackPull(새 글마다) + 집계를 누를 때 최근 7일 다시 읽기(빠진 글 채움). 처음 한 번은 Slack 기록 400일치를 읽어 채움(SLK_STAT_BF) */
+function slkMask_(x){ return String(x||'').replace(/(\d{2,4})[-. ]?(\d{3,4})[-. ]?(\d{4})/g, '$1-****-$3'); }
+function slkStatRecs_(C, m){
+  if(m.thread_ts && m.thread_ts !== m.ts) return [];
+  if(/^(channel_join|channel_leave|channel_topic|channel_purpose)$/.test(m.subtype||'')) return [];
+  if(m.bot_id && m.username && /FS (?:포털|Portal)/.test(m.username)) return [];   // 포털에서 보낸 글
+  const raw = String(m.text||''), text = slkClean_(raw); if(!text.trim()) return [];
+  const ms = Math.round(+m.ts*1000), multi = (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1;
+  const blocks = multi ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
+  return blocks.map(function(b, bi){
+    const kd = slkStatKind_(b), v = {t:ms, c:C.k, k:kd === 'acad' ? 'a' : kd === 'tech' ? 't' : 'e'};
+    if(multi) v.m = 1;
+    if(kd === 'acad'){
+      const pf = slkParse_(b) || {};
+      v.e = slkStatEq_(pf); if(!multi && slkHeadTeam_(raw, text)) v.fw = 1;
+      if(pf.hosp) v.h = slkMask_(pf.hosp).slice(0,60);
+      if(pf.eq) v.r = slkMask_(pf.eq).slice(0,40);
+      v.q = slkMask_(b).slice(0,600);
+    }
+    return {k:C.k + '_' + String(m.ts).replace('.', '') + (multi ? '_' + bi : ''), v:v};
+  });
+}
+function slkStatScan_(t0){   // Slack 기록을 읽어 talk/slack/stat 에 씀(같은 키는 덮어씀)
+  const res = {n:0, more:{}};
+  Object.keys(SLACK_CH).forEach(function(ch){
+    const C = SLACK_CH[ch]; if(C.type !== 'req') return;
+    let cursor = '', page = 0, upd = {};
+    do{
+      const prm = {channel:ch, oldest:String(t0/1000), limit:200}; if(cursor) prm.cursor = cursor;
+      const j = slackApi_('conversations.history', prm);
+      (j.messages||[]).forEach(function(m){ if(+m.ts*1000 < t0) return; slkStatRecs_(C, m).forEach(function(x){ upd['slack/stat/'+x.k] = x.v; res.n++; }); });
+      if(Object.keys(upd).length >= 300){ dbTalk_(upd); upd = {}; }
+      cursor = j.response_metadata && j.response_metadata.next_cursor || '';
+    }while(cursor && ++page < 60);
+    if(Object.keys(upd).length) dbTalk_(upd);
+    if(cursor) res.more[C.k] = true;
+  });
+  return res;
+}
 function slackStats_(req){
   const uid = verifyUser_(String(req.idToken||'')); if(!uid) return {ok:false,err:'auth',ver:NOTIFY_VER};
   const me = db_('talk/users/'+uid);
   if(!(db_('talk/admins/'+uid) === true && me && me.status === 'approved')) return {ok:false,err:'관리자만',ver:NOTIFY_VER};
-  if(!P_('SLACK_BOT_TOKEN')) return {ok:false,err:'스크립트 속성 SLACK_BOT_TOKEN 이 없습니다',ver:NOTIFY_VER};
-  const days = Math.max(1, Math.min(90, +req.days || 28)), t0 = Date.now() - days*864e5;
+  const now = Date.now(), days = +req.days === 0 ? 0 : Math.max(1, Math.min(3650, +req.days || 28)), t0 = days ? now - days*864e5 : 0;
   const z = function(){ return {wd:0, wn:0, we:0}; };
-  const out = {ok:true, days:days, from:t0, to:Date.now(), ch:{}, eq:{}, eqB:{}, fld:{}, week:{}, ver:NOTIFY_VER};
-  const ov = db_('talk/slack/acadfld') || {};   // 291: 관리자가 직접 정한 분야(미분류 → 혈액·응고·면역·뇨화학)
-  out.unk = []; out.manual = 0;
+  const out = {ok:true, days:days, from:t0, to:now, ch:{}, eq:{}, eqB:{}, fld:{}, week:{}, ver:NOTIFY_VER};
+  // 쌓기: 처음 한 번 400일, 그 뒤로는 누를 때마다 최근 7일(빠진 글 채움·고친 규칙 반영). 토큰이 없으면 쌓아 둔 것만으로
+  let scan = null;
+  if(P_('SLACK_BOT_TOKEN')){
+    const PS = PropertiesService.getScriptProperties(), bf = PS.getProperty('SLK_STAT_BF');
+    try{ scan = slkStatScan_(now - (bf ? 7 : 400)*864e5); if(!bf) PS.setProperty('SLK_STAT_BF', String(now)); out.scanned = scan.n; out.firstFill = !bf; }
+    catch(e){ out.scanErr = String(e.message||e).slice(0,160); }
+  }else out.scanErr = '스크립트 속성 SLACK_BOT_TOKEN 이 없어 쌓아 둔 기록만 셉니다';
+  const ov = db_('talk/slack/acadfld') || {};   // 291: 관리자가 직접 정한 분야
+  out.manual = 0;
   try{ out.night = slkNightStats_(t0); }catch(e){ out.nightErr = String(e.message||e).slice(0,120); }
-  Object.keys(SLACK_CH).forEach(function(ch){
-    const C = SLACK_CH[ch]; if(C.type !== 'req') return;
-    const R = {name:C.name, k:C.k, msgs:0, blocks:0, acad:z(), tech:z(), etc:z(), fwd:0, more:false};
-    let cursor = '', page = 0;
-    do{
-      const prm = {channel:ch, oldest:String(t0/1000), limit:200}; if(cursor) prm.cursor = cursor;
-      const j = slackApi_('conversations.history', prm);
-      (j.messages||[]).forEach(function(m){
-        if(m.thread_ts && m.thread_ts !== m.ts) return;
-        if(/^(channel_join|channel_leave|channel_topic|channel_purpose)$/.test(m.subtype||'')) return;
-        const ms = +m.ts*1000; if(ms < t0) return;
-        const raw = String(m.text||''), text = slkClean_(raw); if(!text.trim()) return;
-        R.msgs++;
-        const multi = (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1;
-        const blocks = multi ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
-        const band = slkStatBand_(ms), wk = Utilities.formatDate(new Date(ms - ((new Date(ms + 9*3600e3).getUTCDay()+6)%7)*864e5), 'Asia/Seoul', 'MM/dd');
-        blocks.forEach(function(b, bi){
-          const sk = C.k + '_' + String(m.ts).replace('.', '') + (multi ? '_' + bi : '');
-          const kd = slkStatKind_(b); R.blocks++; R[kd][band]++;
-          if(kd === 'acad'){
-            if(!multi && slkHeadTeam_(raw, text)) R.fwd++;
-            const e = slkStatEq_(slkParse_(b));   // 291: 장비군별·시간대별
-            const E = out.eqB[e] || (out.eqB[e] = {wd:0, wn:0, we:0}); E[band]++;
-            const auto = slkStatFld_(e, b), man = /^(혈액|응고|면역|뇨화학)$/.test(ov[sk]||'') ? ov[sk] : '';
-            const fd = man || auto, F = out.fld[fd] || (out.fld[fd] = {wd:0, wn:0, we:0}); F[band]++;   // 291: 분야별(혈액·응고·면역·뇨화학)
-            if(man) out.manual++;
-            if((auto === '미분류' || man) && out.unk.length < 200){   // 291: 분야를 직접 정할 목록(미분류 + 직접 정한 것) — 전화번호는 가림, 글쓴이 이름은 안 돌려줌
-              const pf = slkParse_(b) || {}, mask = function(x){ return String(x||'').replace(/(\d{2,4})[-. ]?(\d{3,4})[-. ]?(\d{4})/g, '$1-****-$3').slice(0,160); };
-              out.unk.push({k:sk, at:ms, src:C.k, hosp:mask(pf.hosp), eq:mask(pf.eq), req:mask(pf.req || pf.sym || text.replace(/\s+/g,' ')), fld:man});
-            }
-            if(e !== '-') out.eq[e] = (out.eq[e]||0) + 1;
-            const W = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0});
-            W.acad++; if(band !== 'wd') W.night++;
-          }
-          const W2 = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0}); W2.all++;
-        });
-      });
-      cursor = j.response_metadata && j.response_metadata.next_cursor || '';
-    }while(cursor && ++page < 30);
-    if(cursor) R.more = true;
-    out.ch[C.k] = R;
+  const all = dbQuery_('talk/slack/stat', 'orderBy="t"&startAt='+t0) || {};
+  try{ const f = dbQuery_('talk/slack/stat', 'orderBy="t"&limitToFirst=1') || {}; const k = Object.keys(f)[0]; if(k) out.since = f[k].t; }catch(e){}
+  const names = {}; Object.keys(SLACK_CH).forEach(function(ch){ names[SLACK_CH[ch].k] = SLACK_CH[ch].name; });
+  ['cso','night'].forEach(function(k){ out.ch[k] = {name:names[k]||k, k:k, msgs:0, blocks:0, acad:z(), tech:z(), etc:z(), fwd:0, more:!!(scan && scan.more[k])}; });
+  const keys = Object.keys(all).filter(function(sk){ const v = all[sk]; return v && +v.t >= t0 && out.ch[v.c]; });
+  let lo = now; keys.forEach(function(sk){ if(+all[sk].t < lo) lo = +all[sk].t; });
+  const monthly = (now - (t0 || lo)) > 120*864e5; out.per = monthly ? 'm' : 'w';
+  const seen = {}, unk = [];
+  keys.forEach(function(sk){
+    const v = all[sk], R = out.ch[v.c], ms = +v.t, band = slkStatBand_(ms);
+    const mid = sk.split('_').slice(0,2).join('_'); if(!seen[mid]){ seen[mid] = 1; R.msgs++; }
+    const kd = v.k === 'a' ? 'acad' : v.k === 't' ? 'tech' : 'etc'; R.blocks++; R[kd][band]++;
+    const wk = monthly ? Utilities.formatDate(new Date(ms), 'Asia/Seoul', 'yy/MM')
+      : Utilities.formatDate(new Date(ms - ((new Date(ms + 9*3600e3).getUTCDay()+6)%7)*864e5), 'Asia/Seoul', 'MM/dd');
+    const W = out.week[wk] || (out.week[wk] = {acad:0, night:0, all:0}); W.all++;
+    if(kd !== 'acad') return;
+    if(v.fw) R.fwd++;
+    const e = v.e || '-', E = out.eqB[e] || (out.eqB[e] = z()); E[band]++;
+    const auto = slkStatFld_(e, v.q || ''), man = /^(혈액|응고|면역|뇨화학)$/.test(ov[sk]||'') ? ov[sk] : '';
+    const fd = man || auto, F = out.fld[fd] || (out.fld[fd] = z()); F[band]++;
+    if(man) out.manual++;
+    if(auto === '미분류' || man){
+      const pf = slkParse_(v.q || '') || {};
+      unk.push({k:sk, at:ms, src:v.c, hosp:v.h||'', eq:v.r||'', req:slkMask_(pf.req || pf.sym || String(v.q||'').replace(/\s+/g,' ')).slice(0,160), fld:man});
+    }
+    if(e !== '-') out.eq[e] = (out.eq[e]||0) + 1;
+    W.acad++; if(band !== 'wd') W.night++;
   });
+  unk.sort(function(x, y){ return (x.fld ? 1 : 0) - (y.fld ? 1 : 0) || y.at - x.at; });
+  out.unkN = unk.filter(function(u){ return !u.fld; }).length; out.unk = unk.slice(0, 200);
   return out;
 }
 function installSlackTrigger(){

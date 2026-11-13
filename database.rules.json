@@ -682,6 +682,11 @@
             "at"
           ]
         },
+        "stat": {
+          ".indexOn": [
+            "t"
+          ]
+        },
         "acadfld": {
           "$k": {
             ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved') && $k.matches(/^[A-Za-z0-9_]{6,48}$/)",
