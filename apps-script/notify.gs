@@ -132,7 +132,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v66';
+const NOTIFY_VER = 'v67';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -618,11 +618,11 @@ function schGet_(path){
   return JSON.parse(r.getContentText());
 }
 /* ===== 299-2 학술 응대 → KPI 대시보드 자동 반영(2026-11-16, 사용자 결정 「서버로 진행」) =====
-   Sysmex Talk 은 2026-11-10 운영 종료 → 2026-11-11 부터 Slack 학술요청 접수 건(talk/slack/stat 의 k='a')을 KPI 대시보드가 쓴다.
+   Sysmex Talk 은 2026-11-10 운영 종료(검색 자료는 11-03 까지) → 2026-11-04 부터 Slack 학술요청 접수 건(300: 전환일 11-11 → 11-04, 사용자 결정 2026-11-16 — KPI ACAD_CUT 과 같아야 함)(talk/slack/stat 의 k='a')을 KPI 대시보드가 쓴다.
    보내는 것은 날짜(한국 시간)·시간별 건수뿐(이름·기관·본문 없음) — FS Portal 「KPI용 내보내기」 파일과 같은 모양.
    쓰는 곳: 일정 DB(sysmex-system-schedule) kpi-dashboard/acadAuto — 전용 계정(스크립트 속성 KPI_BOT_EMAIL·KPI_BOT_PW, 규칙이 이 경로만 허용).
    계정·비밀번호는 저장소·채팅에 두지 않는다. */
-const ACAD_CUT_MS = Date.UTC(2026, 10, 10, 15);   // 2026-11-11 00:00 한국 시간
+const ACAD_CUT_MS = Date.UTC(2026, 10, 3, 15);   // 2026-11-04 00:00 한국 시간
 function acadKpiDays_(v){
   const days = {}; let n = 0, from = null, to = null;
   Object.keys(v || {}).forEach(function(k){ const r = v[k]; if(!r || r.k !== 'a' || !r.t || +r.t < ACAD_CUT_MS) return;
@@ -644,7 +644,7 @@ function acadKpiPush_(){
   const v = dbQuery_('talk/slack/stat', 'orderBy="t"&startAt='+ACAD_CUT_MS);
   const A = acadKpiDays_(v), made = new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
   const o = {kind:'fsportal-acad', src:'slack', v:1, auto:true, made:made, from:A.from || '', to:A.to || '', total:A.n, at:Date.now(), ver:NOTIFY_VER,
-    rule:'Slack 요청 채널(CSO·CS쉐어링) 학술요청 접수 건(묶음 글은 건마다) · 2026-11-11 부터 · FS Portal 서버 자동', days:A.days};
+    rule:'Slack 요청 채널(CSO·CS쉐어링) 학술요청 접수 건(묶음 글은 건마다) · 2026-11-04 부터 · FS Portal 서버 자동', days:A.days};
   const r = UF_.fetch(SCH_DB+'/kpi-dashboard/acadAuto.json?auth='+encodeURIComponent(schBotToken_(PR)),{method:'put',contentType:'application/json',payload:JSON.stringify(o),muteHttpExceptions:true});
   if(r.getResponseCode() !== 200) return {ok:false, err:'KPI DB 쓰기 실패 '+r.getResponseCode()+' '+r.getContentText().slice(0,120)};
   return {ok:true, n:A.n, made:made};
@@ -1006,7 +1006,7 @@ function slackPull(force, opt){
     if(!opt.newOnly && min % 30 === 0){ try{ slkTrimFeed_(); }catch(e){ console.error(e); } }
     if(!opt.newOnly && (force || min % 5 === 0)){ try{ const er = slkEscalate_(); if(er) meta.esc = er; }catch(e){ console.error(e); } }
     // 299-2: 학술 응대 건수를 KPI 대시보드로 — 3시간에 한 번(하루 약 8번, 외부 호출 3번씩). 계정이 없으면 아무것도 안 함
-    if(!opt.newOnly && PR.KPI_BOT_EMAIL && now - (+PR.SLK_ACAD_KPI_AT || 0) > 3*3600e3){ props.setProperty('SLK_ACAD_KPI_AT', String(now)); try{ const ar = acadKpiPush_(); meta.acadKpi = ar.ok ? {at:now, n:ar.n} : {at:now, err:ar.err}; }catch(e){ meta.acadKpi = {at:now, err:String(e.message||e).slice(0,160)}; console.error(e); } }   // 277: 30분 넘게 아무도 ✅ 안 한 새 요청 → 그 팀 팀장에게 알림
+    if(!opt.newOnly && PR.KPI_BOT_EMAIL && (now - (+PR.SLK_ACAD_KPI_AT || 0) > 3*3600e3 || PR.SLK_ACAD_KPI_V !== NOTIFY_VER)){ props.setProperty('SLK_ACAD_KPI_AT', String(now)); props.setProperty('SLK_ACAD_KPI_V', NOTIFY_VER);   /* 300: 서버 버전이 바뀌면 3시간을 기다리지 않고 한 번 다시 올림 */ try{ const ar = acadKpiPush_(); meta.acadKpi = ar.ok ? {at:now, n:ar.n} : {at:now, err:ar.err}; }catch(e){ meta.acadKpi = {at:now, err:String(e.message||e).slice(0,160)}; console.error(e); } }   // 277: 30분 넘게 아무도 ✅ 안 한 새 요청 → 그 팀 팀장에게 알림
     try{ const pr = slkPushFlush_(SLK_PUSHQ.splice(0)); if(pr) meta.push = pr; }catch(e){ console.error(e); }   // 235: 새 Slack 글 알림
     meta.ms = Date.now() - now;
     if(opt.ev) meta.ev = now;
