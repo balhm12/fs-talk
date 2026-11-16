@@ -21,3 +21,12 @@ const S=db.talk.slack.req;
 assert(S.night_dS00000001.ack&&S.night_dS00000001.ack.via==='cso_dA000000000'&&S.night_dS00000001.st==='done','같은 병원·장비 다른 채널 요청도 확인 완료 '+JSON.stringify(S.night_dS00000001));
 assert(!S.night_dS00000002.ack,'다른 장비는 그대로');assert(!S.night_dS00000003.ack,'24시간 넘은 것은 그대로');assert(!S.night_dS00000004.ack,'묶음 인계는 그대로');
 console.log('slack_sync_many ok');
+
+/* 298: Slack 굵게 표시(*…*)가 있어도 같은 건 */
+(function(){
+  const src = require('fs').readFileSync(__dirname+'/../apps-script/notify.gs','utf8');
+  const m = src.match(/function slkSibKey_\(r\)\{[\s\S]*?\n\}/); const k = new Function(m[0]+'; return slkSibKey_;')();
+  const a = k({f:{hosp:'동아대학교병원', eq:'HLC-723 GR01'}}), b = k({f:{hosp:'*동아대학교병원*', eq:'*HLC-723 GR01*'}});
+  if(!a || a !== b){ console.error('FAIL 298 굵게 표시', a, b); process.exit(1); }
+  console.log('ok 298 굵게 표시 무시');
+})();
