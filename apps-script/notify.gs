@@ -131,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v64';
+const NOTIFY_VER = 'v65';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1605,7 +1605,7 @@ function slkSum297_(){
   return n;
 }
 function slkSibKey_(r){
-  const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·]/g,'').toLowerCase(); };
+  const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·*~`]/g,'').toLowerCase(); };   // 298: Slack 굵게(*…*)·기울임·코드 표시 무시
   const h = n(f.hosp), e = n(f.eq); return (h.length >= 3 && e.length >= 2) ? h+'|'+e : '';
 }
 function slkAckSiblings_(all, id, r, ack, maxAt){   // 286: maxAt = 이 시각보다 뒤에 온(재요청 포함) 요청은 건드리지 않음
