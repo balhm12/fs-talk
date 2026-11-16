@@ -1850,6 +1850,8 @@ html:not([data-theme=dark]) #hreq .slklate{background:#fff;color:#B42318}
 .slkwait{margin:4px 0;color:#B42318;font-weight:700}
 html[data-theme=dark] .slkwait{color:#FFB4B0}
 .slkstat{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:8px 0 10px}
+button.slkstk{font:inherit;text-align:left;cursor:pointer;color:inherit;width:100%}button.slkstk:hover{border-color:var(--brand,#005BAC)}button.slkstk.on{border-color:var(--brand,#005BAC);box-shadow:inset 0 0 0 1px var(--brand,#005BAC);background:rgba(0,91,172,.06)}button.slkstk:focus-visible{outline:2px solid #00B8EE;outline-offset:2px}
+.slkstatf{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px;padding:8px 12px;border-radius:8px;background:rgba(0,91,172,.07)}.slkstatf b{font-size:14px}.slkstatf span{font-size:12px;color:var(--sub)}.slkstatf .hmore{margin-left:auto}.slkwt{font-weight:600;color:var(--sub)}
 .slkstk{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--panel);min-width:0}
 .slkstk span{display:block;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slkstk b{display:block;font-size:17px;font-variant-numeric:tabular-nums;color:var(--strong)}
@@ -1975,6 +1977,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
     <button id="rOrg" title="조직도"><span class="ri" data-ic="users"></span>조직도</button>
     <div class="rfly" id="rFly" hidden role="menu" aria-label="업무 앱">
     <a class="rlink" data-app="silmari" href="https://balhm12.github.io/sysmex-ts/" target="_blank" rel="noopener" title="실마리 · Sysmex TS Guide"><span class="ri" data-ic="compass"></span>실마리</a>
+    <a class="rlink" id="rKpi" data-app="kpi" href="https://balhm12.github.io/Sysmex-schedule/fsg-kpi.html" target="_blank" rel="noopener" title="KPI 대시보드" hidden><span class="ri" data-ic="chart"></span>KPI</a>
     <a class="rlink long" data-app="system" href="https://sysmex-system-configuration.web.app/" target="_blank" rel="noopener" title="전국시스템"><span class="ri" data-ic="sysgrid"></span>전국시스템</a>
     </div>
     <div class="grow"></div>
@@ -2116,7 +2119,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-16.297";
+const APP_VERSION="2026-11-16.299";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -2704,7 +2707,7 @@ function renderNav(){
     [a,b].forEach(id=>{const e=$(id);const old=e.querySelector(".dot");if(old)old.remove();
       const n=i===0?tu:i===3?pendingCount:0;if(n){const d=el("span","dot",n>99?"99+":String(n));e.appendChild(d);}});
   });
-  $("rAdmin").hidden=!isAdmin;$("tAdmin").hidden=!isAdmin;
+  $("rAdmin").hidden=!isAdmin;$("tAdmin").hidden=!isAdmin;$("rKpi").hidden=!(isAdmin||myLead());   // 299: 업무 앱 펼침에 KPI (탭과 같은 기준: 관리자·팀장)
   $("tTech").classList.toggle("on",view==="tech");
   {const r=$("rReq"),o=r.querySelector(".dot");if(o)o.remove();r.classList.toggle("on",view==="req");const n=slkNewCount();if(n)r.appendChild(el("span","dot",n>99?"99+":String(n)));r.setAttribute("aria-label","Slack 요청"+(n?" 새 요청 "+n+"건":""));}
   {const m=$("tMenu"),o=m.querySelector(".dot");if(o)o.remove();if(isAdmin&&pendingCount){m.appendChild(el("span","dot",String(pendingCount)));}
@@ -4277,7 +4280,7 @@ function renderMenuPage(){
 /* ===== Slack 요청함 (198): CSO 기술요청·야간 접수(CS쉐어링) 인계를 포털에서 담당·회신·완료 =====
    자료 talk/slack/req/{id}: 서버(Slack 앱 연결 후 1분마다, id = cso_…·night_…) 또는 직원의 「Slack 글 붙여넣기」(id = p_…)
    아래 slkClean_·slkPerson_·slkParse_ 는 apps-script/notify.gs 와 글자 그대로 같아야 한다(tests/slack_parse.js 가 비교) */
-let slkReq={},slkMeta=null,slkScope=null,slkSt="new",slkOn=false,slkChk={},slkKindF="",slkUnchk=false,slkSrcF="";
+let slkReq={},slkMeta=null,slkScope=null,slkSt="new",slkOn=false,slkChk={},slkKindF="",slkUnchk=false,slkSrcF="",slkStatF="";   // 299: 현황 칸을 누르면 그 요청만
 function slkClean_(t){
   return String(t||'')
     .replace(/<tel:[^|>]*\|([^>]*)>/g,'$1').replace(/<mailto:[^|>]*\|([^>]*)>/g,'$1')
@@ -4366,7 +4369,9 @@ function slkLateEl(r){const m=slkWait(r);const b=el("span","slklate",slkWaitTx(m
 /* 최근 7일 확인까지 걸린 시간(요청 시각 → 첫 ✅ 확인), 30분 넘긴 건수, 재요청 수 — 저장된 요청 자료로만 계산 */
 function slkStats(list){const wk=Date.now()-7*864e5,L=list.filter(r=>r.at>=wk),d=L.filter(r=>r.ack&&r.ack.at>=r.at).map(r=>(r.ack.at-r.at)/6e4).sort((a,b)=>a-b);
   const med=d.length?(d.length%2?d[(d.length-1)/2]:(d[d.length/2-1]+d[d.length/2])/2):null;
-  return {n:L.length,acked:d.length,med,over:d.filter(x=>x>SLK_LATE_MIN).length+L.filter(r=>!r.ack&&slkLate(r)).length,open:L.filter(slkLate).length,rr:L.filter(r=>slkRrN(r)).length};}
+  const wt=r=>r.ack&&r.ack.at>=r.at?(r.ack.at-r.at)/6e4:null, byAt=(a,b)=>slkAtE(b)-slkAtE(a), byWt=(a,b)=>wt(b)-wt(a);
+  const lists={n:L.slice().sort(byAt),med:L.filter(r=>wt(r)!=null).sort(byWt),over:L.filter(r=>(wt(r)!=null&&wt(r)>SLK_LATE_MIN)||(!r.ack&&slkLate(r))).sort((a,b)=>(wt(b)==null?1e9:wt(b))-(wt(a)==null?1e9:wt(a))),open:L.filter(slkLate).sort(byAt),rr:L.filter(r=>slkRrN(r)).sort(byAt)};   // 299: 칸마다 해당 요청 목록
+  return {n:L.length,acked:d.length,med,over:lists.over.length,open:lists.open.length,rr:lists.rr.length,lists};}
 function slkMinTx(m){return m==null?"–":m<1?"1분 안":m<60?Math.round(m)+"분":Math.floor(m/60)+"시간 "+Math.round(m%60)+"분";}
 const slkRrN=r=>r&&r.rr?Object.keys(r.rr).length:0;const slkCk=r=>slkRrN(r)?r.id+"_r"+slkRrN(r):r.id;   // 227: 재요청이 붙으면 「확인함」을 다시 풀어 보이게
 const slkAtE=r=>Math.max(+r.at||0,+r.rrAt||0);   // 227: 재요청 시각까지 본 최근 시각
@@ -4445,33 +4450,39 @@ function renderReqPage(){
   const all=slkList(),wk=Date.now()-7*864e5;
   const sc=el("div","obchips slkch");(myField()?[["team","우리 팀"]]:[]).concat([["me","내 담당"],["all","전체"]]).forEach(([k,l])=>{const x=el("button","hchip sm"+(slkScope===k?" on":""),l);x.setAttribute("aria-pressed",slkScope===k);x.onclick=()=>{slkScope=k;renderReqPage();};sc.appendChild(x);});
   const inS=all.filter(r=>slkIn(r,slkScope)&&(r.st!=="done"||(r.doneAt||r.at)>wk));
-  const sg=el("div","seg slkseg");["all","new","doing","done"].forEach(k=>{const n=k==="all"?inS.length:inS.filter(r=>r.st===k).length;const x=el("button",slkSt===k?"on":null,(k==="all"?"전체":SLK_ST[k])+" "+n);x.setAttribute("aria-pressed",slkSt===k);x.onclick=()=>{slkSt=k;renderReqPage();};sg.appendChild(x);});
+  const sg=el("div","seg slkseg");["all","new","doing","done"].forEach(k=>{const n=k==="all"?inS.length:inS.filter(r=>r.st===k).length;const x=el("button",slkSt===k?"on":null,(k==="all"?"전체":SLK_ST[k])+" "+n);x.setAttribute("aria-pressed",slkSt===k);x.onclick=()=>{slkSt=k;slkStatF="";renderReqPage();};sg.appendChild(x);});
   const bar=el("div","slkbar");bar.appendChild(sg);bar.appendChild(sc);b.appendChild(bar);
-  if(isAdmin||myLead()||myRole()==="group"){const S=slkStats(all.filter(r=>slkIn(r,slkScope)));const sb=el("div","slkstat");sb.setAttribute("aria-label","최근 7일 요청 처리 현황");
-    const it=(k,v,warn)=>{const d=el("div","slkstk"+(warn?" warn":""));d.appendChild(el("span",null,k));d.appendChild(el("b",null,v));sb.appendChild(d);};
-    it("최근 7일 요청",S.n+"건");it("확인까지 (중앙값)",slkMinTx(S.med));it(SLK_LATE_MIN+"분 넘긴 건",S.over+"건",S.over>0);it("지금 미확인",S.open+"건",S.open>0);it("재요청",S.rr+"건");
-    sb.appendChild(el("p","slkstn",(slkScope==="all"?"전체":slkScope==="me"?"내 담당":"우리 팀")+" 기준 · 요청이 올라온 시각부터 첫 ✅ 확인까지 · 붙여넣기 요청 포함"));b.appendChild(sb);}   // 277
+  const S=(isAdmin||myLead()||myRole()==="group")?slkStats(all.filter(r=>slkIn(r,slkScope))):null;if(!S)slkStatF="";
+  const SLK_STN={n:"최근 7일 요청",med:"확인까지 걸린 시간 (오래 걸린 순)",over:SLK_LATE_MIN+"분 넘긴 건",open:"지금 미확인",rr:"재요청"};
+  if(S){const sb=el("div","slkstat");sb.setAttribute("aria-label","최근 7일 요청 처리 현황 — 칸을 누르면 그 요청만 봅니다");
+    const it=(k,lab,v,warn)=>{const d=el("button","slkstk"+(warn?" warn":"")+(slkStatF===k?" on":""));d.type="button";d.setAttribute("aria-pressed",slkStatF===k);d.title=slkStatF===k?"다시 누르면 전체 목록":"누르면 해당 요청 "+S.lists[k].length+"건";
+      d.appendChild(el("span",null,lab));d.appendChild(el("b",null,v));d.onclick=()=>{slkStatF=slkStatF===k?"":k;renderReqPage();track("slk_stat");};sb.appendChild(d);};
+    it("n","최근 7일 요청",S.n+"건");it("med","확인까지 (중앙값)",slkMinTx(S.med));it("over",SLK_LATE_MIN+"분 넘긴 건",S.over+"건",S.over>0);it("open","지금 미확인",S.open+"건",S.open>0);it("rr","재요청",S.rr+"건");
+    sb.appendChild(el("p","slkstn",(slkScope==="all"?"전체":slkScope==="me"?"내 담당":"우리 팀")+" 기준 · 요청이 올라온 시각부터 첫 ✅ 확인까지 · 붙여넣기 요청 포함 · 칸을 누르면 그 요청만 봅니다"));b.appendChild(sb);}   // 277·299
+  const SF=S&&slkStatF?S.lists[slkStatF]:null;
+  if(SF){const fb=el("div","slkstatf");fb.appendChild(el("b",null,"「"+SLK_STN[slkStatF]+"」 "+SF.length+"건"));fb.appendChild(el("span",null,"최근 7일 · 상태·출처·유형 거르기와 관계없이 모두"));
+    const x=el("button","hmore","전체 목록으로");x.onclick=()=>{slkStatF="";renderReqPage();};fb.appendChild(x);b.appendChild(fb);}
   const LS=slkSt==='all'?inS:inS.filter(r=>r.st===slkSt);
-  {const sb=el("div","obchips slksrcb");const n=k=>LS.filter(r=>slkSrc(r)===k).length;   // 209: CSO(평일)·CS쉐어링(야간·휴일) 구분
+  if(!SF){const sb=el("div","obchips slksrcb");const n=k=>LS.filter(r=>slkSrc(r)===k).length;   // 209: CSO(평일)·CS쉐어링(야간·휴일) 구분
     [["","전체",LS.length],["cso","CSO · 평일",n("cso")],["night","CS쉐어링 · 야간·휴일",n("night")]].concat(n("etc")?[["etc","기타",n("etc")]]:[]).forEach(([k,l,c])=>{
       const x=el("button","hchip sm"+(k?" s-"+k:"")+(slkSrcF===k?" on":""),l+" "+c);x.setAttribute("aria-pressed",slkSrcF===k);x.onclick=()=>{slkSrcF=k;renderReqPage();};sb.appendChild(x);});
     b.appendChild(sb);}
   const L0=LS.filter(r=>!slkSrcF||slkSrc(r)===slkSrcF);
-  {const kb=el("div","obchips slkkind");const cnt={};L0.forEach(r=>{const k=slkKind(r.f);cnt[k]=(cnt[k]||0)+1;});   // 208: 유형 칩(건수 있는 것만)
+  if(!SF){const kb=el("div","obchips slkkind");const cnt={};L0.forEach(r=>{const k=slkKind(r.f);cnt[k]=(cnt[k]||0)+1;});   // 208: 유형 칩(건수 있는 것만)
     const ch=(k,l,n)=>{const x=el("button","hchip sm"+(slkKindF===k?" on":""),l+(n!=null?" "+n:""));x.setAttribute("aria-pressed",slkKindF===k);x.onclick=()=>{slkKindF=slkKindF===k&&k?"":k;renderReqPage();};kb.appendChild(x);};
     ch("","전체",L0.length);SLK_KIND.map(k=>k[0]).concat(["etc"]).forEach(k=>{if(cnt[k])ch(k,SLK_KN[k],cnt[k]);});
     if(slkKindF&&!cnt[slkKindF])slkKindF="";b.appendChild(kb);}
   const L1=L0.filter(r=>!slkKindF||slkKind(r.f)===slkKindF);
   const unc=L1.filter(r=>!slkChk[slkCk(r)]);
-  {const cb=el("div","slkchkbar");const u=el("button","hchip sm"+(slkUnchk?" on":""),"확인 안 한 것만 "+unc.length);u.setAttribute("aria-pressed",slkUnchk);u.onclick=()=>{slkUnchk=!slkUnchk;renderReqPage();};cb.appendChild(u);
+  if(!SF){const cb=el("div","slkchkbar");const u=el("button","hchip sm"+(slkUnchk?" on":""),"확인 안 한 것만 "+unc.length);u.setAttribute("aria-pressed",slkUnchk);u.onclick=()=>{slkUnchk=!slkUnchk;renderReqPage();};cb.appendChild(u);
     if(unc.length){const a=el("button","hmore","보이는 "+unc.length+"건 모두 확인");a.onclick=()=>{slkChkSet(unc.map(slkCk),true);toast(unc.length+"건을 확인으로 표시했습니다.");track("slk_chk");};cb.appendChild(a);}
     if(isAdmin&&L1.length){const a=el("button","hmore slkclean","목록 정리");a.onclick=()=>openSlkClean(L1);cb.appendChild(a);}
     b.appendChild(cb);}
-  const L=L1.filter(r=>!slkUnchk||!slkChk[slkCk(r)]).sort((a,c)=>(slkSt==="done"?(c.doneAt||c.at)-(a.doneAt||a.at):slkAtE(c)-slkAtE(a)));
+  const L=SF?SF.slice():L1.filter(r=>!slkUnchk||!slkChk[slkCk(r)]).sort((a,c)=>(slkSt==="done"?(c.doneAt||c.at)-(a.doneAt||a.at):slkAtE(c)-slkAtE(a)));
   slkNav=L.map(r=>r.id);   // 상세 창에서 좌우로 밀 때 쓰는 현재 목록 순서
   const box=el("div","slklist");
   if(!L.length){const e=el("div","slkempty");
-    e.appendChild(el("b",null,slkSt==="all"?"요청이 없습니다":slkSt==="new"?"새 요청이 없습니다":slkSt==="doing"?"처리 중인 요청이 없습니다":"최근 7일 완료한 요청이 없습니다"));
+    e.appendChild(el("b",null,SF?"해당하는 요청이 없습니다":slkSt==="all"?"요청이 없습니다":slkSt==="new"?"새 요청이 없습니다":slkSt==="doing"?"처리 중인 요청이 없습니다":"최근 7일 완료한 요청이 없습니다"));
     if(!all.length)e.appendChild(el("span",null,!isAdmin?"요청이 올라오면 여기에서 기관·장비·요청·증상·회신처를 확인할 수 있습니다.":"Slack #handover-cso-fsg · #handover-cssharing-fsg 의 요청 글을 복사해 「Slack 글 붙여넣기」로 넣으면 기관·장비·요청·증상·회신처로 나눠 보여 줍니다."));
     else if(slkUnchk&&L1.length)e.appendChild(el("span",null,"모두 확인했습니다. 「확인 안 한 것만」을 끄면 전체가 보입니다."));
     else if(slkScope!=="all")e.appendChild(el("span",null,"다른 팀 요청은 「전체」에서 볼 수 있어요."));
@@ -4487,7 +4498,7 @@ function renderReqPage(){
     row.appendChild(el("b","slkh",[f.hosp+(f.area?" ("+f.area+")":""),f.eq].filter(Boolean).join(" · ")));
     const q=slkFirst(f.req||f.sym,80);if(q)row.appendChild(el("span","slkq",q));
     const who=r.st==="done"?(r.ackDone&&slkRcv(r)?"접수자 "+r.ack.n:r.doneBy?"완료 "+r.doneBy:"완료"):slkRcv(r)?"접수자 "+r.ack.n:r.who?"담당 "+r.who:r.mention?"@"+r.mention:"담당자 없음";
-    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention&&!r.ack?" none":""),who);if(r.ack&&r.st!=="done")ft.appendChild(el("b","slkackb"," · ✅ 확인"+(r.ack.n&&!slkRcv(r)?" "+r.ack.n:"")));if(r.mv&&r.st!=="done")ft.appendChild(el("b","slkmv"," · 방문 중"+(r.mv.n?" "+r.mv.n:"")));if(slkRrN(r))ft.appendChild(el("b","slkrr"," · 재요청"+(slkRrN(r)>1?" "+slkRrN(r)+"회":"")+" "+slkWhen(r.rrAt)));if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));if(r.autoFin&&r.st==="done")ft.appendChild(el("em",null," · 현장 「마칩니다」로 완료"));row.appendChild(ft);
+    const ft=el("span","slkft"+(r.st==="new"&&!r.who&&!r.mention&&!r.ack?" none":""),who);if(r.ack&&r.st!=="done")ft.appendChild(el("b","slkackb"," · ✅ 확인"+(r.ack.n&&!slkRcv(r)?" "+r.ack.n:"")));if(r.mv&&r.st!=="done")ft.appendChild(el("b","slkmv"," · 방문 중"+(r.mv.n?" "+r.mv.n:"")));if(SF&&r.ack&&r.ack.at>=r.at)ft.appendChild(el("b","slkwt"," · 확인까지 "+slkMinTx((r.ack.at-r.at)/6e4)));if(slkRrN(r))ft.appendChild(el("b","slkrr"," · 재요청"+(slkRrN(r)>1?" "+slkRrN(r)+"회":"")+" "+slkWhen(r.rrAt)));if(r.fin&&r.st!=="done")ft.appendChild(el("em",null," · 마무리 보고 있음"));if(r.autoFin&&r.st==="done")ft.appendChild(el("em",null," · 현장 「마칩니다」로 완료"));row.appendChild(ft);
     row.onclick=()=>{if(!slkChk[slkCk(r)])slkChkSet([slkCk(r)],true);openSlkReq(r.id);};box.appendChild(it);});   // 208: 열어 보면 확인으로
   b.appendChild(box);
 }
@@ -4928,7 +4939,7 @@ async function openScan(){
 }
 /* ===== 사용 현황(관리자용) — 기기마다 기능별 「하루 한 번」만 숫자 +1. 이름·uid·시각 등 개인 기록은 남기지 않음 =====
    talk/usage/{날짜}/{기능} = 그날 그 기능을 쓴 기기 수. 규칙이 +1만 허용 */
-const TRK={slk_stats:"학술요청 집계(관리자)",slk_acadfld:"학술요청 분야 정하기(관리자)",sil_check:"실마리 연결 점검",av_zoom:"프로필 사진 크게 보기",home_inst:"홈 설치일정 버튼",home_work:"홈 근무일정 버튼",room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
+const TRK={slk_stat:"Slack 요청 현황 칸 보기",slk_stats:"학술요청 집계(관리자)",slk_acadfld:"학술요청 분야 정하기(관리자)",sil_check:"실마리 연결 점검",av_zoom:"프로필 사진 크게 보기",home_inst:"홈 설치일정 버튼",home_work:"홈 근무일정 버튼",room_alarm:"대화 알림 설정",slk_send:"Slack 채널 방에서 보내기",slk_ack:"Slack 요청 ✅ 확인",slk_chk:"Slack 요청 모두 확인",slk_clean:"Slack 요청 목록 정리",pm:"FS 정기점검 관리",room_find:"대화방 안 찾기",v_req:"Slack 요청함",slk_prev:"Slack 연결 전 미리보기",slk_v:"Slack 요청 상세",slk_paste:"Slack 글 붙여넣기",slk_act:"Slack 요청 처리",hist:"Sysmex Talk 검색",map:"길찾기",board_file:"기술정보 파일 올리기",board_dl:"기술정보 파일 받기",ver:"버전 정보",parts:"부품 검색",parts_v:"부품 상세",parts_up:"부품 자료 올리기",po:"부품 발주 시스템",kpi_up:"KPI CRM 올리기",adm_conv:"대화 열람(관리자)",kc:"KnowledgeCenter",pmdb:"Product Manual DB",hr:"HR System",skr:"SKR SharePoint",v_home:"홈",v_org:"조직도",v_chat:"대화방",v_tech:"기술정보 검색",v_team:"팀 현황",v_search:"통합 검색",v_saved:"저장한 글",v_app:"FS Portal 안 앱",
   open:"앱 열기(기기)",search:"검색 실행",scan:"바코드 스캔",sil:"실마리 상세",sch_add:"일정 등록",dm:"1:1 대화 시작",call:"조직도 전화",guide:"사용 안내"};
 function track(f){
   try{if(!me||me.status!=="approved"||!/^[a-z0-9_]{1,24}$/.test(f))return;const d=ymd(new Date()),k="fstalk-trk-"+d;
