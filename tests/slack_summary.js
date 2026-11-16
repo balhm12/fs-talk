@@ -14,8 +14,7 @@ const R=db.talk.slack.req, ids=Object.keys(R);
 assert(R.night_dEXIST.sum&&R.night_dEXIST.sum.ts===ts1,'기존 요청에 인계 요약 표시 '+JSON.stringify(R.night_dEXIST));
 assert(R.night_dEXIST.st==='new','기존 요청 상태는 그대로');
 const fromSum=ids.filter(k=>R[k].ts===ts1);
-assert.strictEqual(fromSum.length,1,'요약 글에서는 맞는 요청이 없는 건(A)만 요청 '+JSON.stringify(fromSum));
-assert(R[fromSum[0]].f.hosp.indexOf('테스트기관A')===0&&R[fromSum[0]].multi,'A = 묶음 요청으로 남김');
+assert.strictEqual(fromSum.length,0,'297: 묶음 인계는 맞는 요청이 없어도 요청 안 만듦 '+JSON.stringify(fromSum));
 // 머리말만 있고 접수 1건 + 기존 요청 있음 → 새 요청 없음
 const ts2=(now-60).toFixed(6);R.night_dEXIST2={kind:'night',ch:CH,ts:'9.9',st:'new',at:N-3600e3,t:'x',f:{hosp:'테스트기관C',eq:'CN-6000'}};
 hist[CH].push({ts:ts2,user:'U3',text:head+blk('테스트기관C','CN-6000','응고 에러')});
@@ -35,4 +34,11 @@ assert.strictEqual(n,1,'정리 1건');
 assert(R.night_nOLD.st==='done'&&R.night_nOLD.doneBy==='인계 요약'&&R.night_nOLD.sumOf==='night_dE','묶음 요청 정리');
 assert(R.night_dE.sum&&R.night_dE.st==='new','개별 요청은 그대로 + 요약 표시');
 assert(R.night_nLONE.st==='new','맞는 개별 요청이 없는 묶음 요청은 남김');
+// 297 한 번 정리: 묶음 인계 요청(night_n…)은 모두 인계 요약으로 완료
+R.night_nX={kind:'night',ch:CH,ts:'6.6',st:'new',multi:true,at:N-3*3600e3,t:'x',f:{hosp:'테스트기관G',eq:'XR-9000'}};
+R.night_nY={kind:'night',ch:CH,ts:'6.6',st:'new',multi:true,at:N-3*3600e3,t:'x',f:{hosp:'테스트기관H',eq:'XR-1000'}};
+R.night_dZ={kind:'night',ch:CH,ts:'5.5',st:'new',at:N-3600e3,t:'x',f:{hosp:'테스트기관Z',eq:'XN'}};
+g.slkSum297_();
+assert(R.night_nX.st==='done'&&R.night_nX.doneBy==='인계 요약'&&R.night_nY.st==='done','묶음 요청 모두 정리');
+assert(R.night_dZ.st==='new','개별 요청은 그대로');
 console.log('slack_summary ok');
