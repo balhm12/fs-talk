@@ -131,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v62';
+const NOTIFY_VER = 'v63';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -874,13 +874,20 @@ function slackPull(force, opt){
           // 요청 채널: 양식 블록마다 요청 1건 (야간 인계 요약 글은 여러 건 — 같은 내용은 같은 id 라 두 번 들어오지 않음)
           const blocks = /\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1
             ? text.split(/(?=\[CS쉐어링 접수\])/).filter(function(b){ return /\[CS쉐어링 접수\]/.test(b); }) : [text];
+          // 296: CS쉐어링 묶음 인계(「…CS쉐어링 전화접수 N차 인계사항」 또는 접수 2건 이상) = 밤사이 처리·전달한 건의 아침 요약 → 새 요청으로 만들지 않고
+          //  같은 병원·장비의 기존 요청(24시간 안)에 「인계 요약에 포함」만 붙임. 맞는 요청이 없는 건만 요청으로 남김(개별 글 없이 요약에만 있는 건이 빠지지 않게)
+          const isSum = C.k === 'night' && (blocks.length > 1 || SLK_SUM_RE.test(text));
           blocks.forEach(function(b, i){
             const f = slkParse_(b); if(!f) return;
+            if(isSum && /\[CS쉐어링 접수\]/.test(b)){
+              const sib = slkSumSibling_(f, at, m.ts);
+              if(sib){ dbPatch_('talk/slack/req/'+sib, {sum:{ch:ch, ts:m.ts, at:at}}); return; }
+            }
             SLK_REQC = null;   // 261: 이 블록이 요청을 쓸 수 있으므로 현장 판정용 요청 목록 캐시를 비움
             if(blocks.length === 1 && hTeam) f.team = hTeam;   // 227: 「CSO Team 먼저 인계드렸으나, FS WEST … 전달」 같은 머리말 = FS 요청(양식이 학술요청이어도)
             else if(/학술\s*요청/.test(b) || (f.team && !/^FS/.test(f.team))) return;   // 202: 학술요청·CSO/SA 인계는 FSG 요청함에 넣지 않음
             const day = Utilities.formatDate(new Date(at), 'Asia/Seoul', 'yyyyMMdd');
-            const id = blocks.length > 1 ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : (C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'));
+            const id = (blocks.length > 1 || isSum) ? C.k+'_n'+slkHash_([f.hosp,f.eq,f.req].join('|')) : (C.k === 'talk' ? 'cso' : C.k)+'_d'+slkHash_([day,f.hosp,f.eq,f.req].join('|'));
             const cur = db_('talk/slack/req/'+id);
             if(cur && !(blocks.length > 1)){
               // 227: 재요청 — 같은 날 같은 기관·장비·요청인데 다른 글(내용이 다르고 1분 넘게 뒤)이면 요청에 「재요청」으로 붙이고, 완료였으면 다시 새 요청으로
@@ -948,6 +955,7 @@ function slackPull(force, opt){
     if(!PR.SLK_DEDUP_232){ try{ slkDedup232_(); props.setProperty('SLK_DEDUP_232','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_REQDUP_233){ try{ slkReqDedup233_(); props.setProperty('SLK_REQDUP_233','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_MERGE_287){ try{ slkMerge287_(); props.setProperty('SLK_MERGE_287','1'); }catch(e){ console.error(e); } }
+    if(!PR.SLK_SUM_296){ try{ slkSum296_(); props.setProperty('SLK_SUM_296','1'); }catch(e){ console.error(e); } }
     if(!PR.SLK_LINK_229){ try{ slkLinkFix229_(); props.setProperty('SLK_LINK_229','1'); }catch(e){ meta.err = '주소 글 펼치기: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!PR.SLK_ACKDONE_266){ try{ slkAckDone266_(); props.setProperty('SLK_ACKDONE_266','1'); }catch(e){ meta.err = '확인 완료 정리: '+String(e.message||e).slice(0,160); console.error(e); } }
     if(!PR.SLK_MIG_224){ try{ slkMig224_(); props.setProperty('SLK_MIG_224','1'); }catch(e){ meta.err = '채널 방으로 옮기기: '+String(e.message||e).slice(0,160); console.error(e); } }
@@ -1558,6 +1566,28 @@ function slkMultiMatch_(items, text){
     if(byEq.length) hit = byEq;
   }
   return hit.map(function(it){ return it.id; });
+}
+const SLK_SUM_RE = /CS\s*쉐어링\s*전화\s*접수\s*(?:\d+\s*차\s*)?인계\s*사항/;
+/* 296: 묶음 인계 한 건과 같은 병원·장비(slkSibKey_)의 기존 요청 — 요약 글보다 24시간 앞 ~ 10분 뒤, 묶음 요청(multi)·요약으로 만든 요청은 제외 */
+function slkSumSibling_(f, at, ts){
+  const sk = slkSibKey_({f:f}); if(!sk) return '';
+  const near = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(at-24*3600e3)+'&endAt='+(at+10*60e3)) || {};
+  const c = Object.keys(near).filter(function(k){ const o = near[k]; return o && !o.multi && !o.sumOnly && o.ts !== ts && slkSibKey_(o) === sk; })
+    .sort(function(a,b){ return (+near[b].at||0) - (+near[a].at||0); });
+  return c[0] || '';
+}
+/* 296: 한 번 — 이미 생긴 열린 묶음 요청 중 같은 병원·장비의 개별 요청이 있는 것은 「인계 요약」으로 완료하고 그 요청에 요약 표시 */
+function slkSum296_(){
+  const all = dbQuery_('talk/slack/req','orderBy="at"&startAt='+(Date.now()-7*864e5)) || {};
+  let n = 0;
+  Object.keys(all).forEach(function(id){
+    const r = all[id]; if(!r || !r.multi || r.st === 'done' || r.ack) return;
+    const sib = slkSumSibling_(r.f || {}, +r.at || 0, r.ts); if(!sib) return;
+    dbPatch_('talk/slack/req/'+sib, {sum:{ch:r.ch, ts:r.ts, at:+r.at||0}});
+    dbPatch_('talk/slack/req/'+id, {st:'done', doneAt:Date.now(), doneBy:'인계 요약', sumOf:sib});
+    n++;
+  });
+  return n;
 }
 function slkSibKey_(r){
   const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·]/g,'').toLowerCase(); };
