@@ -131,7 +131,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v61';
+const NOTIFY_VER = 'v62';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1066,6 +1066,38 @@ function slkSync_(names){
     if(Object.keys(patch).length) dbPatch_('talk/slack/req/'+id, patch);   // 바뀐 게 없으면 쓰지 않음
     if(patch.ack){ r.ack = patch.ack; try{ slkAckSiblings_(all, id, r, patch.ack); }catch(e){} }   // 282
   });
+  // 295: 묶음 야간 인계 — 스레드 답글에 병원 이름(필요하면 장비)이 있으면 그 건만 「확인」. 봇·CS쉐어링 상담사(명단 밖 요청 채널 작성자) 답글은 빼고,
+  //  「담당 아님·미확인」 같은 말이 있으면 건너뜀. 답글이 그대로면 스레드를 다시 읽지 않음(lr)
+  try{
+    const mb = {};
+    Object.keys(all).forEach(function(id){ const r = all[id]; if(r && r.multi && r.ch && r.ts && SLACK_CH[r.ch] && (r.st !== 'done' || !r.doneBy)) (mb[r.ch+'|'+r.ts] = mb[r.ch+'|'+r.ts] || []).push(id); });
+    const cso = slkCso_(), R = slkRoster_();
+    Object.keys(mb).forEach(function(key){
+      const pm = hist[key]; if(!pm || !pm.reply_count) return;
+      const ids = mb[key], lr = String(pm.latest_reply || '');
+      if(ids.every(function(id){ return String(all[id].lr || '') === lr; })) return;
+      const ch = key.split('|')[0], ts = key.split('|')[1];
+      let j; try{ j = slackApi_('conversations.replies',{channel:ch, ts:ts, limit:100}); }catch(e){ return; }
+      const items = ids.filter(function(id){ return !all[id].ack; }).map(function(id){ const f = all[id].f || {}; return {id:id, hosp:f.hosp, eq:f.eq}; });
+      const got = {};
+      (j.messages || []).slice(1).forEach(function(m){
+        if(m.bot_id || m.subtype === 'bot_message' || !m.user || m.user === slkBotId_() || (cso && cso[m.user])) return;
+        const open = items.filter(function(it){ return !got[it.id]; }); if(!open.length) return;
+        const nm = slkPerson_(slkUser_(m.user, names));
+        if(!nm || !Object.keys(R).some(function(t){ return R[t] && Object.prototype.hasOwnProperty.call(R[t], nm); })) return;   // FS 명단에 있는 사람(엔지니어) 답글만
+        slkMultiMatch_(open, slkClean_(m.text)).forEach(function(id){ got[id] = {n:nm, at:Math.round(+m.ts*1000)}; });
+      });
+      ids.forEach(function(id){
+        const r = all[id], patch = {lr:lr || null}, a = got[id];
+        if(a && a.n && !r.ack){
+          patch.ack = {n:a.n, at:a.at, th:1};
+          if(r.st === 'new' || (r.st === 'doing' && !r.mv) || (r.st === 'done' && !r.doneBy)){ if(!r.who){ patch.who = a.n; patch.whoAt = a.at; } slkAckDone_(patch, r, a.n, a.at); }
+          r.ack = patch.ack;
+        }
+        dbPatch_('talk/slack/req/'+id, patch);
+      });
+    });
+  }catch(e){ console.error('묶음 인계 확인', e); }
   // 286: 이미 ✅ 확인된 요청(282 배포 전에 확인된 것 포함)의 같은 병원·장비 요청도 맞춤 — 같은 CSO 글이 handover·#group-sysmex-talk 두 채널에서
   //  서로 다른 요청으로 들어오고(양식을 읽은 결과가 달라 id 가 다름) handover 쪽만 ✅ 된 경우. 확인 시각 + 10분 뒤에 온 요청(다음 날 새 건 등)은 그대로
   Object.keys(all).forEach(function(id){
@@ -1489,6 +1521,44 @@ function slkAckDone266_(){
 /* 266: 확인하면 완료 — 방문 중(현장 「이동」 글)이 아니면 st=done·ackDone. 나중에 담당이 「이동」 글을 쓰면 다시 방문 중, 「마칩니다」면 방문 완료 */
 /* 282: 같은 건이 CSO·CS쉐어링 두 채널로 들어와 요청이 두 줄일 때 — 한쪽을 ✅ 확인하면 24시간 안의 같은 병원·장비 열린 요청도 함께 확인(사용자 결정 2026-11-12)
  *  병원·장비 이름은 띄어쓰기·괄호(지역) 무시로 비교. 묶음 야간 인계(multi)·이미 확인된 것·방문 중은 건드리지 않음(방문 중은 slkAckDone_ 가 그대로 둠) */
+/* 295: 묶음 야간 인계(CS쉐어링 글 하나에 접수 여러 건) — 스레드 답글에 병원 이름이 있으면 그 건만 확인(사용자 결정 2026-11-16).
+ *  묶음 글의 ✅ 반응은 어느 건 확인인지 알 수 없어 그대로 반영하지 않음. 순수 함수(시험 tests/slack_multi_ack.js) */
+const SLK_GENERIC_RE = /^(의료재단|재단|법인|병원|의원|센터|의료원|요양병원|대학교|대학병원|검진센터|건강검진|진단검사|검사실|진단검사의학과|내과|외과|소아과|산부인과|정형외과|확인|확인했습니다|확인합니다|감사합니다|연락|연락드림|방문|방문예정|회신|통화|오전|오후|내일|오늘|월요일|화요일|수요일|목요일|금요일|토요일|일요일)$/;
+const SLK_NOTME_RE = /담당\s*(?:이\s*)?아(?:님|니)|제\s*(?:건|담당)\s*아(?:님|니)|확인\s*(?:전|못)|미확인|오접수|잘못\s*(?:온|들어)/;
+const SLK_SHORT_NO_RE = /^(서울|경기|인천|강원|충북|충남|대전|세종|전북|전남|광주|경북|경남|대구|부산|울산|제주|병원|의원|확인|오늘|내일|오전|오후|방문|연락|통화|회신|장비|점검|수리|에러|알람|부품|교체|담당|고객|현장|이동|도착|완료|처리|문의|요청|접수|인계|전달|예정|다시|지금|바로|먼저|감사|수고)$/;
+function slkHospCore_(h){
+  return String(h||'').replace(/\([^)]*\)|（[^）]*）/g,'')
+    .replace(/^\s*(?:\(?\s*(?:사|재|의)\s*\)|의료법인|재단법인|사단법인|학교법인|사회복지법인)\s*/,'')
+    .replace(/[\s\-_.·,]/g,'');
+}
+function slkEqKey_(e){ const m = /[A-Za-z]{1,6}\s*-?\s*\d{2,5}/.exec(String(e||'')); return m ? m[0].replace(/[\s\-]/g,'').toUpperCase() : ''; }
+function slkMultiMatch_(items, text){
+  const t = String(text||''); if(!t.trim() || SLK_NOTME_RE.test(t)) return [];
+  const tn = t.replace(/[\s\-_.·,]/g,''), tu = tn.toUpperCase();
+  const toks = (t.match(/[가-힣A-Za-z0-9]{2,}/g)||[]).map(function(w){ return w.replace(/(?:에서|으로|이랑|하고|님|은|는|이|가|을|를|에|의|도|건|로|와|과)$/,''); })
+    .filter(function(w){ return w.length >= 3 && /[가-힣]/.test(w) && !SLK_GENERIC_RE.test(w); });
+  // 병원 이름 전체가 답글에 있으면 그 건. 이름 일부(3자 이상 낱말)는 그 낱말이 한 병원에만 맞을 때만(「테스트」처럼 여러 병원에 걸리면 버림)
+  const core = {}; (items||[]).forEach(function(it){ core[it.id] = slkHospCore_(it.hosp); });
+  const ok = {};
+  (items||[]).forEach(function(it){ const c = core[it.id]; if(c.length >= 2 && tn.indexOf(c) >= 0) ok[it.id] = 1; });
+  toks.forEach(function(w){
+    const m = (items||[]).filter(function(it){ return core[it.id].length >= 3 && core[it.id].indexOf(w) >= 0; });
+    const cores = {}; m.forEach(function(it){ cores[core[it.id]] = 1; });
+    if(m.length && Object.keys(cores).length === 1) m.forEach(function(it){ ok[it.id] = 1; });
+  });
+  let hit = (items||[]).filter(function(it){ return ok[it.id]; });
+  if(!hit.length){   // 두 글자 줄임말(「삼광」 등)은 병원 이름 앞부분과 같고 한 건만 맞을 때만
+    const t2 = (t.match(/[가-힣]{2,}/g)||[]).map(function(w){ return w.replace(/(?:에서|으로|님|은|는|이|가|을|를|에|의|도|건|로)$/,''); })
+      .filter(function(w){ return w.length === 2 && !SLK_GENERIC_RE.test(w) && !SLK_SHORT_NO_RE.test(w); });
+    const h2 = (items||[]).filter(function(it){ const c = slkHospCore_(it.hosp); return c.length >= 3 && t2.some(function(w){ return c.indexOf(w) === 0; }); });
+    if(h2.length === 1) hit = h2;
+  }
+  if(hit.length > 1){   // 같은 글에 같은 병원이 여러 건이면 답글에 적은 장비로 좁힘(장비를 안 적었으면 모두)
+    const byEq = hit.filter(function(it){ const k = slkEqKey_(it.eq); return k && tu.indexOf(k) >= 0; });
+    if(byEq.length) hit = byEq;
+  }
+  return hit.map(function(it){ return it.id; });
+}
 function slkSibKey_(r){
   const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·]/g,'').toLowerCase(); };
   const h = n(f.hosp), e = n(f.eq); return (h.length >= 3 && e.length >= 2) ? h+'|'+e : '';

@@ -1,6 +1,6 @@
 const fs=require('fs');const src=fs.readFileSync(process.env.GS||require('path').join(__dirname,'../apps-script/notify.gs'),'utf8');
 const db={talk:{roster:{'FSS Team':{'테스트1':'',},'FS WEST':{'테스트2':''}},slack:{req:{}}}};
-const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cache={};let calls=[];const sent=[];const fcm=[];
+const replies={};const props={SLACK_BOT_TOKEN:'x',DB_URL:'https://db.example.invalid'};const cache={};let calls=[];const sent=[];const fcm=[];
 function get(p){let o=db;for(const k of p.split('/').filter(Boolean)){o=o&&o[decodeURIComponent(k)];}return o;}
 function set(p,v,patch){const ks=p.split('/').filter(Boolean).map(decodeURIComponent);let o=db;for(const k of ks.slice(0,-1)){o[k]=o[k]||{};o=o[k];}const L=ks[ks.length-1];if(patch){o[L]=o[L]||{};for(const k in v){if(k.includes('/')){set(ks.concat(k.split('/')).join('/'),v[k]===null?undefined:v[k]);continue;}if(v[k]===null)delete o[L][k];else o[L][k]=v[k];}}else o[L]=v;}
 const now=Date.now()/1000;
@@ -9,7 +9,7 @@ const ctx={
  UrlFetchApp:{fetchAll(rs){return rs.map(r=>{fcm.push(JSON.parse(r.payload).message);return {getResponseCode:()=>200,getContentText:()=>'{}'};});},fetch(u,o={}){calls.push(u);if(/[" ]/.test(u))throw new Error('잘못된 인수: '+u);
   if(u.startsWith('https://slack.com/api/')){const m=u.split('/api/')[1].split('?')[0];const q=new URLSearchParams(u.split('?')[1]||'');
     let r={ok:true};if(m==='conversations.history')r={ok:true,messages:hist[q.get('channel')]||[]};
-    if(m==='conversations.replies'){const p=hist[q.get('channel')].find(x=>x.ts===q.get('ts'));r={ok:true,messages:[p,{ts:p.latest_reply,user:'U2',text:'제가 봅니다'}]};}
+    if(m==='conversations.replies'){const p=hist[q.get('channel')].find(x=>x.ts===q.get('ts'));const rk=q.get('channel')+'|'+q.get('ts');r={ok:true,messages:replies[rk]?[p].concat(replies[rk]):[p,{ts:p.latest_reply,user:'U2',text:'제가 봅니다'}]};}
     if(m==='users.info')r={ok:true,user:{real_name:q.get('user')==='U1'?'테스트1':q.get('user')==='U3'?'[CSIS] 상담사 테스트칠':'테스트2'}};
     if(m==='auth.test')r={ok:true,user_id:'B1',team_id:'T'};
     if(m==='chat.postMessage'){const pl=JSON.parse(o.payload||'{}');sent.push(pl);r={ok:true,ts:(Date.now()/1000+sent.length/1e4).toFixed(6)};}
@@ -21,13 +21,13 @@ const ctx={
  PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||null,getProperties:()=>Object.assign({},props),setProperty:(k,v)=>props[k]=v})},
  LockService:{getScriptLock:()=>({tryLock:()=>true,waitLock(){},releaseLock(){}})},
  CacheService:{getScriptCache:()=>({get:k=>cache[k]??null,put:(k,v)=>cache[k]=v,remove:k=>delete cache[k]})},
- Utilities:{formatDate:(d)=>d.toISOString().slice(0,10).replace(/-/g,''),computeDigest:(a,s)=>[...require('crypto').createHash('md5').update(String(s)).digest()],DigestAlgorithm:{MD5:1,SHA_1:1,SHA_256:1},Charset:{UTF_8:1},base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),base64Encode:s=>Buffer.from(String(s)).toString('base64')},
+ Utilities:{formatDate:(d,tz,f)=>{const k=new Date(d.getTime()+(tz==='Asia/Seoul'?9*3600e3:0)).toISOString();return f==='H'?String(+k.slice(11,13)):k.slice(0,10).replace(/-/g,'');},computeDigest:(a,s)=>[...require('crypto').createHash('md5').update(String(s)).digest()],DigestAlgorithm:{MD5:1,SHA_1:1,SHA_256:1},Charset:{UTF_8:1},base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),base64Encode:s=>Buffer.from(String(s)).toString('base64')},
  ContentService:{createTextOutput:t=>({t,setMimeType(){return this}}),MimeType:{JSON:1}},
  ScriptApp:{getProjectTriggers:()=>[]},Logger:{log(){}},console};
 ctx.accessToken_=null;
-const f=new Function(...Object.keys(ctx),src+';verifyUser_=function(t){return String(t||"").indexOf("tok-")===0?String(t).slice(4):null;};return {slackPull,doPost,slackSend_,slkFieldHint_,slkAckDone266_,slkEscalate_,slkSync_,slkDiag_,slkMerge287_,slackStats_,slkStatBand_,slkStatFld_,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
+const f=new Function(...Object.keys(ctx),src+';verifyUser_=function(t){return String(t||"").indexOf("tok-")===0?String(t).slice(4):null;};return {slackPull,doPost,slackSend_,slkFieldHint_,slkAckDone266_,slkEscalate_,slkSync_,slkDiag_,slkMerge287_,slackStats_,slkStatBand_,slkStatFld_,slkMultiMatch_,accessToken_:typeof accessToken_!=="undefined"?accessToken_:null};');
 const g=f(...Object.values(ctx));
-module.exports={g,db,props,calls,cache,hist,sent,ctx,fcm};
+module.exports={g,db,props,calls,cache,hist,sent,ctx,fcm,replies};
 // 213: Slack 가져오기 회귀 시험 — 한 글 오류가 전체를 멈추지 않는지, 따옴표 쿼리, 확인(✅) 동기화, 이벤트 처리
 if(require.main===module){
   const assert=require('assert');cache.at='tok';
