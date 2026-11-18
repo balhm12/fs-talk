@@ -527,6 +527,12 @@
         ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
         ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')"
       },
+      "kpistaff": {
+        ".read": "auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved'",
+        ".write": "auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')",
+        ".validate": "newData.hasChildren(['k','at']) && newData.child('k').isString() && newData.child('k').val().length >= 20 && newData.child('k').val().length <= 100 && newData.child('at').isNumber()",
+        "$other": { ".validate": "$other === 'k' || $other === 'at'" }
+      },
       "kpime": {
         ".read": "(auth != null && (root.child('talk/admins/' + auth.uid).val() === true && root.child('talk/users/' + auth.uid + '/status').val() === 'approved')) || (auth != null && root.child('talk/users/' + auth.uid + '/status').val() === 'approved' && (auth != null && (root.child('talk/users/' + auth.uid + '/team').val() === 'FSG' || root.child('talk/users/' + auth.uid + '/team').val() === '고객접점부문' || root.child('talk/roster/' + root.child('talk/users/' + auth.uid + '/team').val() + '/' + root.child('talk/users/' + auth.uid + '/name').val() + '/lead').val() === true)))",
         "$p": {
