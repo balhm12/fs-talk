@@ -3,7 +3,7 @@
  * 직원은 KPI 페이지의 「직원용 화면」(이름 없는 사본)만 본다. 포털이 하는 일:
  *  ① 접근 코드가 저장된 관리자 기기가 「직원용 코드」를 talk/kpistaff 에 올린다
  *  ② 승인된 직원 기기가 그 값을 받아 localStorage fsg-kpi-staff 에 넣는다(KPI 페이지와 같은 출처)
- *  ③ (303) 같은 관리자 기기가 접근 코드를 talk/kpilead 에 올리고, 규칙이 FSS Team·팀장·그룹장·부문장·관리자에게만 읽기를 허용한다.
+ *  ③ (303·305) 같은 관리자 기기가 접근 코드를 talk/kpilead 에 올리고, 규칙이 FSS Team·FSOM Team·팀장·그룹장·부문장·관리자에게만 읽기를 허용한다.
  *     그 사람들 기기는 받아서 fsg-kpi-code 에 넣는다(코드 입력 없이 전체 화면). 그 밖의 직원 기기에는 접근 코드가 가지 않는다
  * 직원용 코드를 만드는 식은 KPI 페이지(Sysmex-schedule fsg-kpi.html 의 staffCodeOf)와 같아야 한다 —
  * 아래 기준값은 그쪽 tests/test_staff.js 와 같은 값이다. 한쪽 식을 바꾸면 두 곳을 같이 바꾼다.
@@ -61,22 +61,22 @@ const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  ✗ ' + m); 
   ok(/localStorage\.setItem\("fsg-kpi-staff",k\)/.test(html), 'KPI 페이지가 읽는 자리(fsg-kpi-staff)에 넣지 않음');
 
   /* ---------- 3-2. 전체 화면 대상(303): 화면 기준 = 규칙의 읽기 조건 ---------- */
-  ok(/const kpiFull=\(\)=>isAdmin\|\|myLead\(\)\|\|\(!!me&&me\.team==="FSS Team"\);/.test(html), 'kpiFull 기준(관리자·팀장·그룹장·부문장·FSS Team)');
+  ok(/const kpiFull=\(\)=>isAdmin\|\|myLead\(\)\|\|\(!!me&&\(me\.team==="FSS Team"\|\|me\.team==="FSOM Team"\)\);/.test(html), 'kpiFull 기준(관리자·팀장·그룹장·부문장·FSS Team·FSOM Team)');
   ok(/const TOP_TEAM="고객접점부문";const isTop=t=>t==="FSG"\|\|t===TOP_TEAM;/.test(html) && /const myLead=\(\)=>\{if\(!me\)return false;if\(isTop\(me\.team\)\)return true;/.test(html), '그룹장·부문장 = myLead 에 포함');
   const kl = rules.rules.talk.kpilead;
   ok(!!kl, 'talk/kpilead 규칙 없음');
   if (kl) {
     const rd = kl['.read'];
-    ok(/talk\/admins\//.test(rd) && /=== 'FSG'/.test(rd) && /=== '고객접점부문'/.test(rd) && /=== 'FSS Team'/.test(rd) && /\/lead'\)\.val\(\) === true/.test(rd), '읽기 대상(관리자·그룹장·부문장·FSS Team·팀장)');
-    ok(!/FSOM/.test(rd) && (rd.match(/status'\)\.val\(\) === 'approved'/g) || []).length === 2, '대상이 넓어졌거나 승인 조건이 빠짐');
+    ok(/talk\/admins\//.test(rd) && /=== 'FSG'/.test(rd) && /=== '고객접점부문'/.test(rd) && /=== 'FSS Team'/.test(rd) && /=== 'FSOM Team'/.test(rd) && /\/lead'\)\.val\(\) === true/.test(rd), '읽기 대상(관리자·그룹장·부문장·FSS Team·FSOM Team·팀장)');
+    ok((rd.match(/=== '[^']*'/g) || []).filter(x => !/approved/.test(x)).length === 4 && (rd.match(/status'\)\.val\(\) === 'approved'/g) || []).length === 2, '대상이 넓어졌거나 승인 조건이 빠짐');
     ok(/talk\/admins\//.test(kl['.write']) && !/FSS Team/.test(kl['.write']), '쓰기 = 관리자만');
     ok(/hasChildren\(\['k','at'\]\)/.test(kl['.validate']) && kl.$other && /\$other === 'k' \|\| \$other === 'at'/.test(kl.$other['.validate']), '값 형식');
     /* 규칙을 실제로 계산해 본다 — 직원·FSOM 은 못 읽고 대상만 읽는다 */
     const can = (u, admin, lead) => { const tree = { ['talk/admins/u1']: admin || null, ['talk/users/u1/status']: u.status, ['talk/users/u1/team']: u.team, ['talk/users/u1/name']: u.name, ['talk/roster/' + u.team + '/' + u.name + '/lead']: lead || null };
       const root = { child: p => ({ val: () => (p in tree ? tree[p] : null) }) }; return !!new Function('auth', 'root', 'return (' + rd + ')')({ uid: 'u1' }, root); };
     const U = (team, status) => ({ team, name: '가명', status: status || 'approved' });
-    ok(!can(U('FS WEST')) && !can(U('FS CENTRAL')) && !can(U('FSOM Team')), '일반 직원·FSOM 직원이 접근 코드를 읽을 수 있음');
-    ok(can(U('FSS Team')) && can(U('FSG')) && can(U('고객접점부문')) && can(U('FS WEST'), null, true) && can(U('FSOM Team'), null, true) && can(U('FS EAST'), true), '대상(FSS Team·그룹장·부문장·팀장·관리자)이 못 읽음');
+    ok(!can(U('FS WEST')) && !can(U('FS EAST')) && !can(U('FS CENTRAL')) && !can(U('FS SOUTH')) && !can(U('기타')), '현장 팀 일반 직원이 접근 코드를 읽을 수 있음');
+    ok(can(U('FSS Team')) && can(U('FSOM Team')) && can(U('FSG')) && can(U('고객접점부문')) && can(U('FS WEST'), null, true) && can(U('FS EAST'), true), '대상(FSS Team·FSOM Team·그룹장·부문장·팀장·관리자)이 못 읽음');
     ok(!can(U('FSS Team', 'pending')) && !can(U('FS WEST', 'pending'), null, true) && !new Function('auth', 'root', 'return (' + rd + ')')(null, { child: () => ({ val: () => null }) }), '승인 전·로그인 없는 사용자가 읽을 수 있음');
   }
   const lg = /function kpiLeadGot\(v\)\{[\s\S]*?\n\}/.exec(html), ls = /function kpiLeadStart\(n\)\{[\s\S]*?\n\}/.exec(html);
