@@ -73,6 +73,36 @@ ok(/@media\(pointer:coarse\)\{\.vfsel,\.vfsave\{min-height:44px\}\}/.test(html),
 ok(/R\("vocfu\/"\+k\)\.update\(o\)/.test(html),
   '조치 저장이 update 가 아님 — set 이면 상태만 바꿀 때 사유·조치 내용이 지워진다');
 
+/* ---------- 5. 저점수 기준 = 만족도 시트 기준 ----------
+ * 시트(Sysmex-schedule apps-script/survey_analysis.gs 의 lowMaxAt_·isLowRow_)는 응답 접수일이
+ * 2026-11-01 이후면 최저 문항 3점 이하, 그 전이면 2점 이하를 저점수로 센다. 「저점수조치」 탭은
+ * 그 기준에 드는 응답만 받으므로 포털이 다르게 잡으면 조치 기록이 시트에 나타나지 않는다.
+ * 시트 CONFIG.ALERT_THRESHOLD·_PREV·_FROM 을 바꾸면 여기 기대값과 index.html 을 같이 바꾼다. */
+const lowSrc = /const VOC_LOW_MAX=[\s\S]*?const vocLowTxt=[^\n]*;/.exec(html);
+ok(!!lowSrc, 'index.html 에서 저점수 기준(VOC_LOW_MAX ~ vocLowTxt)을 찾지 못함');
+if (lowSrc) {
+  const L = new Function(lowSrc[0] + ';return {VOC_LOW_MAX,VOC_LOW_PREV,VOC_LOW_FROM,vocLowMax,vocLow,vocLowTxt};')();
+  ok(L.VOC_LOW_MAX === 3 && L.VOC_LOW_PREV === 2 && L.VOC_LOW_FROM === '2026-11-01',
+    '기준 값이 시트(3 · 2 · 2026-11-01)와 다름');
+  const rec = (ts, q1, q2, q3) => ({ ts, q1, q2, q3 });
+  [
+    ['2026-10-31 23:59', 3, 5, 5, false, '전환 전날 3점은 저점수가 아님'],
+    ['2026-10-31 23:59', 2, 5, 5, true, '전환 전날 2점은 저점수'],
+    ['2026-11-01 00:00', 3, 5, 5, true, '전환일 3점은 저점수'],
+    ['2026-11-11 16:17', 5, 3, 4, true, '11월 3점(둘째 문항)은 저점수'],
+    ['2026-11-11 16:17', 4, 4, 4, false, '11월 4점은 저점수가 아님'],
+    ['2026-09-15 10:00', 5, 5, 1, true, '9월 1점은 저점수'],
+    ['2027-01-02 09:00', 3, 3, 3, true, '해가 바뀌어도 3점 이하'],
+    ['', 3, 5, 5, true, '접수일이 없으면 지금 기준(3점) — 시트 lowMaxAt_ 와 같음'],
+    ['2026-10-20 10:00', '', 5, 5, false, '빈 문항은 5점으로 보고 저점수로 세지 않음'],
+  ].forEach(([ts, a, b, c, want, msg]) => ok(L.vocLow(rec(ts, a, b, c)) === want, msg));
+  ok(L.vocLowTxt('2026-10') === '2점 이하' && L.vocLowTxt('2026-11') === '3점 이하' && L.vocLowTxt() === '3점 이하',
+    '화면 문구가 달 기준과 다름: ' + [L.vocLowTxt('2026-10'), L.vocLowTxt('2026-11'), L.vocLowTxt()].join(' / '));
+}
+/* 화면 문구에 「3점 이하」를 직접 적으면 10월 이전 달을 볼 때 기준과 문구가 어긋난다 */
+ok(!/(?:el|tile|it)\([^)\n]*"[^"\n]*3점 이하/.test(html), '화면 문구에 「3점 이하」가 직접 적혀 있음 — vocLowTxt 를 쓴다');
+ok(!/vocLow=r=>[^;]*<=3;/.test(html), 'vocLow 가 날짜와 상관없이 3점으로 고정돼 있음');
+
 console.log(fail ? '\n저점수 후속 조치: ' + pass + ' 통과 / ' + fail + ' 실패'
   : '저점수 후속 조치: ' + pass + '항목 통과');
 process.exit(fail ? 1 : 0);

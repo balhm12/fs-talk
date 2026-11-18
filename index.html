@@ -2119,7 +2119,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-18.303";
+const APP_VERSION="2026-11-18.304";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -3052,7 +3052,7 @@ function silPreview(r,box){
   }).catch(err=>{box.textContent="";box.appendChild(el("div","hsoon",err.message==="locked"?"실마리 연결 후 볼 수 있어요":"불러오지 못했습니다 ("+err.message+")"));});
 }
 
-/* ===== 고객 만족도 요약·추이·팀별·3점 이하(팀장·관리자) ===== */
+/* ===== 고객 만족도 요약·추이·팀별·저점수(팀장·관리자) ===== */
 function vocSummary(){
   if(!vocData)return null;const D=vocData,ms=[...new Set(Object.keys(D.total||{}).concat((D.recs||[]).map(r=>r&&r.month).filter(x=>/^\d{4}-\d{2}$/.test(x||""))))].sort(),m=ms[ms.length-1];if(!m)return null;   // 280: 응답(recs)이 있는 가장 최근 달까지 — 방문 건수(total)는 CRM 이 달마다 올려 한 달 늦음
   const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,avgOf=R=>mean(R.map(r=>+r.avg).filter(x=>!isNaN(x)));
@@ -3062,7 +3062,12 @@ function vocSummary(){
   const live=m===ymd(new Date()).slice(0,7);
   return {m,mlabel:(+m.slice(5))+"월",live,R,n:R.length,avg:avgOf(R),prev:P.length?avgOf(P):null,rate:tot?Math.round(100*vc/tot):null,ms,avgOf,upd:String(D.updated||D.pushedAt||"")};
 }
-const vocLow=r=>Math.min(+r.q1||5,+r.q2||5,+r.q3||5)<=3;
+/* 저점수 기준 — 만족도 시트(survey_analysis.gs 의 lowMaxAt_·isLowRow_)와 같다: 응답 접수일이 2026-11-01 이후면 3점 이하, 그 전이면 2점 이하.
+   시트 「저점수조치」 탭은 이 기준에 드는 응답만 받으므로, 포털이 더 넓게 잡으면 여기서 남긴 조치가 시트에 나타나지 않는다. 기준을 바꾸면 시트 CONFIG.ALERT_THRESHOLD* 와 같이 바꾼다 */
+const VOC_LOW_MAX=3,VOC_LOW_PREV=2,VOC_LOW_FROM="2026-11-01";
+const vocLowMax=ts=>{const d=String(ts||"").slice(0,10);return d.length<10||d>=VOC_LOW_FROM?VOC_LOW_MAX:VOC_LOW_PREV;};
+const vocLow=r=>Math.min(+r.q1||5,+r.q2||5,+r.q3||5)<=vocLowMax(r.ts);
+const vocLowTxt=m=>(/^\d{4}-\d{2}$/.test(m||"")?vocLowMax(m+"-01"):VOC_LOW_MAX)+"점 이하";
 const vocKey=r=>{let h=2166136261;const s=[r.fsr,r.org,r.ts].join("|");for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return "v"+(h>>>0).toString(36);};
 let vocFu={};
 
@@ -3102,14 +3107,14 @@ function renderVoc(){
   // 팀별
   const teams=["FS WEST","FS EAST","FS CENTRAL","FS SOUTH"].map(t=>[t,S.R.filter(r=>String(r.team||"").toUpperCase()===t)]).filter(x=>x[1].length);
   if(teams.length){box.appendChild(el("h3","hsub","팀별 ("+S.mlabel+")"));const tb=el("div","vocteam");teams.forEach(([t,R])=>{const r=el("div","vtr"+(t===tm?" me":""));r.appendChild(el("span",null,t.replace("FS ","")));const v=S.avgOf(R);const w=el("span","vtbar");const i=el("i");i.style.width=(v==null?0:Math.max(4,v/5*100))+"%";w.appendChild(i);r.appendChild(w);r.appendChild(el("b",null,f(v)));r.appendChild(el("small",null,R.length+"건"));tb.appendChild(r);});box.appendChild(tb);}
-  // 3점 이하
+  // 저점수(기준은 vocLow)
   const low=S.R.filter(vocLow);const lead=isAdmin||myLead();
-  const lh=el("div","voclow");lh.appendChild(el("b",null,"3점 이하 응답 "+low.length+"건"));
+  const lh=el("div","voclow");lh.appendChild(el("b",null,vocLowTxt(S.m)+" 응답 "+low.length+"건"));
   if(lead&&low.length){const done=low.filter(r=>(vocFu[vocKey(r)]||{}).s==="done").length;lh.appendChild(el("span",null," · 조치 완료 "+done+" / "+low.length));const bt=el("button","hmore","확인·조치");bt.onclick=openVocLow;lh.appendChild(bt);}
   else if(low.length)lh.appendChild(el("span",null," · 상세는 팀장·관리자만 볼 수 있어요"));
   box.appendChild(lh);
 }
-/* 3점 이하 조치 사유 — 만족도 시트 「저점수조치」의 사유 열과 같은 값이다.
+/* 저점수 조치 사유 — 만족도 시트 「저점수조치」의 사유 열과 같은 값이다.
    여기를 고치면 Apps Script 쪽 목록(VOC_REASONS)도 같이 고쳐야 집계가 갈라지지 않는다. */
 const VOC_REASONS=["조치 지연","재방문 발생","부품 수급","설명·안내 부족","장비 상태","응대 태도","고객 착오","기타"];
 
@@ -3117,7 +3122,7 @@ function openVocLow(){
   const S=vocSummary();if(!S)return;const lead=isAdmin||myLead();if(!lead)return;
   const c=$("pCard");c.textContent="";c.classList.add("wide");
   const x=el("button","x","×");x.setAttribute("aria-label","닫기");x.onclick=closeProfile;c.appendChild(x);
-  c.appendChild(el("h3",null,S.mlabel+" 3점 이하 응답 · 후속 조치"));
+  c.appendChild(el("h3",null,S.mlabel+" "+vocLowTxt(S.m)+" 응답 · 후속 조치"));
   c.appendChild(el("div","pkhint","사유와 조치 내용을 남기면 팀장·관리자가 함께 보고, 만족도 시트 「저점수조치」에도 옮겨집니다. (만족도 원본 응답은 바꾸지 않음)"));
   const myTeam=me?String(me.team||"").toUpperCase():"";
   const L=S.R.filter(vocLow).filter(r=>isAdmin||isTop(me.team)||!myField()||String(r.team||"").toUpperCase()===myTeam).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
@@ -4240,7 +4245,7 @@ function renderBrief(){try{renderStart();}catch(e){}
   {const n=slkNewCount();if(n)it("headset",[["Slack 새 요청 "],[n+"건",1]],()=>go("req"),"warn");}
   {const P=latestPoster();if(P&&!posterSeen(P)&&(!P.at||Date.now()-P.at<14*864e5))it("star",[["새 게시물 "],[P.title,1]],()=>openPosterViewer(P));}
   if((isAdmin||myLead())&&vocData){const vs=vocSummary();if(vs){const all=myRole()==="group"||!myField(),tm=myTeamU(),open=vs.R.filter(vocLow).filter(r=>all||String(r.team||"").toUpperCase()===tm).filter(r=>(vocFu[vocKey(r)]||{}).s!=="done").length;
-    if(open)it("flag",[["3점 이하 미조치 "],[open+"건",1]],openVocLow,"warn");}}
+    if(open)it("flag",[[vocLowTxt(vs.m)+" 미조치 "],[open+"건",1]],openVocLow,"warn");}}
   {const rt=el("span","hbrt");if(schAt)rt.appendChild(document.createTextNode("일정표 기준 "+new Date(schAt).toTimeString().slice(0,5)+" 갱신"));const rb=el("button","hmore","새로고침");rb.onclick=()=>{schLoad(true);};rt.appendChild(rb);box.appendChild(rt);}
 }
 function renderStats(){
@@ -4264,13 +4269,13 @@ function renderStats(){
   // 2 — 설치·이전·평가
   if(S){const on=S.ev.filter(e=>e.start<=today&&String(e.end||e.start)>=today);tile("box",(S.team?S.label+" ":"")+"오늘 설치·이전·평가",String(on.length),"7일 안 "+S.ev.length+"건",null,toCard("hc-sched"));}
   else tile("box","오늘 설치·이전·평가","–",wait,null,toCard("hc-sched"));
-  // 3 — 직원: 공지·언급 / 팀장·그룹장: 3점 이하 미조치
+  // 3 — 직원: 공지·언급 / 팀장·그룹장: 저점수 미조치
   const vs=vocSummary();
   if(role==="staff"){const pn=pendingNotices().length,un=homeUnread();
     tile("megaphone","확인할 공지",String(pn),"안 읽은 대화 "+un+"건",pn?"warn":null,()=>{if(pn)go("room-notice");else{listTab="rooms";isM()?go(""):go(room?"room-"+room:"");}});}
   else{if(vs){const tm=myTeamU(),all=role==="group"||!myField(),L=vs.R.filter(vocLow).filter(r=>all||String(r.team||"").toUpperCase()===tm),open=L.filter(r=>(vocFu[vocKey(r)]||{}).s!=="done");
-      tile("flag","3점 이하 미조치",String(open.length),vs.mlabel+" 3점 이하 "+L.length+"건"+(all?" · FSG":" · 우리 팀"),open.length?"warn":null,openVocLow);}
-    else tile("star","3점 이하 미조치","–",vocErr?"만족도 연결 안 됨":"불러오는 중",null,null);}
+      tile("flag",vocLowTxt(vs.m)+" 미조치",String(open.length),vs.mlabel+" "+vocLowTxt(vs.m)+" "+L.length+"건"+(all?" · FSG":" · 우리 팀"),open.length?"warn":null,openVocLow);}
+    else tile("star",vocLowTxt()+" 미조치","–",vocErr?"만족도 연결 안 됨":"불러오는 중",null,null);}
   // 4 — 만족도: 직원 = 나(없으면 팀), 팀장 = 팀, 그룹장 = FSG
   if(vs){const tm=myTeamU();let R=vs.R,lab="FSG";
     if(role==="lead"&&myField()){R=vs.R.filter(r=>String(r.team||"").toUpperCase()===tm);lab=me.team;}
@@ -5283,7 +5288,7 @@ function openCmd(){
   draw();$("pOv").hidden=false;setTimeout(()=>q.focus(),30);
 }
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&(e.key==="k"||e.key==="K")&&started&&me&&!isLocked()){e.preventDefault();if(!$("pOv").hidden&&$("pCard").classList.contains("cmdk"))closeProfile();else openCmd();}});
-/* ===== 팀 현황 (팀장 = 우리 팀, 그룹장·관리자 = 팀 선택): 팀원 7일 근무 · 이번 주 설치 · 만족도 · 3점 이하 · KPI ===== */
+/* ===== 팀 현황 (팀장 = 우리 팀, 그룹장·관리자 = 팀 선택): 팀원 7일 근무 · 이번 주 설치 · 만족도 · 저점수 · KPI ===== */
 let teamSel="";
 function renderTeamPage(){
   const b=$("teamBody");if(!b||!me)return;if(!(isAdmin||myLead())){go("home");return;}
@@ -5309,15 +5314,15 @@ function renderTeamPage(){
     const c2=el("section","tsec");if(!evs.length)c2.appendChild(el("p","hp","이번 주 "+teamLabel(T)+" 일정이 없습니다."));
     evs.forEach(e=>{const r=el("div","schev"+(e.start<=schData.today?" now":""));r.appendChild(el("span","schd",schDateLbl(e,schData.today).lb));const cc=SCH_CAT[e.category]||[e.category||"일정","#9E9E9E"];const tg=el("span","schc",cc[0]);tg.style.setProperty("--c",cc[1]);r.appendChild(tg);
       const t=el("span","scht");t.appendChild(el("b",null,String(e.title||"")));t.appendChild(el("small",null,[e.device,e.assignee].filter(Boolean).join(" · ")));r.appendChild(t);c2.appendChild(r);});b.appendChild(c2);}
-  // 2. 만족도·3점 이하
+  // 2. 만족도·저점수
   const h3=el("div","tsech");h3.appendChild(icEl("star","",18));h3.appendChild(el("b",null,"고객 만족도"));b.appendChild(h3);const c3=el("section","tsec");b.appendChild(c3);
   const vs=vocSummary();
   if(!vs)c3.appendChild(el("div","hsoon",vocErr?"만족도에 연결하지 못했습니다":"불러오는 중…"));
   else{const R=vs.R.filter(r=>String(r.team||"").toUpperCase()===TU),low=R.filter(vocLow),open=low.filter(r=>(vocFu[vocKey(r)]||{}).s!=="done");
     const g=el("div","kpig");const tile=(l,v,sub)=>{const x=el("div","kpit");x.appendChild(el("small",null,l));x.appendChild(el("b",null,v));if(sub)x.appendChild(el("span","kgoal",sub));g.appendChild(x);};
-    tile(vs.mlabel+" 팀 평균",R.length?vs.avgOf(R).toFixed(2):"–",R.length+"건 · FSG "+(vs.avg==null?"–":vs.avg.toFixed(2)));tile("3점 이하",String(low.length),"미조치 "+open.length+"건");
+    tile(vs.mlabel+" 팀 평균",R.length?vs.avgOf(R).toFixed(2):"–",R.length+"건 · FSG "+(vs.avg==null?"–":vs.avg.toFixed(2)));tile(vocLowTxt(vs.m),String(low.length),"미조치 "+open.length+"건");
     const by={};R.forEach(r=>{(by[r.fsr]=by[r.fsr]||[]).push(r);});const top=Object.entries(by).sort((a,b)=>b[1].length-a[1].length);tile("응답 받은 팀원",String(top.length)+"명",top.slice(0,3).map(([n,a])=>n+" "+a.length).join(" · "));
-    c3.appendChild(g);if(low.length){const bt=el("button","btn","3점 이하 확인·조치");bt.onclick=openVocLow;c3.appendChild(bt);}}
+    c3.appendChild(g);if(low.length){const bt=el("button","btn",vocLowTxt(vs.m)+" 확인·조치");bt.onclick=openVocLow;c3.appendChild(bt);}}
   // 3. 팀원 KPI
   const h4=el("div","tsech");h4.appendChild(icEl("chart","",18));h4.appendChild(el("b",null,"팀원 KPI"));b.appendChild(h4);const c4=el("section","tsec");b.appendChild(c4);
   const all=kpiAll?Object.values(kpiAll).filter(r=>r&&r.name&&(String(r.team||"").toUpperCase()===TU||String(r.grp||"").toUpperCase()===TU)).sort((a,b)=>(b.score||0)-(a.score||0)):[];
