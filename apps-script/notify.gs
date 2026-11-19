@@ -132,7 +132,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v68';
+const NOTIFY_VER = 'v69';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -853,6 +853,17 @@ function slkParse_(text){
   Object.keys(f).forEach(function(k){ f[k] = String(f[k]).replace(/[ \t]+/g,' ').trim().slice(0,600); if(!f[k]) delete f[k]; });
   return (f.hosp && (f.eq || f.req)) ? f : null;
 }
+/* 308: 요청 채널 글에서 요청 양식을 읽을 글 — 본문에 양식(기관명·장비명/요청사항)이 없는데 공유(전달)·주소 펼침으로 붙은 글(attachments)에 양식이 있으면
+ *  「본문 + ===== + 붙은 글」로 본다(사용자 요청 「재인입 글도 자동으로」 — CSO 가 예전 요청 글을 공유하며 한 줄만 적는 경우). 본문에 양식이 있으면 그대로.
+ *  본문에 취소·완료·해결·종결이 있으면 붙은 글을 쓰지 않는다(끝난 건을 알리며 공유한 글).
+ *  붙은 글은 Slack 이 준 것만 쓰고 따로 읽어 오지 않는다(외부 호출 없음). 요청의 원래 글은 이 글(ch·ts)이라 ✅ 도 이 글에서 읽는다 */
+function slkReqText_(m){
+  const text = slkClean_(String(m && m.text || ''));
+  if(slkParse_(text)) return text;
+  if(/취소|완료|해결|종결/.test(text)) return text;   // 「완료되었습니다」「취소 건입니다」 + 예전 글 공유는 새 요청이 아님
+  const att = ((m && m.attachments) || []).map(function(a){ return slkClean_(String((a && (a.text || a.fallback)) || '')); }).filter(function(x){ return x && slkParse_(x); })[0];
+  return att ? (text ? text + '\n=============================\n' : '') + att : text;
+}
 function slkHash_(s){ return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)).replace(/[=_-]/g,'').slice(0,14); }
 
 /* 1분마다: 새 글 가져오기. 5분마다(또는 force): 열린 요청의 스레드·반응 맞추기 */
@@ -889,9 +900,9 @@ function slackPull(force, opt){
           if(+m.ts <= +last) return;
           if(+m.ts > +maxTs) maxTs = m.ts;
           if(C.type === 'req' && +m.ts > +oldLast) slkStatRecs_(C, m).forEach(function(x){ slkBatchSet_('slack/stat/'+x.k, x.v); });   // 293: 집계용 기록 쌓기
-          if(m.subtype && ['bot_message','thread_broadcast'].concat(C.type === 'feed' ? ['file_share'] : []).indexOf(m.subtype) < 0) return;   // 들어옴·나감 등
+          if(m.subtype && ['bot_message','thread_broadcast','file_share'].indexOf(m.subtype) < 0) return;   // 들어옴·나감 등. 308: 요청 채널도 사진·파일이 붙은 글(file_share)을 읽음 — 「재인입」 글이 캡처와 함께 올라오면 통째로 빠졌음
           if(m.bot_id && m.app_id && m.username && /FS (?:포털|Portal)/.test(m.username)) return;          // 우리가 보낸 글
-          const raw = String(m.text||''), text = slkClean_(raw);
+          const raw = String(m.text||''), text = C.type === 'req' ? slkReqText_(m) : slkClean_(raw);   // 308: 요청 채널은 공유(전달)된 글의 양식도 읽음
           const who = m.user ? slkUser_(m.user, names) : (m.username || (m.bot_profile && m.bot_profile.name) || '');
           const men = /<@([A-Z0-9]+)\|([^>]*)>/.exec(raw);
           const mention = men ? slkPerson_(men[2]) : (/<@([A-Z0-9]+)>/.exec(raw) ? slkPerson_(slkUser_(/<@([A-Z0-9]+)>/.exec(raw)[1], names)) : '');
@@ -1047,7 +1058,7 @@ function slkSync_(names){
   const hId = function(){
     if(hmap) return hmap; hmap = {}; hsib = {};
     Object.keys(hist).forEach(function(k){
-      const m = hist[k], ch = k.split('|')[0], C = SLACK_CH[ch], text = slkClean_(String(m.text||''));
+      const m = hist[k], ch = k.split('|')[0], C = SLACK_CH[ch], text = slkReqText_(m);
       if(/\[CS쉐어링 접수\]/.test(text) && (text.match(/\[CS쉐어링 접수\]/g)||[]).length > 1) return;
       const f = slkParse_(text); if(!f) return;
       const day = Utilities.formatDate(new Date(Math.round(+m.ts*1000)), 'Asia/Seoul', 'yyyyMMdd');
@@ -1081,7 +1092,7 @@ function slkSync_(names){
       const ms = +x.ts*1000;
       return (!kind || x.k === kind) && SLACK_CH[x.ch] && SLACK_CH[x.ch].type === 'req' && !linked[x.ch+'|'+x.ts] && ms <= at + 6e5 && ms >= at - 864e5;
     }).map(function(x){
-      const m = hist[x.ch+'|'+x.ts], f = m ? slkParse_(slkClean_(String(m.text||''))) : null;
+      const m = hist[x.ch+'|'+x.ts], f = m ? slkParse_(slkReqText_(m)) : null;
       return {ch:x.ch, ts:x.ts, same:(rq && f && nq(f.req) === rq) ? 1 : 0, d:Math.abs(+x.ts*1000 - at)};
     }).sort(function(a,b){ return (b.same - a.same) || (a.d - b.d); });
     return cand[0] || null;
@@ -1670,14 +1681,31 @@ function slkSibKey_(r){
   const f = r && r.f || {}, n = function(x){ return String(x||'').replace(/\([^)]*\)/g,'').replace(/[\s\-_.·*~`]/g,'').toLowerCase(); };   // 298: Slack 굵게(*…*)·기울임·코드 표시 무시
   const h = n(f.hosp), e = n(f.eq); return (h.length >= 3 && e.length >= 2) ? h+'|'+e : '';
 }
+/* 308: 병원 이름이 다르게 적힌 같은 병원(사용자 신고 — 「○○병원」 요청이 「△△○○병원」 글의 ✅ 로 확인되지 않음, 사용자 결정 「확인으로 처리되게」).
+ *  이름이 비슷한 다른 병원(지역만 다른 분원 등)의 요청을 확인된 것처럼 만들면 안 되므로 모두 맞을 때만 같은 병원으로 본다:
+ *   ① 장비가 같다 ② 한쪽 이름이 다른 쪽의 앞이나 뒤에 그대로 들어 있다(짧은 쪽 4자 이상) ③ 담당 FS 팀이 양쪽 다 있고 같다
+ *   ④ 지역 표시(f.area)가 둘 다 있으면 같다 ⑤ 최근 요청 가운데 짧은 이름을 품은 「다른」 긴 이름이 없다(후보 병원이 하나뿐)
+ *  함께 확인된 요청에는 ack.sim(확인된 쪽 병원 이름)을 남겨 화면에 알리고, 다른 병원이면 「다시 열기」로 되돌린다 */
+function slkSibLoose_(all, r, o){
+  const ka = slkSibKey_(r), kb = slkSibKey_(o); if(!ka || !kb || ka === kb) return false;
+  const a = ka.split('|'), b = kb.split('|'); if(a[1] !== b[1]) return false;
+  const sh = a[0].length <= b[0].length ? a[0] : b[0], lg = sh === a[0] ? b[0] : a[0];
+  if(sh.length < 4 || sh === lg || !(lg.indexOf(sh) === 0 || lg.lastIndexOf(sh) === lg.length - sh.length)) return false;
+  let ta = [], tb = []; try{ ta = slkEscTeams_(r); tb = slkEscTeams_(o); }catch(e){ return false; }
+  if(ta.length !== 1 || tb.length !== 1 || ta[0] !== tb[0]) return false;
+  const ra = String(r.f && r.f.area || ''), rb = String(o.f && o.f.area || ''); if(ra && rb && ra !== rb) return false;
+  return !Object.keys(all || {}).some(function(k){ const x = all[k], kx = x && !x.multi && slkSibKey_(x); if(!kx) return false; const h = kx.split('|')[0]; return h !== sh && h !== lg && h.indexOf(sh) >= 0; });
+}
 function slkAckSiblings_(all, id, r, ack, maxAt){   // 286: maxAt = 이 시각보다 뒤에 온(재요청 포함) 요청은 건드리지 않음
   const key = slkSibKey_(r); if(!key || r.multi) return 0;
   const t0 = +(r.rrAt || r.at) || 0; let n = 0;
   Object.keys(all || {}).forEach(function(k){
     const o = all[k]; if(k === id || !o || o.multi || o.ack || o.st === 'done') return;
-    if(slkSibKey_(o) !== key || Math.abs((+(o.rrAt || o.at) || 0) - t0) > 864e5) return;
+    if(Math.abs((+(o.rrAt || o.at) || 0) - t0) > 864e5) return;
+    const same = slkSibKey_(o) === key, sim = !same && slkSibLoose_(all, r, o);   // 308: 이름이 포함 관계인 같은 병원(조건부)
+    if(!same && !sim) return;
     if(maxAt && (+(o.rrAt || o.at) || 0) > maxAt) return;
-    const p = {ack:{n:ack.n||'', at:ack.at||Date.now(), via:id}}; if(!o.who && ack.n){ p.who = ack.n; p.whoAt = p.ack.at; }
+    const p = {ack:{n:ack.n||'', at:ack.at||Date.now(), via:id}}; if(sim) p.ack.sim = String(r.f && r.f.hosp || '').slice(0,60); if(!o.who && ack.n){ p.who = ack.n; p.whoAt = p.ack.at; }
     slkAckDone_(p, o, ack.n, p.ack.at); dbPatch_('talk/slack/req/'+k, p); o.ack = p.ack; n++;
   });
   return n;
