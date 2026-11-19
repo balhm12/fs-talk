@@ -2119,7 +2119,7 @@ html[data-theme=dark] .slkstk.warn b{color:#FF8A85}
 <script>
 (function(){
 "use strict";
-const APP_VERSION="2026-11-19.308";
+const APP_VERSION="2026-11-20.309";
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyBbjBmVrsJuuWnT-MWpESlLPxzgG9pkueU",
   authDomain:"fs-talk-fa383.firebaseapp.com",
@@ -4612,7 +4612,7 @@ function openSlkReq(id){const r0=slkReq[id];if(!r0)return;const r=Object.assign(
   ackB();
   if(r.st==="new")B("내가 담당",r.st==="new"?"pri":null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
   else if(r.st==="doing"&&r.who!==me.name)B("내가 담당",null,async()=>{if(await slkDo(id,"claim",txt()))openSlkReq(id);});
-  if(r.st!=="done")B("완료",r.st==="doing"?"pri":null,async()=>{if(await slkDo(id,"done",txt()))openSlkReq(id);});
+  if(r.st!=="done"){const x=B("완료",r.st==="doing"?"pri":null,async()=>{const t=txt();if(await slkDo(id,"done",""))openSlkReq(id);if(t)toast("완료는 포털에만 표시합니다 — 회신 칸의 글은 「회신 보내기」로 보내세요.");});x.title="포털에서만 완료로 표시합니다(Slack에는 글·반응을 남기지 않음)";}
   else B("다시 열기",null,async()=>{if(await slkDo(id,"reopen",""))openSlkReq(id);});
   if(r.kind==="paste"&&(r.pu===uid||isAdmin))B("삭제","bad",async()=>{if(!confirm("이 요청을 요청함에서 지울까요? (Slack 글은 그대로)"))return;try{await R("slack/req/"+id).remove();closeProfile();toast("지웠습니다.");}catch(e){toast("지우지 못했습니다.");}});
   if(r.multi&&slkAct(r)&&r.st!=="done")c.appendChild(el("p","hp slknote","한 Slack 글에 여러 요청이 묶인 인계라 담당·확인·완료는 FS Portal에만 표시됩니다(Slack 원래 글에는 반응을 달지 않음)."));
@@ -4651,7 +4651,7 @@ async function slkDo(id,op,text){const r=slkReq[id];if(!r||!me)return false;if(!
       const res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"slack",idToken,op,id,text})});
       const j=await res.json().catch(()=>null);if(!j||!j.ok){toast((j&&j.err)||"Slack에 보내지 못했습니다.");return false;}
       if(r.multi){toast({claim:"담당으로 표시했습니다.",ack:"확인으로 표시했습니다.",done:"완료로 표시했습니다.",reopen:"다시 열었습니다."}[op]||"바꿨습니다.");return true;}
-      toast({claim:"담당으로 표시하고 Slack 스레드에 알렸습니다.",ack:"✅ 확인을 Slack 원래 글에 달았습니다.",reply:"Slack 스레드에 보냈습니다.",done:"완료로 표시하고 Slack 스레드에 알렸습니다.",reopen:"다시 열었습니다."}[op]);return true;}
+      toast({claim:"담당으로 표시하고 Slack 스레드에 알렸습니다.",ack:"✅ 확인을 Slack 원래 글에 달았습니다.",reply:"Slack 스레드에 보냈습니다.",done:"완료로 표시했습니다(Slack에는 남기지 않음).",reopen:"다시 열었습니다."}[op]);return true;}
     catch(e){toast("연결하지 못했습니다.");return false;}}
   if(r.kind!=="paste"){toast("Slack 연결이 끊겨 지금은 바꿀 수 없습니다.");return false;}
   if(op==="ack"&&!isAdmin){toast("붙여 넣은 요청은 관리자만 바꿀 수 있습니다.");return false;}

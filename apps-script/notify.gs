@@ -132,7 +132,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v69';
+const NOTIFY_VER = 'v70';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1779,8 +1779,7 @@ function slackAct_(req){
   }else if(op === 'ack'){   // 210: ✅ = 확인(접수)
     if(!r.multi){ try{ slackApi_('reactions.add',{channel:r.ch, timestamp:r.ts, name:'white_check_mark'}, true); }catch(e){} post('✅ '+name+' 확인'+(text?'\n'+text:'')); }
     patch.ack = {n:name, at:now}; if(!r.who){ patch.who = name; patch.whoAt = now; } if(r.st !== 'done') slkAckDone_(patch, r, name, now);   // 266: 확인하면 완료(방문 중이면 그대로)
-  }else if(op === 'done'){   // 210: ✅ 는 「확인」이라 완료에는 반응을 달지 않음
-    if(!r.multi){ post('처리 완료 — '+name+(text?'\n'+text:'')); }
+  }else if(op === 'done'){   // 210: ✅ 는 「확인」이라 완료에는 반응을 달지 않음 · 309(사용자 지시): 완료는 포털에만 — Slack 에 글·반응 모두 남기지 않음
     patch.st = 'done'; patch.doneAt = now; patch.doneBy = name; patch.ackDone = null; if(!r.who) patch.who = name;
   }else if(op === 'reopen'){
     patch.st = 'doing'; patch.doneAt = null; patch.doneBy = null; patch.ackDone = null;
