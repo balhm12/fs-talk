@@ -132,7 +132,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v67';
+const NOTIFY_VER = 'v68';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -1070,11 +1070,32 @@ function slkSync_(names){
     const ok = cand.filter(function(x){ return hasAck(hist[x.ch+'|'+x.ts]); });
     return ok[0] || (loose ? cand[0] : null) || null;
   };
+  // 307: 「Slack 글 붙여넣기」로 링크 없이 넣은 요청은 원래 글을 몰라 Slack 의 ✅ 가 반영되지 않았음(사용자 신고 2026-11-19) →
+  //  같은 병원·장비(slkSibKey_)의 요청 채널 글 가운데 붙여넣기 전 24시간 ~ 뒤 10분 안이고 다른 요청에 묶이지 않은 글을 찾아 그 글로 연결.
+  //  요청사항까지 같은 글을 먼저, 그다음 붙여넣은 시각에 가까운 글. 종류(CSO·CS쉐어링)가 다른 채널 글은 쓰지 않음
+  const pasteMsg = function(r){
+    hId();
+    const sk = slkSibKey_(r); if(!sk) return null;
+    const at = +r.at || 0, kind = r.src === 'night' ? 'night' : r.src === 'cso' ? 'cso' : '', nq = function(x){ return String(x||'').replace(/\s+/g,''); }, rq = nq(r.f && r.f.req);
+    const cand = (hsib[sk] || []).filter(function(x){
+      const ms = +x.ts*1000;
+      return (!kind || x.k === kind) && SLACK_CH[x.ch] && SLACK_CH[x.ch].type === 'req' && !linked[x.ch+'|'+x.ts] && ms <= at + 6e5 && ms >= at - 864e5;
+    }).map(function(x){
+      const m = hist[x.ch+'|'+x.ts], f = m ? slkParse_(slkClean_(String(m.text||''))) : null;
+      return {ch:x.ch, ts:x.ts, same:(rq && f && nq(f.req) === rq) ? 1 : 0, d:Math.abs(+x.ts*1000 - at)};
+    }).sort(function(a,b){ return (b.same - a.same) || (a.d - b.d); });
+    return cand[0] || null;
+  };
   // 281: 키는 해시라 시각 순서가 아님 — 예전 slice(-80) 은 요청이 80건을 넘으면 최근 요청을 빼먹어 ✅ 확인이 반영되지 않았음. 열린 요청을 최근 순으로 120건까지
   const ids = Object.keys(all).filter(function(id){ const r = all[id]; return r && (r.st !== 'done' || !r.doneBy); })
     .sort(function(a,b){ return (+(all[b].rrAt||all[b].at)||0) - (+(all[a].rrAt||all[a].at)||0); }).slice(0,120);
   ids.forEach(function(id){
     const r = all[id]; if(!r || r.multi) return;
+    if(r.kind === 'paste' && !r.ch && !r.ack && r.st !== 'done'){   // 307: 붙여넣은 요청 → Slack 원래 글 찾기
+      const h = pasteMsg(r);
+      if(h){ dbPatch_('talk/slack/req/'+id, {ch:h.ch, ts:h.ts, lr:null}); linked[h.ch+'|'+h.ts] = id; r.ch = h.ch; r.ts = h.ts; r.lr = null; }
+      else return;   // 원래 글이 없으면 Slack 에 물어볼 것이 없음(예전에는 빈 채널로 스레드를 읽으려다 오류로 넘어갔음)
+    }
     if(r.ch && SLACK_CH[r.ch] && !r.ack){
       const reqCh = SLACK_CH[r.ch].type === 'req', pm0 = hist[r.ch+'|'+r.ts];
       if(!reqCh || !hasAck(pm0)){
