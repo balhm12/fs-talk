@@ -132,7 +132,7 @@ function doPost0_(e){
   }
 }
 
-const NOTIFY_VER = 'v70';
+const NOTIFY_VER = 'v71';
 
 /** 본문의 @이름 → 언급된 사람 이름 목록 (등록된 사용자 이름 중 긴 이름 우선) */
 function mentions_(text, users){
@@ -603,12 +603,14 @@ function dbPatch_(path, val){
    설치: installDigestTrigger() 한 번 실행 → 매일 아침 7시대. 끄기: removeDigestTrigger().
    사람별로 끄기: 앱 설정의 「아침 근무 알림」(talk/prefs/{팀_이름}/digest = false). */
 const SCH_DB = 'https://sysmex-system-schedule-default-rtdb.firebaseio.com';
-const SCH_KEY = 'AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8';
+const SCH_KEY_DEF = 'AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8';   // 일정표 웹 키(공개 HTML 과 같은 값). 서버용 키는 스크립트 속성 SCH_KEY 에 넣는다(2026-11-25) — 화면용 키에 리퍼러 제한을 걸면 이 값으로는 서버에서 로그인이 막힌다
+let _schApiKey = null;
+function schApiKey_(PR){ if(_schApiKey) return _schApiKey; const v = String((PR ? PR.SCH_KEY : P_('SCH_KEY')) || '').trim(); return (_schApiKey = v || SCH_KEY_DEF); }   // 속성이 없으면 예전 값 그대로(동작 변화 없음)
 const SCH_TEAMS = ['west','east','central','south','fss','fsom'];
 function schToken_(){
   const c = CacheService.getScriptCache(), t = c.get('schTok');
   if(t) return t;
-  const r = UF_.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+SCH_KEY,{method:'post',contentType:'application/json',payload:JSON.stringify({returnSecureToken:true}),muteHttpExceptions:true});
+  const r = UF_.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+schApiKey_(),{method:'post',contentType:'application/json',payload:JSON.stringify({returnSecureToken:true}),muteHttpExceptions:true});
   if(r.getResponseCode()!==200) throw new Error('일정표 인증 실패 '+r.getResponseCode());
   const id = JSON.parse(r.getContentText()).idToken; c.put('schTok', id, 3000); return id;
 }
@@ -633,7 +635,7 @@ function acadKpiDays_(v){
 }
 function schBotToken_(PR){
   const c = CacheService.getScriptCache(), t = c.get('schBot'); if(t) return t;
-  const r = UF_.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+SCH_KEY,{method:'post',contentType:'application/json',muteHttpExceptions:true,
+  const r = UF_.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+schApiKey_(PR),{method:'post',contentType:'application/json',muteHttpExceptions:true,
     payload:JSON.stringify({email:PR.KPI_BOT_EMAIL, password:PR.KPI_BOT_PW, returnSecureToken:true})});
   if(r.getResponseCode() !== 200) throw new Error('KPI 계정 로그인 실패 '+r.getResponseCode());
   const id = JSON.parse(r.getContentText()).idToken; c.put('schBot', id, 3000); return id;
